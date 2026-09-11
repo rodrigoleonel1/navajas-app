@@ -1,10 +1,10 @@
-import { Navbar } from "../components/landing/Navbar";
-import { Hero } from "../components/landing/Hero";
-import { Services } from "../components/landing/Services";
-import { Manifesto } from "../components/landing/Manifesto";
-import { Works } from "../components/landing/Works";
+import { Footer } from "../components/Footer";
+import { Navbar } from "../components/Navbar";
 import { Booking } from "../components/landing/Booking";
-import { Footer } from "../components/landing/Footer";
+import { Hero } from "../components/landing/Hero";
+import { Manifesto } from "../components/landing/Manifesto";
+import { Services } from "../components/landing/Services";
+import { Works } from "../components/landing/Works";
 
 export function LandingPage() {
   return (

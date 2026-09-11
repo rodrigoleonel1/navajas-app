@@ -1,7 +1,7 @@
+import { works } from "../../data/works";
 import { Section } from "../ui/Section";
 import { SectionHeader } from "../ui/SectionHeader";
 import { WorkCard } from "./WorkCard";
-import { works } from "../../data/works";
 
 export function Works() {
   return (

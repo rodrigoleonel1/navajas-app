@@ -1,14 +1,14 @@
-import { useState, useCallback } from "react";
+import { useCallback, useState } from "react";
 import { ArrowUpRight, Menu, X } from "lucide-react";
-import { BrandLogo } from "../ui/BrandLogo";
-import { Button } from "../ui/Button";
-import { cn } from "../../lib/utils";
-import { useLockBodyScroll } from "../../hooks/useLockBodyScroll";
+import { useLockBodyScroll } from "../hooks/useLockBodyScroll";
+import { cn } from "../lib/utils";
+import { BrandLogo } from "./ui/BrandLogo";
+import { Button } from "./ui/Button";
 
 const NAV_LINKS = [
-  { href: "#servicios", label: "Servicios", index: "01" },
-  { href: "#nosotros", label: "Nosotros", index: "02" },
-  { href: "#trabajos", label: "Trabajos", index: "03" },
+  { href: "/#servicios", label: "Servicios", index: "01" },
+  { href: "/#nosotros", label: "Nosotros", index: "02" },
+  { href: "/#trabajos", label: "Trabajos", index: "03" },
 ] as const;
 
 export function Navbar() {
@@ -40,7 +40,7 @@ export function Navbar() {
 
       {/* Menu mobile */}
       <div className="flex items-center gap-4">
-        <Button variant="outline" href="./login.html">
+        <Button variant="outline" href="/login">
           Reservar{" "}
           <ArrowUpRight size={14} className="opacity-60" aria-hidden="true" />
         </Button>
@@ -89,18 +89,22 @@ export function Navbar() {
             href={link.href}
             role="menuitem"
             onClick={close}
-            className={`grid grid-cols-[2.5rem_1fr_auto] items-center py-4 font-barlow text-3xl font-extrabold tracking-wide uppercase border-b ${i === 0 ? "border-t border-border" : "border-border-subtle"}`}
+            className={`group grid grid-cols-[2.5rem_1fr_auto] items-center gap-4 py-4 font-barlow text-3xl font-extrabold tracking-wide uppercase border-b hover:pl-2 transition-all duration-200 ${i === 0 ? "border-t border-border" : "border-border-subtle"}`}
           >
             <span className="font-jetbrains text-[0.65rem] font-medium text-primary">
               {link.index}
             </span>
             <span>{link.label}</span>
-            <ArrowUpRight size={16} className="opacity-50" aria-hidden="true" />
+            <ArrowUpRight
+              size={16}
+              className="text-primary opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-200"
+              aria-hidden="true"
+            />
           </a>
         ))}
         <Button
           variant="primaryBlock"
-          href="./login.html"
+          href="/login"
           className="mt-6"
           onClick={close}
         >

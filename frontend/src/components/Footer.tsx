@@ -1,4 +1,4 @@
-import { BrandLogo } from "../ui/BrandLogo";
+import { BrandLogo } from "./ui/BrandLogo";
 
 export function Footer() {
   return (

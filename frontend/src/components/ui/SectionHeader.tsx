@@ -1,11 +1,10 @@
+import type { ComponentProps } from "react";
 import { cn } from "../../lib/utils";
 import { SectionEyebrow } from "./SectionEyebrow";
 import { SectionTitle } from "./SectionTitle";
-import type { ComponentProps } from "react";
 
 type EyebrowTone = NonNullable<ComponentProps<typeof SectionEyebrow>["tone"]>;
 type TitleAs = NonNullable<ComponentProps<typeof SectionTitle>["as"]>;
-type TitleSize = NonNullable<ComponentProps<typeof SectionTitle>["size"]>;
 type HighlightVariant = NonNullable<
   ComponentProps<typeof SectionTitle>["highlightVariant"]
 >;
@@ -24,7 +23,6 @@ type SectionHeaderProps = {
   title: string;
   highlight: string;
   as?: TitleAs;
-  size?: TitleSize;
   highlightVariant?: HighlightVariant;
   description?: string;
   descriptionVariant?: DescriptionVariant;
@@ -39,7 +37,6 @@ export function SectionHeader({
   title,
   highlight,
   as,
-  size,
   highlightVariant,
   description,
   descriptionVariant,
@@ -61,7 +58,6 @@ export function SectionHeader({
         title={title}
         highlight={highlight}
         as={as}
-        size={size}
         highlightVariant={highlightVariant}
       />
     </div>
@@ -89,7 +85,6 @@ export function SectionHeader({
           title={title}
           highlight={highlight}
           as={as}
-          size={size}
           highlightVariant={highlightVariant}
         />
         {description ? (

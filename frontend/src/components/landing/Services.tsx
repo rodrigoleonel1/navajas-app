@@ -1,7 +1,7 @@
+import { services } from "../../data/services";
 import { Section } from "../ui/Section";
 import { SectionHeader } from "../ui/SectionHeader";
 import { ServiceRow } from "./ServiceRow";
-import { services } from "../../data/services";
 
 export function Services() {
   return (

@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { cn } from "../../lib/utils";
 
 type BrandLogoProps = {
@@ -5,10 +6,10 @@ type BrandLogoProps = {
   className?: string;
 };
 
-export function BrandLogo({ href = "#top", className }: BrandLogoProps) {
+export function BrandLogo({ href = "/", className }: BrandLogoProps) {
   return (
-    <a
-      href={href}
+    <Link
+      to={href}
       aria-label="Navajas Barber inicio"
       className={cn("flex items-center gap-2", className)}
     >
@@ -16,6 +17,6 @@ export function BrandLogo({ href = "#top", className }: BrandLogoProps) {
       <small className="border-l pl-2 text-[0.55rem] font-semibold tracking-widest leading-snug w-10">
         NAVAJAS BARBER
       </small>
-    </a>
+    </Link>
   );
 }
