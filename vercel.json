@@ -1,14 +1,14 @@
 {
   "buildCommand": "pnpm --prefix frontend run build",
   "outputDirectory": "frontend/dist",
-  "installCommand": "pnpm --prefix frontend install && pnpm --prefix backend install",
+  "installCommand": "pnpm install && pnpm --prefix frontend install && pnpm --prefix backend install",
   "framework": "vite",
   "functions": {
-    "backend/api/index.js": {
+    "api/index.js": {
       "includeFiles": "backend/src/**"
     }
   },
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/backend/api/index.js" }
+    { "source": "/api/(.*)", "destination": "/api/index.js" }
   ]
 }
