@@ -3,6 +3,7 @@ import dotenv from "dotenv";
 import express from "express";
 import mongoSanitize from "express-mongo-sanitize";
 import { config } from "./config.js";
+import { connectDB } from "./db.js";
 import { errorHandler, notFound } from "./middlewares/errorHandler.js";
 
 dotenv.config();
@@ -33,6 +34,19 @@ app.use((req, _res, next) => {
   if (req.body) mongoSanitize.sanitize(req.body);
   if (req.params) mongoSanitize.sanitize(req.params);
   next();
+});
+
+// Lazy DB connect para Vercel serverless sin bloquear /health
+app.use(async (req, _res, next) => {
+  if (req.path === "/health" || req.path === "/api/health") {
+    return next();
+  }
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    next(err);
+  }
 });
 
 app.get("/health", (_req, res) => {
