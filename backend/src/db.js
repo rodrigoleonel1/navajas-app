@@ -18,6 +18,8 @@ export async function connectDB() {
     isConnected = true;
     console.log(`[mongo] conectado a ${config.mongoUri.split("@").pop()}`);
   } else {
-    console.log("[mongo] MONGO_URI no configurado, omitiendo conexión (dev sin DB)");
+    console.log(
+      "[mongo] MONGO_URI no configurado, omitiendo conexión (dev sin DB)",
+    );
   }
 }

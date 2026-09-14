@@ -12,7 +12,7 @@ export function Hero() {
         <SectionEyebrow tone="mutedLight">
           Est. 2016 / Morón, Buenos Aires
         </SectionEyebrow>
-        <h1 className="font-barlow font-extrabold tracking-tight leading-[0.85] uppercase text-foreground text-8xl md:text-9xl">
+        <h1 className="font-barlow font-extrabold tracking-tight leading-[0.85] uppercase text-8xl">
           Tu estilo.
           <br />
           <span className="text-primary">Tu código.</span>

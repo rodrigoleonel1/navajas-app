@@ -16,7 +16,7 @@ async function start() {
 
     app.listen(config.port, () => {
       console.log(`[server] escuchando en http://localhost:${config.port}`);
-      console.log(`[health] GET http://localhost:${config.port}/health`);
+      console.log(`[health] GET http://localhost:${config.port}/api/health`);
     });
   } catch (err) {
     console.error("[mongo] error de conexión", err);
@@ -24,9 +24,7 @@ async function start() {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  start();
-}
+start();
 
 export { app, start, connectDB };
 export default app;

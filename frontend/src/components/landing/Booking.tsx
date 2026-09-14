@@ -21,7 +21,7 @@ export function Booking() {
           Reserva online en menos de un minuto. O pásate por el local, siempre
           hay sitio para uno más.
         </p>
-        <Button href="./login.html">
+        <Button href="/login">
           Reservar ahora <ArrowUpRight size={14} aria-hidden="true" />
         </Button>
       </div>

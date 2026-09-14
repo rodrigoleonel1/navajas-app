@@ -21,7 +21,7 @@ export function Manifesto() {
           El punto de encuentro del barrio. Donde te conocen por tu nombre, tu
           corte y tu charla. Música y tijera sin apuro.
         </p>
-        <Button variant="link" href="./login.html">
+        <Button variant="link" href="/login">
           Vení a conocernos <ArrowUpRight size={14} aria-hidden="true" />
         </Button>
       </div>

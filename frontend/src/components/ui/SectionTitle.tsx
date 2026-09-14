@@ -22,7 +22,7 @@ export function SectionTitle({
   className = "",
 }: SectionTitleProps) {
   const base =
-    "font-barlow font-extrabold tracking-tight leading-[0.85] uppercase text-foreground text-6xl";
+    "font-barlow font-extrabold tracking-tight leading-[0.85] uppercase text-foreground text-7xl md:text-8xl";
   const classes = `${base} ${className}`.trim();
   const hl = highlightClasses[highlightVariant];
 
