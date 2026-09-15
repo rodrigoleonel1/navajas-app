@@ -5,6 +5,8 @@ import mongoSanitize from "express-mongo-sanitize";
 import { config } from "./config.js";
 import { errorHandler, notFound } from "./middlewares/errorHandler.js";
 import { connectMongo } from "./middlewares/connectMongo.js";
+import authRoutes from "./routes/auth.js";
+import barberRoutes from "./routes/barbers.js";
 
 dotenv.config();
 const app = express();
@@ -23,8 +25,11 @@ app.use((req, _res, next) => {
 app.use(connectMongo);
 
 app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", env: config.nodeEnv });
+  res.json({ status: "ok", env: config.NODE_ENV });
 });
+
+app.use("/api/auth", authRoutes);
+app.use("/api/barbers", barberRoutes);
 
 app.use(notFound);
 app.use(errorHandler);

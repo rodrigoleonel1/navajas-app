@@ -14,9 +14,9 @@ async function start() {
       return;
     }
 
-    app.listen(config.port, () => {
-      console.log(`[server] escuchando en http://localhost:${config.port}`);
-      console.log(`[health] GET http://localhost:${config.port}/api/health`);
+    app.listen(config.PORT, () => {
+      console.log(`[server] escuchando en http://localhost:${config.PORT}`);
+      console.log(`[health] GET http://localhost:${config.PORT}/api/health`);
     });
   } catch (err) {
     console.error("[mongo] error de conexión", err);

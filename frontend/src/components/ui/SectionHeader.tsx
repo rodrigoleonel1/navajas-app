@@ -1,33 +1,20 @@
-import type { ComponentProps } from "react";
 import { cn } from "../../lib/utils";
 import { SectionEyebrow } from "./SectionEyebrow";
 import { SectionTitle } from "./SectionTitle";
 
-type EyebrowTone = NonNullable<ComponentProps<typeof SectionEyebrow>["tone"]>;
-type TitleAs = NonNullable<ComponentProps<typeof SectionTitle>["as"]>;
-type HighlightVariant = NonNullable<
-  ComponentProps<typeof SectionTitle>["highlightVariant"]
->;
+type EyebrowTone = "muted" | "primary";
 
-type DescriptionVariant = "mutedLight" | "monoMuted";
-
-const descriptionVariantClasses: Record<DescriptionVariant, string> = {
-  mutedLight: "mb-6 text-muted-light",
-  monoMuted:
-    "font-jetbrains text-xs uppercase text-muted-2 md:max-w-xs md:text-right mt-4 md:mt-0",
-};
+const descriptionClass =
+  "font-jetbrains text-xs uppercase text-muted-2 md:max-w-xs md:text-right mt-4 md:mt-0";
 
 type SectionHeaderProps = {
   eyebrow: string;
   eyebrowTone?: EyebrowTone;
   title: string;
   highlight: string;
-  as?: TitleAs;
-  highlightVariant?: HighlightVariant;
   description?: string;
-  descriptionVariant?: DescriptionVariant;
-  descriptionClassName?: string;
   layout?: "stacked" | "split" | "fragment";
+  compact?: boolean;
   className?: string;
 };
 
@@ -36,30 +23,15 @@ export function SectionHeader({
   eyebrowTone,
   title,
   highlight,
-  as,
-  highlightVariant,
   description,
-  descriptionVariant,
-  descriptionClassName,
   layout = "stacked",
+  compact,
   className,
 }: SectionHeaderProps) {
-  const descriptionClasses = description
-    ? cn(
-        descriptionVariant ? descriptionVariantClasses[descriptionVariant] : "",
-        descriptionClassName,
-      )
-    : "";
-
   const titleBlock = (
     <div>
       <SectionEyebrow tone={eyebrowTone}>{eyebrow}</SectionEyebrow>
-      <SectionTitle
-        title={title}
-        highlight={highlight}
-        as={as}
-        highlightVariant={highlightVariant}
-      />
+      <SectionTitle title={title} highlight={highlight} compact={compact} />
     </div>
   );
 
@@ -72,7 +44,7 @@ export function SectionHeader({
         )}
       >
         {titleBlock}
-        <p className={descriptionClasses}>{description}</p>
+        <p className={descriptionClass}>{description}</p>
       </div>
     );
   }
@@ -81,15 +53,8 @@ export function SectionHeader({
     return (
       <>
         <SectionEyebrow tone={eyebrowTone}>{eyebrow}</SectionEyebrow>
-        <SectionTitle
-          title={title}
-          highlight={highlight}
-          as={as}
-          highlightVariant={highlightVariant}
-        />
-        {description ? (
-          <p className={descriptionClasses}>{description}</p>
-        ) : null}
+        <SectionTitle title={title} highlight={highlight} compact={compact} />
+        {description ? <p className={descriptionClass}>{description}</p> : null}
       </>
     );
   }
@@ -97,7 +62,7 @@ export function SectionHeader({
   return (
     <div className={cn(className)}>
       {titleBlock}
-      {description ? <p className={descriptionClasses}>{description}</p> : null}
+      {description ? <p className={descriptionClass}>{description}</p> : null}
     </div>
   );
 }

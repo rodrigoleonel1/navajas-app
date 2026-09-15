@@ -1,16 +1,10 @@
-type HighlightVariant = "stroke" | "primary";
 type As = "h1" | "h2";
-
-const highlightClasses: Record<HighlightVariant, string> = {
-  stroke: "text-stroke",
-  primary: "text-primary",
-};
 
 type SectionTitleProps = {
   title: string;
   highlight: string;
   as?: As;
-  highlightVariant?: HighlightVariant;
+  compact?: boolean;
   className?: string;
 };
 
@@ -18,13 +12,13 @@ export function SectionTitle({
   title,
   highlight,
   as = "h2",
-  highlightVariant = "stroke",
+  compact,
   className = "",
 }: SectionTitleProps) {
-  const base =
-    "font-barlow font-extrabold tracking-tight leading-[0.85] uppercase text-foreground text-7xl md:text-8xl";
+  const sizeClasses = compact ? "text-6xl md:text-7xl" : "text-7xl md:text-8xl";
+  const base = `font-barlow font-extrabold tracking-tight leading-[0.85] uppercase text-foreground ${sizeClasses}`;
   const classes = `${base} ${className}`.trim();
-  const hl = highlightClasses[highlightVariant];
+  const hl = "text-stroke";
 
   const content = (
     <>

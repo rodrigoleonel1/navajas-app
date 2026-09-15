@@ -1,12 +1,56 @@
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
-import { Link } from "react-router-dom";
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Link, useNavigate } from "react-router-dom";
 import { Footer } from "../components/Footer";
 import { Navbar } from "../components/Navbar";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { SectionTitle } from "../components/ui/SectionTitle";
+import { api } from "../lib/api";
+import {
+  signupSchemaWithConfirm,
+  type SignupWithConfirmInput,
+} from "../lib/schemas";
+import axios from "axios";
 
 export function SignupPage() {
+  const navigate = useNavigate();
+  const [serverError, setServerError] = useState("");
+  const {
+    register,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+  } = useForm<SignupWithConfirmInput>({
+    resolver: zodResolver(signupSchemaWithConfirm),
+  });
+
+  const isPending = isSubmitting;
+
+  const onSubmit = async (data: SignupWithConfirmInput) => {
+    setServerError("");
+    try {
+      const { confirmPassword: _confirm, ...payload } = data;
+      const res = await api.post("/auth/signup", payload);
+      const { token, user } = res.data;
+      localStorage.setItem("token", token);
+      localStorage.setItem("user", JSON.stringify(user));
+      if (user.role === "admin") navigate("/app/admin", { replace: true });
+      else if (user.role === "barber")
+        navigate("/app/barber", { replace: true });
+      else navigate("/app/client", { replace: true });
+    } catch (err) {
+      if (axios.isAxiosError(err)) {
+        const msg =
+          err.response?.data?.error?.message || "Error al crear cuenta";
+        setServerError(msg);
+      } else {
+        setServerError("Error inesperado");
+      }
+    }
+  };
+
   return (
     <div className="min-h-dvh flex flex-col bg-background">
       <Navbar />
@@ -23,13 +67,19 @@ export function SignupPage() {
             </p>
           </div>
 
-          <form className="flex flex-col gap-4" onSubmit={(e) => e.preventDefault()}>
+          <form
+            className="flex flex-col gap-4"
+            onSubmit={handleSubmit(onSubmit)}
+            noValidate
+          >
             <Input
               id="name"
               label="Nombre"
               type="text"
               placeholder="Juan Pérez"
               autoComplete="name"
+              error={errors.name?.message}
+              {...register("name")}
             />
             <Input
               id="email"
@@ -37,6 +87,8 @@ export function SignupPage() {
               type="email"
               placeholder="hola@ejemplo.com"
               autoComplete="email"
+              error={errors.email?.message}
+              {...register("email")}
             />
             <Input
               id="password"
@@ -45,6 +97,8 @@ export function SignupPage() {
               placeholder="••••••••"
               autoComplete="new-password"
               withToggle
+              error={errors.password?.message}
+              {...register("password")}
             />
             <Input
               id="confirmPassword"
@@ -53,10 +107,21 @@ export function SignupPage() {
               placeholder="••••••••"
               autoComplete="new-password"
               withToggle
+              error={errors.confirmPassword?.message}
+              {...register("confirmPassword")}
             />
 
-            <Button variant="primaryBlock" className="mt-2 rounded-lg">
-              Crear cuenta <ArrowUpRight size={14} aria-hidden="true" />
+            {serverError && (
+              <p className="text-sm text-destructive">{serverError}</p>
+            )}
+
+            <Button
+              variant="primaryBlock"
+              className="mt-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isPending}
+            >
+              {isPending ? "Creando..." : "Crear cuenta"}{" "}
+              {!isPending && <ArrowUpRight size={14} aria-hidden="true" />}
             </Button>
           </form>
 

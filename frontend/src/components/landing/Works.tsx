@@ -10,9 +10,7 @@ export function Works() {
         eyebrow="Nuestros cortes"
         title="Trabajos"
         highlight="que hablan."
-        description="Degradados limpios, textura y tijera. Detalle a detalle."
-        descriptionVariant="monoMuted"
-        layout="split"
+        description="Degradados limpios, textura y tijera. Detalle a detalle." layout="split"
         className="mb-8"
       />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

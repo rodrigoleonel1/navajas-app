@@ -4,6 +4,7 @@ import { useLockBodyScroll } from "../hooks/useLockBodyScroll";
 import { cn } from "../lib/utils";
 import { BrandLogo } from "./ui/BrandLogo";
 import { Button } from "./ui/Button";
+import { MobileNavLink } from "./ui/MobileNavLink";
 
 const NAV_LINKS = [
   { href: "/#servicios", label: "Servicios", index: "01" },
@@ -84,23 +85,14 @@ export function Navbar() {
           Navegación / 01 — {String(NAV_LINKS.length).padStart(2, "0")}
         </p>
         {NAV_LINKS.map((link, i) => (
-          <a
+          <MobileNavLink
             key={link.href}
-            href={link.href}
-            role="menuitem"
+            to={link.href}
+            label={link.label}
+            index={link.index}
+            isFirst={i === 0}
             onClick={close}
-            className={`group grid grid-cols-[2.5rem_1fr_auto] items-center gap-4 py-4 font-barlow text-3xl font-extrabold tracking-wide uppercase border-b hover:pl-2 transition-all duration-200 ${i === 0 ? "border-t border-border" : "border-border-subtle"}`}
-          >
-            <span className="font-jetbrains text-[0.65rem] font-medium text-primary">
-              {link.index}
-            </span>
-            <span>{link.label}</span>
-            <ArrowUpRight
-              size={16}
-              className="text-primary opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-200"
-              aria-hidden="true"
-            />
-          </a>
+          />
         ))}
         <Button
           variant="primaryBlock"
