@@ -44,12 +44,12 @@ export async function login({ email, password }) {
 
   const user = await User.findOne({ email: normalizedEmail });
   if (!user) {
-    throw createAppError(401, "UNAUTHORIZED", "Credenciales inválidas");
+    throw createAppError(401, "UNAUTHORIZED", "Email o contraseña incorrectos");
   }
 
   const isValid = await isValidPassword(password, user.password_hash);
   if (!isValid) {
-    throw createAppError(401, "UNAUTHORIZED", "Credenciales inválidas");
+    throw createAppError(401, "UNAUTHORIZED", "Email o contraseña incorrectos");
   }
 
   const token = generateToken({

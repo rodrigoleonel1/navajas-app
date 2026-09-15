@@ -1,9 +1,6 @@
-import dotenv from "dotenv";
 import app from "./app.js";
 import { config } from "./config.js";
 import { connectDB } from "./db.js";
-
-dotenv.config();
 
 async function start() {
   try {
@@ -25,6 +22,3 @@ async function start() {
 }
 
 start();
-
-export { app, start, connectDB };
-export default app;

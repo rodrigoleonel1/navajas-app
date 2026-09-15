@@ -15,14 +15,14 @@ export function Services() {
         highlight="Buena vibra."
       />
       <div>
-        {services.map((s, i) => (
+        {services.map((service, index) => (
           <ServiceRow
-            key={s.index}
-            index={s.index}
-            title={s.title}
-            description={s.description}
-            price={s.price}
-            isLast={i === services.length - 1}
+            key={service.index}
+            index={service.index}
+            title={service.title}
+            description={service.description}
+            price={service.price}
+            isLast={index === services.length - 1}
           />
         ))}
       </div>

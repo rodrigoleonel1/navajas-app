@@ -4,14 +4,12 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { Input } from "../../components/ui/Input";
+import { PasswordInput } from "../../components/ui/PasswordInput";
 import { Button } from "../../components/ui/Button";
-import { api } from "../../lib/api";
-import { createBarberSchema } from "../../lib/schemas";
-import { z } from "zod";
-import axios from "axios";
+import { api, getErrorMessage } from "../../lib/api";
+import { createBarberSchema, type CreateBarberInput } from "../../lib/schemas";
 
 type Barber = { id: string; name: string; email: string; role: string };
-type CreateBarberInput = z.infer<typeof createBarberSchema>;
 
 export function BarbersPage() {
   const [barbers, setBarbers] = useState<Barber[]>([]);
@@ -29,10 +27,11 @@ export function BarbersPage() {
 
   const fetchBarbers = async () => {
     try {
-      const res = await api.get("/barbers");
-      setBarbers(Array.isArray(res.data) ? res.data : res.data.barbers || []);
-    } catch {
-      // público, no debería fallar
+      const res = await api.get<Barber[] | { barbers: Barber[] }>("/barbers");
+      const data = res.data;
+      setBarbers(Array.isArray(data) ? data : data.barbers || []);
+    } catch (err) {
+      console.error("[barbers] fetch error", err);
     }
   };
 
@@ -49,13 +48,7 @@ export function BarbersPage() {
       reset();
       fetchBarbers();
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        setServerError(
-          err.response?.data?.error?.message || "Error al crear barbero",
-        );
-      } else {
-        setServerError("Error inesperado");
-      }
+      setServerError(getErrorMessage(err, "Error al crear barbero"));
     }
   };
 
@@ -94,12 +87,10 @@ export function BarbersPage() {
             error={errors.email?.message}
             {...register("email")}
           />
-          <Input
+          <PasswordInput
             id="password"
             label="Contraseña"
-            type="password"
             placeholder="••••••••"
-            withToggle
             error={errors.password?.message}
             {...register("password")}
           />
@@ -124,13 +115,13 @@ export function BarbersPage() {
             <p className="text-sm text-muted">No hay barberos aún.</p>
           ) : (
             <ul className="flex flex-col gap-3">
-              {barbers.map((b) => (
+              {barbers.map((barber) => (
                 <li
-                  key={b.id}
+                  key={barber.id}
                   className="flex justify-between items-center border border-border rounded-lg px-3 py-2"
                 >
-                  <span className="text-sm font-medium">{b.name}</span>
-                  <span className="text-xs text-muted">{b.email}</span>
+                  <span className="text-sm font-medium">{barber.name}</span>
+                  <span className="text-xs text-muted">{barber.email}</span>
                 </li>
               ))}
             </ul>

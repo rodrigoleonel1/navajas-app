@@ -1,13 +1,5 @@
 import { Navigate } from "react-router-dom";
-
-function getRole(): string | null {
-  try {
-    const user = JSON.parse(localStorage.getItem("user") || "null");
-    return user?.role || null;
-  } catch {
-    return null;
-  }
-}
+import { getRole } from "../lib/auth";
 
 export function RoleRedirect() {
   const role = getRole();

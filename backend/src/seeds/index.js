@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { config } from "../config.js";
+import { connectDB } from "../db.js";
 import { createHash } from "../utils/bcrypt.js";
 import { User } from "../models/User.js";
 
@@ -13,12 +13,8 @@ export async function seed() {
   }
 
   try {
-    if (mongoose.connection.readyState !== 1) {
-      await mongoose.connect(config.MONGO_URI, {
-        serverSelectionTimeoutMS: 5000,
-      });
-      console.log("[seed] conectado");
-    }
+    await connectDB();
+    console.log("[seed] conectado");
 
     const exists = await User.findOne({ email: ADMIN_EMAIL }).lean();
     if (exists) {
@@ -46,5 +42,3 @@ export async function seed() {
 if (process.argv[1]?.replaceAll("\\", "/").endsWith("seeds/index.js")) {
   seed().catch(() => process.exit(1));
 }
-
-export default seed;

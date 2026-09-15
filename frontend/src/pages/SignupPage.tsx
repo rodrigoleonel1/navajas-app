@@ -7,13 +7,10 @@ import { Footer } from "../components/Footer";
 import { Navbar } from "../components/Navbar";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
+import { PasswordInput } from "../components/ui/PasswordInput";
 import { SectionTitle } from "../components/ui/SectionTitle";
-import { api } from "../lib/api";
-import {
-  signupSchemaWithConfirm,
-  type SignupWithConfirmInput,
-} from "../lib/schemas";
-import axios from "axios";
+import { api, getErrorMessage } from "../lib/api";
+import { signupSchema, type SignupInput } from "../lib/schemas";
 
 export function SignupPage() {
   const navigate = useNavigate();
@@ -22,13 +19,13 @@ export function SignupPage() {
     register,
     handleSubmit,
     formState: { errors, isSubmitting },
-  } = useForm<SignupWithConfirmInput>({
-    resolver: zodResolver(signupSchemaWithConfirm),
+  } = useForm<SignupInput>({
+    resolver: zodResolver(signupSchema),
   });
 
   const isPending = isSubmitting;
 
-  const onSubmit = async (data: SignupWithConfirmInput) => {
+  const onSubmit = async (data: SignupInput) => {
     setServerError("");
     try {
       const { confirmPassword: _confirm, ...payload } = data;
@@ -41,13 +38,7 @@ export function SignupPage() {
         navigate("/app/barber", { replace: true });
       else navigate("/app/client", { replace: true });
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const msg =
-          err.response?.data?.error?.message || "Error al crear cuenta";
-        setServerError(msg);
-      } else {
-        setServerError("Error inesperado");
-      }
+      setServerError(getErrorMessage(err, "Error al crear cuenta"));
     }
   };
 
@@ -90,23 +81,19 @@ export function SignupPage() {
               error={errors.email?.message}
               {...register("email")}
             />
-            <Input
+            <PasswordInput
               id="password"
               label="Contraseña"
-              type="password"
               placeholder="••••••••"
               autoComplete="new-password"
-              withToggle
               error={errors.password?.message}
               {...register("password")}
             />
-            <Input
+            <PasswordInput
               id="confirmPassword"
               label="Confirmar contraseña"
-              type="password"
               placeholder="••••••••"
               autoComplete="new-password"
-              withToggle
               error={errors.confirmPassword?.message}
               {...register("confirmPassword")}
             />

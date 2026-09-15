@@ -7,10 +7,10 @@ import { Footer } from "../components/Footer";
 import { Navbar } from "../components/Navbar";
 import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
+import { PasswordInput } from "../components/ui/PasswordInput";
 import { SectionTitle } from "../components/ui/SectionTitle";
-import { api } from "../lib/api";
+import { api, getErrorMessage } from "../lib/api";
 import { loginSchema, type LoginInput } from "../lib/schemas";
-import axios from "axios";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -38,13 +38,7 @@ export function LoginPage() {
         navigate("/app/barber", { replace: true });
       else navigate("/app/client", { replace: true });
     } catch (err) {
-      if (axios.isAxiosError(err)) {
-        const msg =
-          err.response?.data?.error?.message || "Error al iniciar sesión";
-        setServerError(msg);
-      } else {
-        setServerError("Error inesperado");
-      }
+      setServerError(getErrorMessage(err, "Error al iniciar sesión"));
     }
   };
 
@@ -78,13 +72,11 @@ export function LoginPage() {
               error={errors.email?.message}
               {...register("email")}
             />
-            <Input
+            <PasswordInput
               id="password"
               label="Contraseña"
-              type="password"
               placeholder="••••••••"
               autoComplete="current-password"
-              withToggle
               error={errors.password?.message}
               {...register("password")}
             />

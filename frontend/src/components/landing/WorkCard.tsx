@@ -1,12 +1,6 @@
-type WorkCardProps = {
-  src: string;
-  alt: string;
-  title: string;
-  subtitle: string;
-  index: string;
-};
+import type { Work } from "../../data/works";
 
-export function WorkCard({ src, alt, title, subtitle, index }: WorkCardProps) {
+export function WorkCard({ src, alt, title, subtitle, index }: Work) {
   return (
     <article className="group">
       <div className="h-88 md:h-104 overflow-hidden rounded-xl border border-border-light">
@@ -23,9 +17,7 @@ export function WorkCard({ src, alt, title, subtitle, index }: WorkCardProps) {
           </h3>
           <p className="text-muted text-xs font-medium uppercase">{subtitle}</p>
         </div>
-        <span className="font-jetbrains text-sm text-primary">
-          {index}
-        </span>
+        <span className="font-jetbrains text-sm text-primary">{index}</span>
       </div>
     </article>
   );

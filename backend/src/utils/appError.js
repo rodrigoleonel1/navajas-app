@@ -4,5 +4,3 @@ export function createAppError(statusCode, code, message) {
   err.code = code;
   return err;
 }
-
-export default createAppError;

@@ -31,11 +31,11 @@ export async function listBarbers() {
   const barbers = await User.find({ role: "barber" })
     .select("name email role barberProfile")
     .lean();
-  return barbers.map((b) => ({
-    id: b._id.toString(),
-    name: b.name,
-    email: b.email,
-    role: b.role,
-    barberProfile: b.barberProfile,
+  return barbers.map((barber) => ({
+    id: barber._id.toString(),
+    name: barber.name,
+    email: barber.email,
+    role: barber.role,
+    barberProfile: barber.barberProfile,
   }));
 }

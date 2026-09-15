@@ -17,5 +17,3 @@ export function validateBody(schema) {
     }
   };
 }
-
-export default validateBody;
