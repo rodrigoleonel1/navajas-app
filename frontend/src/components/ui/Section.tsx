@@ -7,14 +7,16 @@ type SectionProps = {
   children: ReactNode;
 } & React.HTMLAttributes<HTMLElement>;
 
-export function Section({ id, className = "", children, ...rest }: SectionProps) {
+export function Section({
+  id,
+  className = "",
+  children,
+  ...rest
+}: SectionProps) {
   return (
     <section
       id={id}
-      className={cn(
-        "px-5 md:px-shell w-full",
-        className,
-      )}
+      className={cn("px-5 md:px-shell w-full", className)}
       {...rest}
     >
       {children}

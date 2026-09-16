@@ -5,12 +5,10 @@ export function BarberPage() {
   return (
     <Section>
       <SectionHeader
-        compact
         eyebrow="Panel — Barbero"
         title="Agenda"
         highlight="barbero."
         description="Consultá tus turnos e ingresos."
-        layout="split"
       />
     </Section>
   );

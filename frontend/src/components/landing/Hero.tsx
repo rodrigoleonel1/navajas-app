@@ -9,9 +9,7 @@ export function Hero() {
       className="hero-section relative grid grid-cols-1 bg-[url('/images/hero.jpg')] bg-center bg-cover px-5 py-28 md:px-shell md:py-36 *:z-1"
     >
       <div>
-        <SectionEyebrow tone="mutedLight">
-          Est. 2016 / Morón, Buenos Aires
-        </SectionEyebrow>
+        <SectionEyebrow>Est. 2016 / Morón, Buenos Aires</SectionEyebrow>
         <h1 className="font-barlow font-extrabold tracking-tight leading-[0.85] uppercase text-8xl">
           Tu estilo.
           <br />

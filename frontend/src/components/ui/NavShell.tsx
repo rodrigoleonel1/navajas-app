@@ -11,7 +11,6 @@ type NavShellProps = {
   onToggle: () => void;
   onClose: () => void;
   mobileHeader?: ReactNode;
-  mobileFooter?: ReactNode;
 };
 
 export function NavShell({
@@ -22,7 +21,6 @@ export function NavShell({
   open,
   onToggle,
   mobileHeader,
-  mobileFooter,
 }: NavShellProps) {
   return (
     <nav
@@ -75,7 +73,6 @@ export function NavShell({
       >
         {mobileHeader}
         {mobileLinks}
-        {mobileFooter}
       </div>
     </nav>
   );

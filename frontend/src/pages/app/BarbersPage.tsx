@@ -55,12 +55,10 @@ export function BarbersPage() {
   return (
     <Section>
       <SectionHeader
-        compact
         eyebrow="Panel — Admin"
         title="Barberos"
         highlight="equipo."
         description="Alta y listado de barberos."
-        layout="split"
       />
 
       <div className="mt-8 grid gap-8 lg:grid-cols-2">

@@ -10,8 +10,7 @@ export function Works() {
         eyebrow="Nuestros cortes"
         title="Trabajos"
         highlight="que hablan."
-        description="Degradados limpios, textura y tijera. Detalle a detalle." layout="split"
-        className="mb-8"
+        description="Degradados limpios, textura y tijera. Detalle a detalle."
       />
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {works.map((work) => (

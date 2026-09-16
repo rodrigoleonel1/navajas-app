@@ -78,7 +78,7 @@ export function AppNavbar() {
 
   return (
     <NavShell
-      brand={<BrandLogo className="relative z-102" href="/app/agenda" />}
+      brand={<BrandLogo className="relative z-102" />}
       desktop={desktop}
       actions={actions}
       mobileLinks={mobileLinks}

@@ -1,8 +1,7 @@
-type Tone = "muted" | "mutedLight" | "primary";
+type Tone = "muted" | "primary";
 
 const toneClasses: Record<Tone, string> = {
   muted: "text-muted",
-  mutedLight: "text-muted-light",
   primary: "text-primary",
 };
 

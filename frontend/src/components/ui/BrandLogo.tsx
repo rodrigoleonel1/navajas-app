@@ -2,14 +2,13 @@ import { Link } from "react-router-dom";
 import { cn } from "../../lib/utils";
 
 type BrandLogoProps = {
-  href?: string;
   className?: string;
 };
 
-export function BrandLogo({ href = "/", className }: BrandLogoProps) {
+export function BrandLogo({ className }: BrandLogoProps) {
   return (
     <Link
-      to={href}
+      to="/"
       aria-label="Navajas Barber inicio"
       className={cn("flex items-center gap-2", className)}
     >
