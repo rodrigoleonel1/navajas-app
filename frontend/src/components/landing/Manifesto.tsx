@@ -1,7 +1,6 @@
 import { ArrowUpRight } from "lucide-react";
 import { Button } from "../ui/Button";
-import { SectionEyebrow } from "../ui/SectionEyebrow";
-import { SectionTitle } from "../ui/SectionTitle";
+import { SectionHeader } from "../ui/SectionHeader";
 
 export function Manifesto() {
   return (
@@ -9,10 +8,13 @@ export function Manifesto() {
       id="nosotros"
       className="noise-overlay relative border-y border-border-light grid grid-cols-1 md:grid-cols-3 gap-8 px-5 py-16 md:py-24 md:px-shell"
     >
-      <div>
-        <SectionEyebrow tone="primary">Nuestra esencia</SectionEyebrow>
-        <SectionTitle title="Más que un" highlight="corte." />
-      </div>
+      <SectionHeader
+        eyebrow="Nuestra esencia"
+        eyebrowTone="primary"
+        title="Más que un"
+        highlight="corte."
+        layout="fragment"
+      />
 
       <div className="max-w-88">
         <p className="mb-6 text-muted-light">

@@ -6,13 +6,19 @@ const toneClasses: Record<Tone, string> = {
   primary: "text-primary",
 };
 
+type SectionEyebrowProps = {
+  children: string;
+  tone?: Tone;
+  className?: string;
+};
+
 export function SectionEyebrow({
   children,
   tone = "muted",
-}: {
-  children: string;
-  tone?: Tone;
-}) {
+  className = "",
+}: SectionEyebrowProps) {
   const base = "mb-5 text-[0.65rem] tracking-widest font-semibold uppercase";
-  return <p className={`${base} ${toneClasses[tone]}`}>{children}</p>;
+  const classes = `${base} ${toneClasses[tone]} ${className}`.trim();
+
+  return <p className={classes}>{children}</p>;
 }

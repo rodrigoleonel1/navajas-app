@@ -13,7 +13,7 @@ type SectionHeaderProps = {
   title: string;
   highlight: string;
   description?: string;
-  layout?: "stacked" | "split";
+  layout?: "stacked" | "split" | "fragment";
   compact?: boolean;
   className?: string;
 };
@@ -46,6 +46,16 @@ export function SectionHeader({
         {titleBlock}
         <p className={descriptionClass}>{description}</p>
       </div>
+    );
+  }
+
+  if (layout === "fragment") {
+    return (
+      <>
+        <SectionEyebrow tone={eyebrowTone}>{eyebrow}</SectionEyebrow>
+        <SectionTitle title={title} highlight={highlight} compact={compact} />
+        {description ? <p className={descriptionClass}>{description}</p> : null}
+      </>
     );
   }
 
