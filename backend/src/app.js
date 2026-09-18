@@ -18,7 +18,6 @@ app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", env: config.NODE_ENV });
 });
 
-// Conexión lazy a Mongo para Vercel serverless (después de health para no conectar en health checks)
 app.use(connectMongo);
 
 app.use("/api/auth", authRoutes);
