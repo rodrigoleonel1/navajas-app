@@ -5,6 +5,12 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
+    "dev": "concurrently -n \"back,front\" -c \"blue,green\" \"pnpm --prefix backend dev\" \"pnpm --prefix frontend dev\"",
+    "dev:backend": "pnpm --prefix backend dev",
+    "dev:frontend": "pnpm --prefix frontend dev",
+    "build": "pnpm --prefix frontend run build",
+    "start": "pnpm --prefix backend start",
+    "install:all": "pnpm install && pnpm --prefix frontend install && pnpm --prefix backend install",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
@@ -12,5 +18,8 @@
   "license": "ISC",
   "dependencies": {
     "serverless-http": "^4.0.0"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5"
   }
 }
