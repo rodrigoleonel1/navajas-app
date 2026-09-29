@@ -33,9 +33,9 @@ export function PasswordInput({ id, error, ...props }: PasswordInputProps) {
           className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center justify-center w-7 h-7 text-muted hover:text-foreground transition-colors cursor-pointer"
         >
           {show ? (
-            <EyeOff size={16} aria-hidden="true" />
-          ) : (
             <Eye size={16} aria-hidden="true" />
+          ) : (
+            <EyeOff size={16} aria-hidden="true" />
           )}
         </button>
       </div>

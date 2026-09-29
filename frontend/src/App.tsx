@@ -6,7 +6,9 @@ import { AppLayout } from "./layouts/AppLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RoleRedirect } from "./components/RoleRedirect";
 import { ClientPage } from "./pages/app/ClientPage";
+import { ClientTurnosPage } from "./pages/app/ClientTurnosPage";
 import { BarberPage } from "./pages/app/BarberPage";
+import { BarberIngresosPage } from "./pages/app/BarberIngresosPage";
 import { AdminPage } from "./pages/app/AdminPage";
 import { AgendaPage } from "./pages/app/AgendaPage";
 import { BarbersPage } from "./pages/app/BarbersPage";
@@ -30,7 +32,9 @@ function App() {
           <Route index element={<RoleRedirect />} />
           <Route path="agenda" element={<AgendaPage />} />
           <Route path="client" element={<ClientPage />} />
+          <Route path="client/turnos" element={<ClientTurnosPage />} />
           <Route path="barber" element={<BarberPage />} />
+          <Route path="barber/ingresos" element={<BarberIngresosPage />} />
           <Route path="admin" element={<AdminPage />} />
           <Route path="barbers" element={<BarbersPage />} />
         </Route>
