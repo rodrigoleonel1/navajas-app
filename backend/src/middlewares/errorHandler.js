@@ -13,6 +13,7 @@ export function errorHandler(err, _req, res, _next) {
     error: {
       code,
       message,
+      ...(err.details !== undefined ? { details: err.details } : {}),
     },
   });
 }
