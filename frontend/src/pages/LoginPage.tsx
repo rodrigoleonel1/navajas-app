@@ -87,7 +87,7 @@ export function LoginPage() {
 
             <Button
               variant="primaryBlock"
-              className="mt-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="mt-2"
               disabled={isPending}
             >
               {isPending ? "Ingresando..." : "Ingresar"}{" "}

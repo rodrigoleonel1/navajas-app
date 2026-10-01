@@ -28,7 +28,7 @@ export function SignupPage() {
   const onSubmit = async (data: SignupInput) => {
     setServerError("");
     try {
-      const { confirmPassword: _confirm, ...payload } = data;
+      const payload = { name: data.name, email: data.email, password: data.password };
       const res = await api.post("/auth/signup", payload);
       const { token, user } = res.data;
       localStorage.setItem("token", token);
@@ -104,7 +104,7 @@ export function SignupPage() {
 
             <Button
               variant="primaryBlock"
-              className="mt-2 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
+              className="mt-2"
               disabled={isPending}
             >
               {isPending ? "Creando..." : "Crear cuenta"}{" "}

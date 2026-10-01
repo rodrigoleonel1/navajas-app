@@ -12,7 +12,7 @@ const variantClasses: Record<Variant, string> = {
     "flex items-center gap-1 px-4 py-2 text-xs bg-transparent border border-muted/30 rounded-full font-medium tracking-wide transition-all duration-200 hover:bg-primary hover:text-background cursor-pointer",
   link: "text-primary flex items-center font-semibold text-xs tracking-wide border-b border-primary/50 hover:border-primary transition-colors duration-200 w-fit cursor-pointer",
   primaryBlock:
-    "flex justify-center items-center bg-primary text-background py-3 text-sm font-semibold cursor-pointer hover:bg-primary-low transition-colors duration-200",
+    "flex justify-center items-center bg-primary text-background py-3 text-sm font-semibold cursor-pointer hover:bg-primary-low transition-colors duration-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed",
 };
 
 type ButtonProps = {
