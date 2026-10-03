@@ -18,6 +18,7 @@ export function AppNavbar() {
       ? [
           { to: "/app/agenda", label: "Agenda", index: "01" },
           { to: "/app/barbers", label: "Barberos", index: "02" },
+          { to: "/app/services", label: "Servicios", index: "03" },
         ]
       : role === "barber"
         ? [

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { ArrowUpRight } from "lucide-react";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { Input } from "../../components/ui/Input";
@@ -8,13 +9,13 @@ import { PasswordInput } from "../../components/ui/PasswordInput";
 import { Button } from "../../components/ui/Button";
 import { api, getErrorMessage } from "../../lib/api";
 import { createBarberSchema, type CreateBarberInput } from "../../lib/schemas";
-
-type Barber = { id: string; name: string; email: string; role: string };
+import type { Barber } from "../../lib/appointments";
 
 export function BarbersPage() {
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [serverError, setServerError] = useState("");
   const [success, setSuccess] = useState("");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const {
     register,
@@ -25,19 +26,24 @@ export function BarbersPage() {
     resolver: zodResolver(createBarberSchema),
   });
 
-  const fetchBarbers = async () => {
-    try {
-      const res = await api.get<Barber[] | { barbers: Barber[] }>("/barbers");
-      const data = res.data;
-      setBarbers(Array.isArray(data) ? data : data.barbers || []);
-    } catch (err) {
-      console.error("[barbers] fetch error", err);
-    }
-  };
-
   useEffect(() => {
-    fetchBarbers();
-  }, []);
+    let cancelled = false;
+    async function loadBarbers() {
+      try {
+        const res = await api.get<Barber[] | { barbers: Barber[] }>("/barbers");
+        const data = res.data;
+        if (!cancelled) {
+          setBarbers(Array.isArray(data) ? data : data.barbers || []);
+        }
+      } catch (err) {
+        if (!cancelled) console.error("[barbers] fetch error", err);
+      }
+    }
+    loadBarbers();
+    return () => {
+      cancelled = true;
+    };
+  }, [refreshKey]);
 
   const onSubmit = async (data: CreateBarberInput) => {
     setServerError("");
@@ -46,7 +52,7 @@ export function BarbersPage() {
       await api.post("/barbers", data);
       setSuccess(`Barbero ${data.email} creado`);
       reset();
-      fetchBarbers();
+      setRefreshKey((key) => key + 1);
     } catch (err) {
       setServerError(getErrorMessage(err, "Error al crear barbero"));
     }
@@ -98,7 +104,6 @@ export function BarbersPage() {
           {success && <p className="text-sm text-primary">{success}</p>}
           <Button
             variant="primaryBlock"
-            className="rounded-lg disabled:opacity-50"
             disabled={isSubmitting}
           >
             {isSubmitting ? "Creando..." : "Crear barbero"}
@@ -116,10 +121,28 @@ export function BarbersPage() {
               {barbers.map((barber) => (
                 <li
                   key={barber.id}
-                  className="flex justify-between items-center border border-border rounded-lg px-3 py-2"
+                  className="flex justify-between items-center gap-2 border border-border rounded-lg px-3 py-2"
                 >
-                  <span className="text-sm font-medium">{barber.name}</span>
-                  <span className="text-xs text-muted">{barber.email}</span>
+                  <span className="flex flex-col">
+                    <span className="text-sm font-medium">{barber.name}</span>
+                    <span className="text-xs text-muted">
+                      {barber.email} ·{" "}
+                      {barber.barberProfile?.workingHours?.start ?? "09:00"}–
+                      {barber.barberProfile?.workingHours?.end ?? "18:00"}
+                    </span>
+                  </span>
+                  <Button
+                    variant="outline"
+                    href={`/app/barbers/${barber.id}`}
+                    aria-label={`Ver detalle de ${barber.name}`}
+                  >
+                    Detalle
+                    <ArrowUpRight
+                      size={14}
+                      aria-hidden="true"
+                      className="opacity-60"
+                    />
+                  </Button>
                 </li>
               ))}
             </ul>

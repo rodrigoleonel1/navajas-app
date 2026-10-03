@@ -12,6 +12,9 @@ import { BarberIngresosPage } from "./pages/app/BarberIngresosPage";
 import { AdminPage } from "./pages/app/AdminPage";
 import { AgendaPage } from "./pages/app/AgendaPage";
 import { BarbersPage } from "./pages/app/BarbersPage";
+import { BarberDetailPage } from "./pages/app/BarberDetailPage";
+import { ServicesPage } from "./pages/app/ServicesPage";
+import { ServiceDetailPage } from "./pages/app/ServiceDetailPage";
 
 function App() {
   return (
@@ -37,6 +40,9 @@ function App() {
           <Route path="barber/ingresos" element={<BarberIngresosPage />} />
           <Route path="admin" element={<AdminPage />} />
           <Route path="barbers" element={<BarbersPage />} />
+          <Route path="barbers/:id" element={<BarberDetailPage />} />
+          <Route path="services" element={<ServicesPage />} />
+          <Route path="services/:id" element={<ServiceDetailPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
