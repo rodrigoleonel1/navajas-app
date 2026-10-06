@@ -1,12 +1,17 @@
 import { Router } from "express";
 import { validateBody } from "../middlewares/validateBody.js";
-import { authenticate, requireRole } from "../middlewares/auth.js";
+import {
+  authenticate,
+  optionalAuthenticate,
+  requireRole,
+} from "../middlewares/auth.js";
 import {
   createServiceSchema,
   updateServiceSchema,
 } from "../schemas/service.schema.js";
 import {
   createService,
+  getServiceById,
   listServices,
   removeService,
   updateService,
@@ -14,7 +19,8 @@ import {
 
 const router = Router();
 
-router.get("/", listServices);
+router.get("/", optionalAuthenticate, listServices);
+router.get("/:id", authenticate, requireRole("admin"), getServiceById);
 
 router.post(
   "/",

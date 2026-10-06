@@ -22,6 +22,32 @@ export function authenticate(req, res, next) {
   }
 }
 
+// Auth opcional: si hay Bearer lo verifica y guarda payload en req.user;
+// sin header sigue sin usuario (ruta pública). Token inválido → 401.
+export function optionalAuthenticate(req, res, next) {
+  const header = req.headers.authorization;
+  if (!header) {
+    next();
+    return;
+  }
+  if (!header.startsWith("Bearer ")) {
+    res.status(401).json({
+      error: { code: "UNAUTHORIZED", message: "Autenticación requerida" },
+    });
+    return;
+  }
+
+  const token = header.slice(7); // quita "Bearer "
+  try {
+    req.user = jwt.verify(token, config.JWT_SECRET);
+    next();
+  } catch {
+    res.status(401).json({
+      error: { code: "UNAUTHORIZED", message: "Sesión expirada o no válida." },
+    });
+  }
+}
+
 // Autoriza solo a ciertos roles (usar después de authenticate)
 export function requireRole(...roles) {
   return (req, res, next) => {

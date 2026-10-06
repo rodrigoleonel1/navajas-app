@@ -18,12 +18,25 @@ function toServiceDTO(doc) {
   };
 }
 
-export async function listServices() {
-  const services = await Service.find({ active: true })
+export async function listServices({ includeInactive = false } = {}) {
+  const services = await Service.find(includeInactive ? {} : { active: true })
     .select("name duration price active")
     .sort({ name: 1 })
     .lean();
   return services.map(toServiceDTO);
+}
+
+export async function getServiceById(id) {
+  assertObjectId(id);
+
+  const service = await Service.findById(id)
+    .select("name duration price active")
+    .lean();
+  if (!service) {
+    throw createAppError(404, "NOT_FOUND", "Servicio no encontrado");
+  }
+
+  return toServiceDTO(service);
 }
 
 export async function createService({ name, duration, price }) {

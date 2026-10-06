@@ -13,5 +13,8 @@ export const createServiceSchema = z.object({
   price: z.number().positive("Precio debe ser mayor a 0"),
 });
 
-// Para PATCH: mismos campos opcionales, mismas validaciones
-export const updateServiceSchema = createServiceSchema.partial();
+// Para PATCH: mismos campos opcionales, mismas validaciones + active
+// (permite reactivar un servicio desactivado con { active: true })
+export const updateServiceSchema = createServiceSchema
+  .partial()
+  .extend({ active: z.boolean().optional() });
