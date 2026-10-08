@@ -1,18 +1,13 @@
 import { ZodError } from "zod";
 
 // Valida req.query con un schema Zod (ej: filtros ?barberId&date&status).
-// Express 5 expone req.query como getter: no se puede reasignar,
-// por eso se copian las claves validadas una por una (igual que sanitize.js).
+// Express 5 expone req.query como getter que re-parsea en cada acceso:
+// NO se puede escribir ahí (los cambios se pierden), por eso lo validado
+// (con coerciones y defaults aplicados) se expone en req.validatedQuery.
 export function validateQuery(schema) {
   return (req, res, next) => {
     try {
-      const parsed = schema.parse(req.query);
-      for (const key of Object.keys(req.query)) {
-        delete req.query[key];
-      }
-      for (const [key, value] of Object.entries(parsed)) {
-        req.query[key] = value;
-      }
+      req.validatedQuery = schema.parse(req.query);
       next();
     } catch (err) {
       if (err instanceof ZodError) {

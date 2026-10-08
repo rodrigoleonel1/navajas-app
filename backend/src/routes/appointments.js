@@ -5,10 +5,12 @@ import { authenticate, requireRole } from "../middlewares/auth.js";
 import {
   createAppointmentSchema,
   listAppointmentsQuerySchema,
+  availabilityQuerySchema,
 } from "../schemas/appointment.schema.js";
 import {
   createAppointment,
   listAppointments,
+  getAvailability,
 } from "../controllers/appointment.controller.js";
 
 const router = Router();
@@ -19,6 +21,13 @@ router.post(
   requireRole("client"),
   validateBody(createAppointmentSchema),
   createAppointment,
+);
+
+router.get(
+  "/availability",
+  authenticate,
+  validateQuery(availabilityQuerySchema),
+  getAvailability,
 );
 
 router.get(
