@@ -1,5 +1,5 @@
 import { Navigate } from "react-router-dom";
-import { clearAuth } from "../lib/auth";
+import { clearAuth, getUser } from "../lib/auth";
 
 function isTokenExpired(token: string): boolean {
   try {
@@ -10,11 +10,20 @@ function isTokenExpired(token: string): boolean {
   }
 }
 
-export function ProtectedRoute({ children }: { children: React.ReactNode }) {
+export function ProtectedRoute({
+  children,
+  roles,
+}: {
+  children: React.ReactNode;
+  roles?: string[];
+}) {
   const token = localStorage.getItem("token");
   if (!token || isTokenExpired(token)) {
     if (token) clearAuth();
     return <Navigate to="/login" replace />;
+  }
+  if (roles && !roles.includes(getUser()?.role ?? "")) {
+    return <Navigate to="/app" replace />;
   }
   return children;
 }

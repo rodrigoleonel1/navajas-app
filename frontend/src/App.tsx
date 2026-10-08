@@ -39,10 +39,38 @@ function App() {
           <Route path="barber" element={<BarberPage />} />
           <Route path="barber/ingresos" element={<BarberIngresosPage />} />
           <Route path="admin" element={<AdminPage />} />
-          <Route path="barbers" element={<BarbersPage />} />
-          <Route path="barbers/:id" element={<BarberDetailPage />} />
-          <Route path="services" element={<ServicesPage />} />
-          <Route path="services/:id" element={<ServiceDetailPage />} />
+          <Route
+            path="barbers"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <BarbersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="barbers/:id"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <BarberDetailPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="services"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <ServicesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="services/:id"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <ServiceDetailPage />
+              </ProtectedRoute>
+            }
+          />
         </Route>
       </Routes>
     </BrowserRouter>

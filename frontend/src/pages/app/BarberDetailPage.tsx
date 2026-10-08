@@ -22,6 +22,9 @@ const WEEKDAYS = [
   { value: 0, label: "Dom" },
 ];
 
+// Hora en formato HH:MM de 24h (igual que el back en barber.schema.js).
+const WORK_HOUR_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
 function toDayKey(value: string): string {
   return value.slice(0, 10);
 }
@@ -86,10 +89,7 @@ export function BarberDetailPage() {
       setError("Nombre mínimo 2 caracteres");
       return;
     }
-    if (
-      !/^([01]\d|2[0-3]):[0-5]\d$/.test(start) ||
-      !/^([01]\d|2[0-3]):[0-5]\d$/.test(end)
-    ) {
+    if (!WORK_HOUR_RE.test(start) || !WORK_HOUR_RE.test(end)) {
       setError("Jornada inválida, use HH:MM");
       return;
     }
