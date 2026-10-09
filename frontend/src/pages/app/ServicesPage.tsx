@@ -16,6 +16,7 @@ export function ServicesPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [serverError, setServerError] = useState("");
   const [success, setSuccess] = useState("");
+  const [listError, setListError] = useState("");
 
   const {
     register,
@@ -29,11 +30,15 @@ export function ServicesPage() {
   useEffect(() => {
     let cancelled = false;
     async function loadServices() {
+      setListError("");
       try {
         const data = await listServices(showInactive);
         if (!cancelled) setServices(data);
       } catch (err) {
-        if (!cancelled) console.error("[services] fetch error", err);
+        if (!cancelled) {
+          setServices([]);
+          setListError(getErrorMessage(err, "Error al cargar servicios"));
+        }
       }
     }
     loadServices();
@@ -126,8 +131,13 @@ export function ServicesPage() {
               Ver inactivos
             </label>
           </div>
+          {listError && (
+            <p className="text-sm text-destructive mb-4">{listError}</p>
+          )}
           {services.length === 0 ? (
-            <p className="text-sm text-muted">No hay servicios aún.</p>
+            <p className="text-sm text-muted">
+              {listError ? "Reintentá recargando la página." : "No hay servicios aún."}
+            </p>
           ) : (
             <ul className="flex flex-col gap-3">
               {services.map((service) => (
