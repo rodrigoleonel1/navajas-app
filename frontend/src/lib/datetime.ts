@@ -64,6 +64,23 @@ export function formatWeekdayDay(dayKey: string): string {
   return weekdayDayFormatter.format(new Date(`${dayKey}T12:00:00Z`));
 }
 
+const dateKeyFormatter = new Intl.DateTimeFormat("es-AR", {
+  timeZone: BUSINESS_TZ,
+  day: "2-digit",
+  month: "2-digit",
+  year: "numeric",
+});
+
+// Día comercial YYYY-MM-DD en formato argentino DD/MM/YYYY.
+export function formatDateKey(dayKey: string): string {
+  return dateKeyFormatter.format(new Date(`${dayKey}T12:00:00Z`));
+}
+
+// Etiqueta de día con fecha ("sáb 13/10").
+export function formatDayLabel(dayKey: string): string {
+  return `${formatWeekdayDay(dayKey)} ${formatDateKey(dayKey).slice(0, 5)}`;
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Próximos `count` días comerciales desde hoy (inclusive).

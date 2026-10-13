@@ -7,9 +7,9 @@ import { getErrorMessage } from "../../lib/api";
 import {
   businessDayKeysFromToday,
   formatDayHour,
+  formatDayLabel,
   formatFull,
   formatHour,
-  formatWeekdayDay,
   toBusinessDayKey,
 } from "../../lib/datetime";
 import {
@@ -322,7 +322,7 @@ export function ClientPage() {
                     disabled={disabled}
                     onClick={() => setDate(dayKey)}
                     aria-pressed={selected}
-                    aria-label={`${formatWeekdayDay(dayKey)}${disabled ? " (no laborable)" : ""}`}
+                    aria-label={`${formatDayLabel(dayKey)}${disabled ? " (no laborable)" : ""}`}
                     className={
                       selected
                         ? "shrink-0 border border-primary bg-primary/10 rounded-lg px-3 py-2 text-sm font-semibold transition-colors"
@@ -331,7 +331,7 @@ export function ClientPage() {
                           : "shrink-0 border border-border rounded-lg px-3 py-2 text-sm hover:border-primary transition-colors"
                     }
                   >
-                    {formatWeekdayDay(dayKey)}
+                    {formatDayLabel(dayKey)}
                   </button>
                 );
               })}

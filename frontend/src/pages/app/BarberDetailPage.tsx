@@ -6,6 +6,7 @@ import { SectionHeader } from "../../components/ui/SectionHeader";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { getErrorMessage } from "../../lib/api";
+import { formatDateKey } from "../../lib/datetime";
 import {
   getBarberById,
   updateBarberProfile,
@@ -255,10 +256,10 @@ export function BarberDetailPage() {
                   key={day}
                   className="flex items-center gap-2 text-xs border border-border rounded-full px-3 py-1"
                 >
-                  {day}
+                  {formatDateKey(day)}
                   <button
                     type="button"
-                    aria-label={`Quitar franco ${day}`}
+                    aria-label={`Quitar franco ${formatDateKey(day)}`}
                     onClick={() =>
                       setDaysOff((prev) => prev.filter((d) => d !== day))
                     }
