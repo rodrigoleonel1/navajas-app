@@ -6,16 +6,17 @@ import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
+import { Badge } from "../../components/ui/Badge";
 import { api, getErrorMessage } from "../../lib/api";
+import { useToast } from "../../hooks/useToast";
 import { serviceSchema, type ServiceInput } from "../../lib/schemas";
 import { listServices, type Service } from "../../lib/appointments";
 
 export function ServicesPage() {
+  const toast = useToast();
   const [services, setServices] = useState<Service[]>([]);
   const [showInactive, setShowInactive] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [serverError, setServerError] = useState("");
-  const [success, setSuccess] = useState("");
   const [listError, setListError] = useState("");
 
   const {
@@ -48,15 +49,13 @@ export function ServicesPage() {
   }, [showInactive, refreshKey]);
 
   const onSubmit = async (data: ServiceInput) => {
-    setServerError("");
-    setSuccess("");
     try {
       await api.post("/services", data);
-      setSuccess("Servicio creado");
+      toast.success("Servicio creado");
       reset();
       setRefreshKey((key) => key + 1);
     } catch (err) {
-      setServerError(getErrorMessage(err, "Error al crear servicio"));
+      toast.error(getErrorMessage(err, "Error al crear servicio"));
     }
   };
 
@@ -103,10 +102,6 @@ export function ServicesPage() {
             error={errors.price?.message}
             {...register("price", { valueAsNumber: true })}
           />
-          {serverError && (
-            <p className="text-sm text-destructive">{serverError}</p>
-          )}
-          {success && <p className="text-sm text-primary">{success}</p>}
           <Button
             variant="primaryBlock"
             className="flex-1"
@@ -148,11 +143,7 @@ export function ServicesPage() {
                   <span className="flex flex-col">
                     <span className="text-sm font-medium flex items-center gap-2">
                       {service.name}
-                      {!service.active && (
-                        <span className="text-[10px] uppercase tracking-widest text-muted border border-border rounded-full px-2 py-0.5">
-                          Inactivo
-                        </span>
-                      )}
+                      {!service.active && <Badge>Inactivo</Badge>}
                     </span>
                     <span className="text-xs text-muted">
                       {service.duration} min — $

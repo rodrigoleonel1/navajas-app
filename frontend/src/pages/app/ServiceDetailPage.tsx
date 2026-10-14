@@ -8,6 +8,7 @@ import { SectionHeader } from "../../components/ui/SectionHeader";
 import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { getErrorMessage } from "../../lib/api";
+import { useToast } from "../../hooks/useToast";
 import { serviceSchema, type ServiceInput } from "../../lib/schemas";
 import {
   getServiceById,
@@ -17,11 +18,10 @@ import {
 
 export function ServiceDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const toast = useToast();
   const [service, setService] = useState<Service | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
-  const [serverError, setServerError] = useState("");
-  const [success, setSuccess] = useState("");
 
   const {
     register,
@@ -61,27 +61,23 @@ export function ServiceDetailPage() {
 
   const onSubmit = async (data: ServiceInput) => {
     if (!id) return;
-    setServerError("");
-    setSuccess("");
     try {
       const updated = await updateService(id, data);
       setService(updated);
-      setSuccess("Servicio actualizado");
+      toast.success("Servicio actualizado");
     } catch (err) {
-      setServerError(getErrorMessage(err, "Error al guardar servicio"));
+      toast.error(getErrorMessage(err, "Error al guardar servicio"));
     }
   };
 
   const setActive = async (active: boolean) => {
     if (!id) return;
-    setServerError("");
-    setSuccess("");
     try {
       const updated = await updateService(id, { active });
       setService(updated);
-      setSuccess(active ? "Servicio activado" : "Servicio desactivado");
+      toast.success(active ? "Servicio activado" : "Servicio desactivado");
     } catch (err) {
-      setServerError(getErrorMessage(err, "Error al cambiar estado"));
+      toast.error(getErrorMessage(err, "Error al cambiar estado"));
     }
   };
 
@@ -169,11 +165,7 @@ export function ServiceDetailPage() {
             error={errors.price?.message}
             {...register("price", { valueAsNumber: true })}
           />
-          {serverError && (
-            <p className="text-sm text-destructive">{serverError}</p>
-          )}
-          {success && <p className="text-sm text-primary">{success}</p>}
-          <Button disabled={isSubmitting}>
+          <Button variant="primaryBlock" disabled={isSubmitting}>
             {isSubmitting ? "Guardando..." : "Guardar cambios"}
           </Button>
         </form>

@@ -1,5 +1,4 @@
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "react-router-dom";
@@ -10,11 +9,12 @@ import { Input } from "../components/ui/Input";
 import { PasswordInput } from "../components/ui/PasswordInput";
 import { SectionTitle } from "../components/ui/SectionTitle";
 import { api, getErrorMessage } from "../lib/api";
+import { useToast } from "../hooks/useToast";
 import { signupSchema, type SignupInput } from "../lib/schemas";
 
 export function SignupPage() {
   const navigate = useNavigate();
-  const [serverError, setServerError] = useState("");
+  const toast = useToast();
   const {
     register,
     handleSubmit,
@@ -26,7 +26,6 @@ export function SignupPage() {
   const isPending = isSubmitting;
 
   const onSubmit = async (data: SignupInput) => {
-    setServerError("");
     try {
       const payload = { name: data.name, email: data.email, password: data.password };
       const res = await api.post("/auth/signup", payload);
@@ -38,7 +37,7 @@ export function SignupPage() {
         navigate("/app/barber", { replace: true });
       else navigate("/app/client", { replace: true });
     } catch (err) {
-      setServerError(getErrorMessage(err, "Error al crear cuenta"));
+      toast.error(getErrorMessage(err, "Error al crear cuenta"));
     }
   };
 
@@ -97,10 +96,6 @@ export function SignupPage() {
               error={errors.confirmPassword?.message}
               {...register("confirmPassword")}
             />
-
-            {serverError && (
-              <p className="text-sm text-destructive">{serverError}</p>
-            )}
 
             <Button
               variant="primaryBlock"

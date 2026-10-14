@@ -8,13 +8,13 @@ import { Input } from "../../components/ui/Input";
 import { PasswordInput } from "../../components/ui/PasswordInput";
 import { Button } from "../../components/ui/Button";
 import { api, getErrorMessage } from "../../lib/api";
+import { useToast } from "../../hooks/useToast";
 import { createBarberSchema, type CreateBarberInput } from "../../lib/schemas";
 import type { Barber } from "../../lib/appointments";
 
 export function BarbersPage() {
+  const toast = useToast();
   const [barbers, setBarbers] = useState<Barber[]>([]);
-  const [serverError, setServerError] = useState("");
-  const [success, setSuccess] = useState("");
   const [refreshKey, setRefreshKey] = useState(0);
 
   const {
@@ -46,15 +46,13 @@ export function BarbersPage() {
   }, [refreshKey]);
 
   const onSubmit = async (data: CreateBarberInput) => {
-    setServerError("");
-    setSuccess("");
     try {
       await api.post("/barbers", data);
-      setSuccess(`Barbero ${data.email} creado`);
+      toast.success(`Barbero ${data.email} creado`);
       reset();
       setRefreshKey((key) => key + 1);
     } catch (err) {
-      setServerError(getErrorMessage(err, "Error al crear barbero"));
+      toast.error(getErrorMessage(err, "Error al crear barbero"));
     }
   };
 
@@ -98,10 +96,6 @@ export function BarbersPage() {
             error={errors.password?.message}
             {...register("password")}
           />
-          {serverError && (
-            <p className="text-sm text-destructive">{serverError}</p>
-          )}
-          {success && <p className="text-sm text-primary">{success}</p>}
           <Button
             variant="primaryBlock"
             disabled={isSubmitting}

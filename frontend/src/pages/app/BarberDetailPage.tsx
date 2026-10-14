@@ -7,6 +7,7 @@ import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { getErrorMessage } from "../../lib/api";
 import { formatDateKey } from "../../lib/datetime";
+import { useToast } from "../../hooks/useToast";
 import {
   getBarberById,
   updateBarberProfile,
@@ -32,6 +33,7 @@ function toDayKey(value: string): string {
 
 export function BarberDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const toast = useToast();
   const [barber, setBarber] = useState<Barber | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -42,8 +44,6 @@ export function BarberDetailPage() {
   const [daysOff, setDaysOff] = useState<string[]>([]);
   const [weeklyDaysOff, setWeeklyDaysOff] = useState<number[]>([]);
   const [newDay, setNewDay] = useState("");
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -83,19 +83,17 @@ export function BarberDetailPage() {
 
   async function handleSave() {
     if (!id) return;
-    setError("");
-    setSuccess("");
     const trimmedName = name.trim();
     if (trimmedName.length < 2) {
-      setError("Nombre mínimo 2 caracteres");
+      toast.error("Nombre mínimo 2 caracteres");
       return;
     }
     if (!WORK_HOUR_RE.test(start) || !WORK_HOUR_RE.test(end)) {
-      setError("Jornada inválida, use HH:MM");
+      toast.error("Jornada inválida, use HH:MM");
       return;
     }
     if (start >= end) {
-      setError("La salida debe ser posterior a la entrada");
+      toast.error("La salida debe ser posterior a la entrada");
       return;
     }
     setSaving(true);
@@ -107,9 +105,9 @@ export function BarberDetailPage() {
         weeklyDaysOff,
       });
       setBarber(updated);
-      setSuccess("Barbero actualizado");
+      toast.success("Barbero actualizado");
     } catch (err) {
-      setError(getErrorMessage(err, "Error al guardar cambios"));
+      toast.error(getErrorMessage(err, "Error al guardar cambios"));
     } finally {
       setSaving(false);
     }
@@ -294,12 +292,6 @@ export function BarberDetailPage() {
           </div>
         </div>
 
-        {error && (
-          <p className="text-sm text-destructive lg:col-span-2">{error}</p>
-        )}
-        {success && (
-          <p className="text-sm text-primary lg:col-span-2">{success}</p>
-        )}
         <Button
           variant="primaryBlock"
           className="px-10 w-full lg:w-auto lg:col-span-2 lg:justify-self-end"
