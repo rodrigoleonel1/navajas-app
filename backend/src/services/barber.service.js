@@ -92,7 +92,7 @@ export async function updateBarberProfile(id, patch) {
   const barber = await User.findOneAndUpdate(
     { _id: id, role: "barber" },
     { $set: update },
-    { new: true, runValidators: true },
+    { returnDocument: "after", runValidators: true },
   )
     .select("name email role barberProfile")
     .lean();

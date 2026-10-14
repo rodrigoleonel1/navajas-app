@@ -71,7 +71,7 @@ export async function updateService(id, patch) {
   if (patch.active !== undefined) update.active = patch.active;
 
   const service = await Service.findByIdAndUpdate(id, update, {
-    new: true,
+    returnDocument: "after",
     runValidators: true,
   })
     .select("name duration price active")
@@ -90,7 +90,7 @@ export async function deactivateService(id) {
   const service = await Service.findByIdAndUpdate(
     id,
     { active: false },
-    { new: true },
+    { returnDocument: "after" },
   )
     .select("name duration price active")
     .lean();
