@@ -76,9 +76,14 @@ export function formatDateKey(dayKey: string): string {
   return dateKeyFormatter.format(new Date(`${dayKey}T12:00:00Z`));
 }
 
-// Etiqueta de día con fecha ("sáb 13/10").
+const weekdayFormatter = new Intl.DateTimeFormat("es-AR", {
+  timeZone: BUSINESS_TZ,
+  weekday: "short",
+});
+
+// Etiqueta de día con fecha ("jue 15/10").
 export function formatDayLabel(dayKey: string): string {
-  return `${formatWeekdayDay(dayKey)} ${formatDateKey(dayKey).slice(0, 5)}`;
+  return `${weekdayFormatter.format(new Date(`${dayKey}T12:00:00Z`))} ${formatDateKey(dayKey).slice(0, 5)}`;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;

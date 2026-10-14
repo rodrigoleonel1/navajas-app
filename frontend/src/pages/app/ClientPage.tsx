@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { CalendarCheck, CheckCircle2, Clock } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { CalendarCheck, Clock } from "lucide-react";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { Button } from "../../components/ui/Button";
+import { useToast } from "../../hooks/useToast";
 import { getErrorMessage } from "../../lib/api";
 import {
   businessDayKeysFromToday,
   formatDayHour,
   formatDayLabel,
-  formatFull,
   formatHour,
   toBusinessDayKey,
 } from "../../lib/datetime";
@@ -18,7 +19,6 @@ import {
   getConflictSuggestion,
   listBarbers,
   listServices,
-  type Appointment,
   type Availability,
   type Barber,
   type Service,
@@ -33,6 +33,8 @@ function formatPrice(price: number): string {
 }
 
 export function ClientPage() {
+  const navigate = useNavigate();
+  const toast = useToast();
   const [services, setServices] = useState<Service[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
@@ -53,7 +55,6 @@ export function ClientPage() {
   const [isBooking, setIsBooking] = useState(false);
   const [bookError, setBookError] = useState("");
   const [suggestion, setSuggestion] = useState<string | null>(null);
-  const [booked, setBooked] = useState<Appointment | null>(null);
 
   useEffect(() => {
     async function loadCatalog() {
@@ -143,72 +144,25 @@ export function ClientPage() {
     setBookError("");
     setSuggestion(null);
     try {
-      const appointment = await createAppointment({
+      await createAppointment({
         barberId,
         serviceIds,
         startAt,
       });
-      setBooked(appointment);
+      toast.success("Turno reservado");
+      navigate("/app/client/turnos");
     } catch (err) {
-      setBookError(getErrorMessage(err, "Error al reservar el turno"));
-      setSuggestion(getConflictSuggestion(err));
+      const nextSuggestion = getConflictSuggestion(err);
+      setSuggestion(nextSuggestion);
+      if (nextSuggestion) {
+        setBookError(getErrorMessage(err, "Horario no disponible"));
+      } else {
+        setBookError("");
+        toast.error(getErrorMessage(err, "Error al reservar el turno"));
+      }
     } finally {
       setIsBooking(false);
     }
-  }
-
-  if (booked) {
-    const barberName =
-      barbers.find((b) => b.id === booked.barber.id)?.name ??
-      booked.barber.name ??
-      "Barbero";
-    return (
-      <Section>
-        <SectionHeader
-          eyebrow="Panel — Cliente"
-          title="Turno"
-          highlight="confirmado."
-          description="Te enviamos la confirmación por email."
-        />
-        <div className="mt-8 max-w-md mx-auto bg-card border border-border rounded-2xl p-6 flex flex-col gap-4">
-          <CheckCircle2
-            size={32}
-            aria-hidden="true"
-            className="text-primary"
-          />
-          <dl className="flex flex-col gap-2 text-sm">
-            <div className="flex justify-between">
-              <dt className="text-muted">Barbero</dt>
-              <dd className="font-medium">{barberName}</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted">Fecha</dt>
-              <dd className="font-medium">
-                {formatFull(booked.startAt)}
-              </dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted">Duración</dt>
-              <dd className="font-medium">{booked.durationSnapshot} min</dd>
-            </div>
-            <div className="flex justify-between">
-              <dt className="text-muted">Precio</dt>
-              <dd className="font-medium">
-                {formatPrice(booked.priceSnapshot)}
-              </dd>
-            </div>
-          </dl>
-          <div className="flex flex-col gap-2">
-            <Button variant="primaryBlock" href="/app/client/turnos">
-              Ver mis turnos
-            </Button>
-            <Button variant="outline" onClick={() => setBooked(null)}>
-              Reservar otro turno
-            </Button>
-          </div>
-        </div>
-      </Section>
-    );
   }
 
   return (

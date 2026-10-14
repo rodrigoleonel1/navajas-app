@@ -5,6 +5,7 @@ import { SignupPage } from "./pages/SignupPage";
 import { AppLayout } from "./layouts/AppLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RoleRedirect } from "./components/RoleRedirect";
+import { ToastProvider } from "./components/ui/Toast";
 import { ClientPage } from "./pages/app/ClientPage";
 import { ClientTurnosPage } from "./pages/app/ClientTurnosPage";
 import { BarberPage } from "./pages/app/BarberPage";
@@ -18,7 +19,8 @@ import { ServiceDetailPage } from "./pages/app/ServiceDetailPage";
 
 function App() {
   return (
-    <BrowserRouter>
+    <ToastProvider>
+      <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
@@ -34,11 +36,46 @@ function App() {
         >
           <Route index element={<RoleRedirect />} />
           <Route path="agenda" element={<AgendaPage />} />
-          <Route path="client" element={<ClientPage />} />
-          <Route path="client/turnos" element={<ClientTurnosPage />} />
-          <Route path="barber" element={<BarberPage />} />
-          <Route path="barber/ingresos" element={<BarberIngresosPage />} />
-          <Route path="admin" element={<AdminPage />} />
+          <Route
+            path="client"
+            element={
+              <ProtectedRoute roles={["client"]}>
+                <ClientPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="client/turnos"
+            element={
+              <ProtectedRoute roles={["client"]}>
+                <ClientTurnosPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="barber"
+            element={
+              <ProtectedRoute roles={["barber"]}>
+                <BarberPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="barber/ingresos"
+            element={
+              <ProtectedRoute roles={["barber"]}>
+                <BarberIngresosPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="admin"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <AdminPage />
+              </ProtectedRoute>
+            }
+          />
           <Route
             path="barbers"
             element={
@@ -74,6 +111,7 @@ function App() {
         </Route>
       </Routes>
     </BrowserRouter>
+    </ToastProvider>
   );
 }
 

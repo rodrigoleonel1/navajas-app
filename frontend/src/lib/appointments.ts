@@ -118,6 +118,21 @@ export async function createAppointment(input: {
   return res.data;
 }
 
+export async function listAppointments(params?: {
+  barberId?: string;
+  date?: string;
+  status?: string;
+}): Promise<Appointment[]> {
+  const res = await api.get<Appointment[]>("/appointments", {
+    params: {
+      ...(params?.barberId ? { barberId: params.barberId } : {}),
+      ...(params?.date ? { date: params.date } : {}),
+      ...(params?.status ? { status: params.status } : {}),
+    },
+  });
+  return res.data;
+}
+
 export function getConflictSuggestion(err: unknown): string | null {
   if (
     typeof err === "object" &&
