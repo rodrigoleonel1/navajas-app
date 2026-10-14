@@ -10,7 +10,11 @@ export const createAppointmentSchema = z.object({
 
 export const listAppointmentsQuerySchema = z.object({
   barberId: objectId.optional(),
-  date: z.iso.datetime().optional(),
+  date: z
+    .union([z.iso.date(), z.iso.datetime()], {
+      message: "Fecha inválida, use YYYY-MM-DD o ISO8601 UTC",
+    })
+    .optional(),
   status: z.enum(["pending", "completed", "cancelled"]).optional(),
 });
 
