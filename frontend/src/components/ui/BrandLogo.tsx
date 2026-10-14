@@ -3,12 +3,13 @@ import { cn } from "../../lib/utils";
 
 type BrandLogoProps = {
   className?: string;
+  to?: string;
 };
 
-export function BrandLogo({ className }: BrandLogoProps) {
+export function BrandLogo({ className, to = "/" }: BrandLogoProps) {
   return (
     <Link
-      to="/"
+      to={to}
       aria-label="Navajas Barber inicio"
       className={cn("flex items-center gap-2", className)}
     >

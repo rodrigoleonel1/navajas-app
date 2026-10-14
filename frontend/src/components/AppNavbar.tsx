@@ -13,6 +13,13 @@ export function AppNavbar() {
   const role = user?.role as string | undefined;
   const { open, close, toggle } = useMobileMenu();
 
+  const home =
+    role === "admin"
+      ? "/app/admin"
+      : role === "barber"
+        ? "/app/barber"
+        : "/app/client";
+
   const links =
     role === "admin"
       ? [
@@ -79,7 +86,7 @@ export function AppNavbar() {
 
   return (
     <NavShell
-      brand={<BrandLogo className="relative z-102" />}
+      brand={<BrandLogo className="relative z-102" to={home} />}
       desktop={desktop}
       actions={actions}
       mobileLinks={mobileLinks}
