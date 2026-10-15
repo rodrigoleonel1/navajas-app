@@ -2,6 +2,7 @@ import {
   createAppointment as createAppointmentService,
   listAppointments as listAppointmentsService,
   getAvailability as getAvailabilityService,
+  updateAppointmentStatus as updateAppointmentStatusService,
 } from "../services/appointment.service.js";
 
 export async function createAppointment(req, res, next) {
@@ -45,6 +46,18 @@ export async function getAvailability(req, res, next) {
       horizonDays: query.horizonDays,
     });
     res.json(availability);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function updateAppointmentStatus(req, res, next) {
+  try {
+    const appointment = await updateAppointmentStatusService({
+      id: req.params.id,
+      status: req.body.status,
+    });
+    res.json(appointment);
   } catch (err) {
     next(err);
   }

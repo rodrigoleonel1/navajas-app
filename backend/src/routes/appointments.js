@@ -6,11 +6,13 @@ import {
   createAppointmentSchema,
   listAppointmentsQuerySchema,
   availabilityQuerySchema,
+  updateAppointmentStatusSchema,
 } from "../schemas/appointment.schema.js";
 import {
   createAppointment,
   listAppointments,
   getAvailability,
+  updateAppointmentStatus,
 } from "../controllers/appointment.controller.js";
 
 const router = Router();
@@ -35,6 +37,14 @@ router.get(
   authenticate,
   validateQuery(listAppointmentsQuerySchema),
   listAppointments,
+);
+
+router.patch(
+  "/:id",
+  authenticate,
+  requireRole("admin"),
+  validateBody(updateAppointmentStatusSchema),
+  updateAppointmentStatus,
 );
 
 export default router;

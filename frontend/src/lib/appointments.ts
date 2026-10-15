@@ -133,6 +133,14 @@ export async function listAppointments(params?: {
   return res.data;
 }
 
+export async function updateAppointmentStatus(
+  id: string,
+  status: "completed" | "cancelled",
+): Promise<Appointment> {
+  const res = await api.patch<Appointment>(`/appointments/${id}`, { status });
+  return res.data;
+}
+
 export function getConflictSuggestion(err: unknown): string | null {
   if (
     typeof err === "object" &&

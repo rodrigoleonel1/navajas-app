@@ -3,11 +3,14 @@ import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { Input } from "../../components/ui/Input";
 import { Select } from "../../components/ui/Select";
+import { Button } from "../../components/ui/Button";
 import { AppointmentRow } from "../../components/AppointmentRow";
 import { getErrorMessage } from "../../lib/api";
+import { useToast } from "../../hooks/useToast";
 import {
   listAppointments,
   listBarbers,
+  updateAppointmentStatus,
   type Appointment,
   type Barber,
 } from "../../lib/appointments";
@@ -20,6 +23,7 @@ const STATUS_OPTIONS = [
 ];
 
 export function AdminPage() {
+  const toast = useToast();
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [barberId, setBarberId] = useState("");
   const [date, setDate] = useState("");
@@ -27,6 +31,7 @@ export function AdminPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
+  const [actingId, setActingId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,6 +73,29 @@ export function AdminPage() {
       cancelled = true;
     };
   }, [barberId, date, status]);
+
+  async function handleStatusChange(
+    appointment: Appointment,
+    nextStatus: "completed" | "cancelled",
+  ) {
+    const label = nextStatus === "completed" ? "completado" : "cancelado";
+    if (!window.confirm(`Marcar turno como ${label}?`)) return;
+    setActingId(appointment.id);
+    try {
+      await updateAppointmentStatus(appointment.id, nextStatus);
+      toast.success(`Turno ${label}`);
+      const data = await listAppointments({
+        ...(barberId ? { barberId } : {}),
+        ...(date ? { date } : {}),
+        ...(status ? { status } : {}),
+      });
+      setAppointments(data);
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Error al cambiar estado"));
+    } finally {
+      setActingId(null);
+    }
+  }
 
   return (
     <Section>
@@ -131,6 +159,30 @@ export function AdminPage() {
               <AppointmentRow
                 key={appointment.id}
                 appointment={appointment}
+                actions={
+                  appointment.status === "pending" ? (
+                    <>
+                      <Button
+                        variant="outline"
+                        disabled={actingId === appointment.id}
+                        onClick={() =>
+                          handleStatusChange(appointment, "completed")
+                        }
+                      >
+                        Completar
+                      </Button>
+                      <Button
+                        variant="outline"
+                        disabled={actingId === appointment.id}
+                        onClick={() =>
+                          handleStatusChange(appointment, "cancelled")
+                        }
+                      >
+                        Cancelar
+                      </Button>
+                    </>
+                  ) : undefined
+                }
               />
             ))}
           </ul>

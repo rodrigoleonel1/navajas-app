@@ -8,6 +8,12 @@ export const createAppointmentSchema = z.object({
   startAt: z.iso.datetime({ message: "Fecha inválida, use ISO8601 UTC" }),
 });
 
+// V1: el admin solo puede pasar un turno pendiente a completado o cancelado.
+// La ausencia (no_show) es V2 y exige cambio de modelo.
+export const updateAppointmentStatusSchema = z.object({
+  status: z.enum(["completed", "cancelled"]),
+});
+
 export const listAppointmentsQuerySchema = z.object({
   barberId: objectId.optional(),
   date: z

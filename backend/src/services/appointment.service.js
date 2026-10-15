@@ -478,6 +478,38 @@ export async function listAppointments({ requester, barberId, date, status }) {
   return appointments.map(toAppointmentDTO);
 }
 
+// V1: el admin pasa un turno pendiente a completado o cancelado.
+// Al salir de pending el horario se libera solo (solapes solo cuentan pending).
+export async function updateAppointmentStatus({ id, status }) {
+  if (!["completed", "cancelled"].includes(status)) {
+    throw createAppError(400, "VALIDATION_ERROR", "Estado inválido");
+  }
+  const appointmentOid = toObjectIdOrThrow(id, "ID de turno inválido");
+  const appointment = await Appointment.findById(appointmentOid);
+  if (!appointment) {
+    throw createAppError(404, "NOT_FOUND", "Turno no encontrado");
+  }
+  if (appointment.status !== "pending") {
+    throw createAppError(
+      400,
+      "VALIDATION_ERROR",
+      "Solo se puede cambiar un turno pendiente",
+    );
+  }
+  appointment.status = status;
+  await appointment.save();
+
+  const populated = await Appointment.findById(appointmentOid)
+    .select(
+      "barber_id client_id service_ids start_at end_at status price_snapshot duration_snapshot",
+    )
+    .populate("barber_id", "name")
+    .populate("client_id", "name")
+    .populate("service_ids", "name price duration")
+    .lean();
+  return toAppointmentDTO(populated);
+}
+
 export async function getAvailability({
   barberId,
   date,

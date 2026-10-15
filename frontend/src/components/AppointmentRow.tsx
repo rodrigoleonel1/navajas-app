@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { formatDayHour } from "../lib/datetime";
 import type { Appointment } from "../lib/appointments";
 import { Badge } from "./ui/Badge";
@@ -12,10 +13,12 @@ export function AppointmentRow({
   appointment,
   hideBarber = false,
   hideClient = false,
+  actions,
 }: {
   appointment: Appointment;
   hideBarber?: boolean;
   hideClient?: boolean;
+  actions?: ReactNode;
 }) {
   const serviceNames = appointment.services
     .map((service) => service.name ?? "Servicio")
@@ -42,6 +45,7 @@ export function AppointmentRow({
           Cliente: {appointment.client.name}
         </span>
       )}
+      {actions && <span className="mt-1 flex gap-2">{actions}</span>}
     </li>
   );
 }

@@ -1,4 +1,5 @@
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "react-router-dom";
@@ -9,12 +10,11 @@ import { Input } from "../components/ui/Input";
 import { PasswordInput } from "../components/ui/PasswordInput";
 import { SectionTitle } from "../components/ui/SectionTitle";
 import { api, getErrorMessage } from "../lib/api";
-import { useToast } from "../hooks/useToast";
 import { loginSchema, type LoginInput } from "../lib/schemas";
 
 export function LoginPage() {
   const navigate = useNavigate();
-  const toast = useToast();
+  const [serverError, setServerError] = useState("");
   const {
     register,
     handleSubmit,
@@ -26,6 +26,7 @@ export function LoginPage() {
   const isPending = isSubmitting;
 
   const onSubmit = async (data: LoginInput) => {
+    setServerError("");
     try {
       const res = await api.post("/auth/login", data);
       const { token, user } = res.data;
@@ -37,7 +38,7 @@ export function LoginPage() {
         navigate("/app/barber", { replace: true });
       else navigate("/app/client", { replace: true });
     } catch (err) {
-      toast.error(getErrorMessage(err, "Error al iniciar sesión"));
+      setServerError(getErrorMessage(err, "Error al iniciar sesión"));
     }
   };
 
@@ -79,6 +80,10 @@ export function LoginPage() {
               error={errors.password?.message}
               {...register("password")}
             />
+
+            {serverError && (
+              <p className="text-sm text-destructive">{serverError}</p>
+            )}
 
             <Button
               variant="primaryBlock"
