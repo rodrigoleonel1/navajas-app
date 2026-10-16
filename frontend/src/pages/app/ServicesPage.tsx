@@ -1,32 +1,30 @@
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowUpRight } from "lucide-react";
+import { Plus } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
-import { Input } from "../../components/ui/Input";
 import { Button } from "../../components/ui/Button";
 import { Badge } from "../../components/ui/Badge";
-import { api, getErrorMessage } from "../../lib/api";
+import { ServiceTable } from "../../components/ServiceTable";
+import { ServiceCreateModal } from "../../components/ServiceCreateModal";
+import { AppointmentMenu } from "../../components/AppointmentMenu";
+import { getErrorMessage } from "../../lib/api";
 import { useToast } from "../../hooks/useToast";
-import { serviceSchema, type ServiceInput } from "../../lib/schemas";
-import { listServices, type Service } from "../../lib/appointments";
+import {
+  listServices,
+  updateService,
+  type Service,
+} from "../../lib/appointments";
 
 export function ServicesPage() {
+  const navigate = useNavigate();
   const toast = useToast();
   const [services, setServices] = useState<Service[]>([]);
   const [showInactive, setShowInactive] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [listError, setListError] = useState("");
-
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<ServiceInput>({
-    resolver: zodResolver(serviceSchema),
-  });
+  const [showCreate, setShowCreate] = useState(false);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -48,16 +46,40 @@ export function ServicesPage() {
     };
   }, [showInactive, refreshKey]);
 
-  const onSubmit = async (data: ServiceInput) => {
+  async function handleToggle(service: Service) {
+    const nextActive = !service.active;
+    setTogglingId(service.id);
     try {
-      await api.post("/services", data);
-      toast.success("Servicio creado");
-      reset();
+      await updateService(service.id, { active: nextActive });
+      toast.success(
+        nextActive ? "Servicio activado" : "Servicio desactivado",
+      );
       setRefreshKey((key) => key + 1);
     } catch (err) {
-      toast.error(getErrorMessage(err, "Error al crear servicio"));
+      toast.error(getErrorMessage(err, "Error al cambiar estado"));
+    } finally {
+      setTogglingId(null);
     }
-  };
+  }
+
+  function serviceMenuItems(service: Service) {
+    return [
+      {
+        label: "Editar servicio",
+        onSelect: () => navigate(`/app/services/${service.id}`),
+      },
+      service.active
+        ? {
+            label: "Desactivar",
+            danger: true,
+            onSelect: () => handleToggle(service),
+          }
+        : {
+            label: "Reactivar",
+            onSelect: () => handleToggle(service),
+          },
+    ];
+  }
 
   return (
     <Section>
@@ -65,76 +87,51 @@ export function ServicesPage() {
         eyebrow="Panel — Admin"
         title="Servicios"
         highlight="catálogo."
-        description="Alta y listado de servicios."
+        description="Gestioná los servicios de la barbería."
       />
 
-      <div className="mt-8 grid gap-8 lg:grid-cols-2">
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          noValidate
-          className="flex flex-col gap-4 bg-card border border-border rounded-2xl p-6"
-        >
-          <h3 className="font-barlow font-bold uppercase text-sm tracking-widest">
-            Alta servicio
+      <div className="mt-8 bg-card border border-border rounded-2xl p-6">
+        <div className="flex flex-wrap items-center gap-2 mb-4">
+          <h3 className="font-barlow font-bold uppercase text-sm tracking-widest mr-auto">
+            Listado ({services.length})
           </h3>
-          <Input
-            id="name"
-            label="Nombre"
-            placeholder="Corte clásico"
-            error={errors.name?.message}
-            {...register("name")}
-          />
-          <Input
-            id="duration"
-            label="Duración (minutos)"
-            type="number"
-            min={1}
-            placeholder="30"
-            error={errors.duration?.message}
-            {...register("duration", { valueAsNumber: true })}
-          />
-          <Input
-            id="price"
-            label="Precio"
-            type="number"
-            min={1}
-            placeholder="15000"
-            error={errors.price?.message}
-            {...register("price", { valueAsNumber: true })}
-          />
-          <Button
-            variant="primaryBlock"
-            className="flex-1"
-            disabled={isSubmitting}
-          >
-            {isSubmitting ? "Creando..." : "Crear servicio"}
-          </Button>
-        </form>
-
-        <div className="bg-card border border-border rounded-2xl p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-barlow font-bold uppercase text-sm tracking-widest">
-              Listado ({services.length})
-            </h3>
-            <label className="flex items-center gap-2 text-xs text-muted cursor-pointer">
-              <input
-                type="checkbox"
-                checked={showInactive}
-                onChange={(e) => setShowInactive(e.target.checked)}
-                className="accent-primary h-4 w-4"
-              />
-              Ver inactivos
-            </label>
+          <label className="flex items-center gap-2 text-xs text-muted cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showInactive}
+              onChange={(e) => setShowInactive(e.target.checked)}
+              className="accent-primary h-4 w-4"
+            />
+            Ver inactivos
+          </label>
+          <div className="w-full sm:w-auto sm:flex sm:justify-end">
+            <Button
+              variant="primaryBlock"
+              size="sm"
+              className="w-full sm:w-auto"
+              onClick={() => setShowCreate(true)}
+            >
+              <Plus size={16} aria-hidden="true" />
+              Agregar servicio
+            </Button>
           </div>
-          {listError && (
-            <p className="text-sm text-destructive mb-4">{listError}</p>
-          )}
-          {services.length === 0 ? (
-            <p className="text-sm text-muted">
-              {listError ? "Reintentá recargando la página." : "No hay servicios aún."}
-            </p>
-          ) : (
-            <ul className="flex flex-col gap-3">
+        </div>
+        {listError && (
+          <p className="text-sm text-destructive mb-4">{listError}</p>
+        )}
+        {services.length === 0 ? (
+          <p className="text-sm text-muted">
+            {listError ? "Reintentá recargando la página." : "No hay servicios aún."}
+          </p>
+        ) : (
+          <>
+            <ServiceTable
+              services={services}
+              busyId={togglingId}
+              onEdit={(service) => navigate(`/app/services/${service.id}`)}
+              onToggle={handleToggle}
+            />
+            <ul className="flex flex-col gap-3 lg:hidden">
               {services.map((service) => (
                 <li
                   key={service.id}
@@ -143,31 +140,31 @@ export function ServicesPage() {
                   <span className="flex flex-col">
                     <span className="text-sm font-medium flex items-center gap-2">
                       {service.name}
-                      {!service.active && <Badge>Inactivo</Badge>}
+                      {!service.active && <Badge tone="danger">Inactivo</Badge>}
                     </span>
                     <span className="text-xs text-muted">
                       {service.duration} min — $
                       {service.price.toLocaleString("es-AR")}
                     </span>
                   </span>
-                  <Button
-                    variant="outline"
-                    href={`/app/services/${service.id}`}
-                    aria-label={`Ver detalle de ${service.name}`}
-                  >
-                    Detalle
-                    <ArrowUpRight
-                      size={14}
-                      aria-hidden="true"
-                      className="opacity-60"
-                    />
-                  </Button>
+                  <AppointmentMenu
+                    ariaLabel={`Acciones de ${service.name}`}
+                    busy={togglingId === service.id}
+                    items={serviceMenuItems(service)}
+                  />
                 </li>
               ))}
             </ul>
-          )}
-        </div>
+          </>
+        )}
       </div>
+
+      {showCreate && (
+        <ServiceCreateModal
+          onClose={() => setShowCreate(false)}
+          onCreated={() => setRefreshKey((key) => key + 1)}
+        />
+      )}
     </Section>
   );
 }
