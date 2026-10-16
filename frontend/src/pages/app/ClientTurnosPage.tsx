@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
-import { AppointmentRow } from "../../components/AppointmentRow";
+import { AppointmentCard } from "../../components/AppointmentCard";
 import { getErrorMessage } from "../../lib/api";
 import {
   listAppointments,
+  partitionAppointments,
   type Appointment,
 } from "../../lib/appointments";
 
@@ -36,20 +37,10 @@ export function ClientTurnosPage() {
     };
   }, []);
 
-  const { upcoming, history } = useMemo(() => {
-    const upcoming = appointments
-      .filter(
-        (appointment) =>
-          appointment.status === "pending" &&
-          new Date(appointment.startAt).getTime() >= now,
-      )
-      .sort((a, b) => +new Date(a.startAt) - +new Date(b.startAt));
-    const upcomingIds = new Set(upcoming.map((appointment) => appointment.id));
-    const history = appointments
-      .filter((appointment) => !upcomingIds.has(appointment.id))
-      .sort((a, b) => +new Date(b.startAt) - +new Date(a.startAt));
-    return { upcoming, history };
-  }, [appointments, now]);
+  const { upcoming, history } = useMemo(
+    () => partitionAppointments(appointments, now),
+    [appointments, now],
+  );
 
   return (
     <Section>
@@ -77,7 +68,7 @@ export function ClientTurnosPage() {
             ) : (
               <ul className="flex flex-col gap-3">
                 {upcoming.map((appointment) => (
-                  <AppointmentRow
+                  <AppointmentCard
                     key={appointment.id}
                     appointment={appointment}
                     hideClient
@@ -96,7 +87,7 @@ export function ClientTurnosPage() {
             ) : (
               <ul className="flex flex-col gap-3">
                 {history.map((appointment) => (
-                  <AppointmentRow
+                  <AppointmentCard
                     key={appointment.id}
                     appointment={appointment}
                     hideClient

@@ -86,6 +86,27 @@ export function formatDayLabel(dayKey: string): string {
   return `${weekdayFormatter.format(new Date(`${dayKey}T12:00:00Z`))} ${formatDateKey(dayKey).slice(0, 5)}`;
 }
 
+const weekdayLongFormatter = new Intl.DateTimeFormat("es-AR", {
+  timeZone: BUSINESS_TZ,
+  weekday: "long",
+});
+
+// Fecha completa argentina ("Viernes 16/10, 09:30 hs").
+export function formatWeekdayDateTime(iso: string): string {
+  const date = new Date(iso);
+  const weekday = weekdayLongFormatter.format(date);
+  const capitalized = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+  return `${capitalized} ${formatDateKey(toBusinessDayKey(iso)).slice(0, 5)}, ${formatHour(iso)} hs`;
+}
+
+// Día con semana ("Viernes 16/10").
+export function formatWeekdayDate(iso: string): string {
+  const date = new Date(iso);
+  const weekday = weekdayLongFormatter.format(date);
+  const capitalized = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+  return `${capitalized} ${formatDateKey(toBusinessDayKey(iso)).slice(0, 5)}`;
+}
+
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 // Próximos `count` días comerciales desde hoy (inclusive).
@@ -96,4 +117,12 @@ export function businessDayKeysFromToday(count: number): string[] {
   return Array.from({ length: count }, (_, i) =>
     new Date(base + i * DAY_MS).toISOString().slice(0, 10),
   );
+}
+
+// Suma (o resta con delta negativo) días calendario a un YYYY-MM-DD.
+export function shiftDayKey(dayKey: string, delta: number): string {
+  const [year, month, day] = dayKey.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day) + delta * DAY_MS)
+    .toISOString()
+    .slice(0, 10);
 }

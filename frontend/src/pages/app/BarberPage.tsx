@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { Input } from "../../components/ui/Input";
-import { AppointmentRow } from "../../components/AppointmentRow";
+import { AppointmentCard } from "../../components/AppointmentCard";
 import { getErrorMessage } from "../../lib/api";
+import { getUser } from "../../lib/auth";
 import { formatDateKey, toBusinessDayKey } from "../../lib/datetime";
 import {
   listAppointments,
@@ -11,6 +12,7 @@ import {
 } from "../../lib/appointments";
 
 export function BarberPage() {
+  const barberName = getUser()?.name ?? "Barbero";
   const [date, setDate] = useState(() =>
     toBusinessDayKey(new Date().toISOString()),
   );
@@ -46,8 +48,8 @@ export function BarberPage() {
       <SectionHeader
         eyebrow="Panel — Barbero"
         title="Agenda"
-        highlight="barbero."
-        description="Consultá tus turnos e ingresos."
+        highlight={`${barberName}.`}
+        description="Consultá tus turnos."
       />
 
       <div className="mt-8 bg-card border border-border rounded-2xl p-6">
@@ -70,9 +72,9 @@ export function BarberPage() {
         ) : appointments.length === 0 ? (
           <p className="text-sm text-muted">No tenés turnos ese día.</p>
         ) : (
-          <ul className="flex flex-col gap-3">
+          <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
             {appointments.map((appointment) => (
-              <AppointmentRow
+              <AppointmentCard
                 key={appointment.id}
                 appointment={appointment}
                 hideBarber
