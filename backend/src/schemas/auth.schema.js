@@ -2,7 +2,7 @@ import { z } from "zod";
 
 // Valida email y contraseña segura en front y back
 export const signupSchema = z.object({
-  name: z.string().trim().min(2, "Nombre mínimo 2 caracteres").max(50),
+  name: z.string().trim().min(2, "Nombre mínimo 2 caracteres").max(50, "Nombre máximo 50 caracteres"),
   email: z.email("Email inválido").trim().toLowerCase(),
   password: z.string().min(8, "Contraseña mínimo 8 caracteres"),
 });
@@ -14,7 +14,7 @@ export const loginSchema = z.object({
 
 // Valida solo admin crea barberos
 export const createBarberSchema = z.object({
-  name: z.string().trim().min(2).max(50),
+  name: z.string().trim().min(2, "Nombre mínimo 2 caracteres").max(50, "Nombre máximo 50 caracteres"),
   email: z.email("Email inválido").trim().toLowerCase(),
   password: z.string().min(8, "Contraseña mínimo 8 caracteres"),
 });

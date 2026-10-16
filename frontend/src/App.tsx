@@ -6,6 +6,7 @@ import { AppLayout } from "./layouts/AppLayout";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RoleRedirect } from "./components/RoleRedirect";
 import { ToastProvider } from "./components/ui/Toast";
+import { ConfirmProvider } from "./components/ui/ConfirmModal";
 import { ClientPage } from "./pages/app/ClientPage";
 import { ClientTurnosPage } from "./pages/app/ClientTurnosPage";
 import { BarberPage } from "./pages/app/BarberPage";
@@ -20,7 +21,8 @@ import { ServiceDetailPage } from "./pages/app/ServiceDetailPage";
 function App() {
   return (
     <ToastProvider>
-      <BrowserRouter>
+      <ConfirmProvider>
+        <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
@@ -110,7 +112,8 @@ function App() {
           />
         </Route>
       </Routes>
-    </BrowserRouter>
+        </BrowserRouter>
+      </ConfirmProvider>
     </ToastProvider>
   );
 }

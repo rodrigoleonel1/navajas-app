@@ -6,7 +6,7 @@ type SectionHeaderProps = {
   eyebrow: string;
   title: string;
   highlight: string;
-  description: string;
+  description?: string;
   className?: string;
 };
 
@@ -28,9 +28,11 @@ export function SectionHeader({
         <SectionEyebrow>{eyebrow}</SectionEyebrow>
         <SectionTitle title={title} highlight={highlight} />
       </div>
-      <p className="font-jetbrains text-xs uppercase text-muted-2 md:max-w-xs md:text-right mt-4 md:mt-0">
-        {description}
-      </p>
+      {description && (
+        <p className="font-jetbrains text-xs uppercase text-muted-2 md:max-w-xs md:text-right mt-4 md:mt-0">
+          {description}
+        </p>
+      )}
     </div>
   );
 }

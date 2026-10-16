@@ -1,7 +1,16 @@
 import type { ReactNode } from "react";
 import { cn } from "../../lib/utils";
 
-type Variant = "primary" | "secondary" | "outline" | "link" | "primaryBlock";
+type Variant = "primary" | "secondary" | "outline" | "link" | "primaryBlock" | "danger";
+
+type ButtonSize = "sm" | "md";
+
+// Medida opcional: md es la estándar de bloque, sm la compacta.
+// Solo se aplica si se pasa size; sin size cada variante conserva su medida.
+const sizeClasses: Record<ButtonSize, string> = {
+  sm: "px-4 py-2 text-xs",
+  md: "px-6 py-3 text-sm",
+};
 
 const variantClasses: Record<Variant, string> = {
   primary:
@@ -12,11 +21,14 @@ const variantClasses: Record<Variant, string> = {
     "flex items-center gap-1 px-4 py-2 text-xs bg-transparent border border-muted/30 rounded-full font-medium tracking-wide transition-all duration-200 hover:bg-primary hover:text-background cursor-pointer",
   link: "text-primary flex items-center font-semibold text-xs tracking-wide border-b border-primary/50 hover:border-primary transition-colors duration-200 w-fit cursor-pointer",
   primaryBlock:
-    "flex justify-center items-center bg-primary text-background py-3 text-sm font-semibold cursor-pointer hover:bg-primary-low transition-colors duration-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed",
+    "flex justify-center items-center bg-primary text-background px-6 py-3 text-sm font-semibold cursor-pointer hover:bg-primary-low transition-colors duration-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed",
+  danger:
+    "flex justify-center items-center bg-destructive text-background px-6 py-3 text-sm font-semibold cursor-pointer hover:opacity-90 transition-colors duration-200 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed",
 };
 
 type ButtonProps = {
   variant?: Variant;
+  size?: ButtonSize;
   href?: string;
   children: ReactNode;
   className?: string;
@@ -26,13 +38,18 @@ type ButtonProps = {
 
 export function Button({
   variant = "primary",
+  size,
   href,
   children,
   className = "",
   onClick,
   ...rest
 }: ButtonProps) {
-  const classes = cn(variantClasses[variant], className);
+  const classes = cn(
+    variantClasses[variant],
+    size ? sizeClasses[size] : undefined,
+    className,
+  );
 
   if (href) {
     return (

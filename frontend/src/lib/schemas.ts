@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const signupSchema = z
   .object({
-    name: z.string().trim().min(2, "Nombre mínimo 2 caracteres").max(50),
+    name: z.string().trim().min(2, "Nombre mínimo 2 caracteres").max(50, "Nombre máximo 50 caracteres"),
     email: z.email("Email inválido").trim().toLowerCase(),
     password: z.string().min(8, "Contraseña mínimo 8 caracteres"),
     confirmPassword: z.string().min(1, "Confirmá tu contraseña"),
@@ -18,13 +18,13 @@ export const loginSchema = z.object({
 });
 
 export const createBarberSchema = z.object({
-  name: z.string().trim().min(2).max(50),
+  name: z.string().trim().min(2, "Nombre mínimo 2 caracteres").max(50, "Nombre máximo 50 caracteres"),
   email: z.email("Email inválido").trim().toLowerCase(),
   password: z.string().min(8, "Contraseña mínimo 8 caracteres"),
 });
 
 export const serviceSchema = z.object({
-  name: z.string().trim().min(2, "Nombre mínimo 2 caracteres").max(50),
+  name: z.string().trim().min(2, "Nombre mínimo 2 caracteres").max(50, "Nombre máximo 50 caracteres"),
   duration: z
     .number({ error: "Duración inválida" })
     .int("Duración debe ser entera")
