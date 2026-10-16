@@ -23,6 +23,8 @@ const userSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    // Baja lógica: false oculta al barbero de reserva/login sin romper historial
+    active: { type: Boolean, default: true },
     barberProfile: {
       workingHours: {
         start: { type: String, default: "09:00" },

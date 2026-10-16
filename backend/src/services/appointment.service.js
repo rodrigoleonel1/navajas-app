@@ -180,9 +180,9 @@ async function resolveDurationAndPrice(serviceIds) {
 async function getBarberOrThrow(barberId) {
   const barberOid = toObjectIdOrThrow(barberId, "ID de barbero inválido");
   const barber = await User.findById(barberOid)
-    .select("role name barberProfile")
+    .select("role name active barberProfile")
     .lean();
-  if (!barber || barber.role !== "barber") {
+  if (!barber || barber.role !== "barber" || barber.active === false) {
     throw createAppError(404, "NOT_FOUND", "Barbero no encontrado");
   }
   return { barber, barberOid };

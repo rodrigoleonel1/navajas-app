@@ -52,6 +52,12 @@ export async function login({ email, password }) {
     throw createAppError(401, "UNAUTHORIZED", "Email o contraseña incorrectos");
   }
 
+  // Cuenta desactivada: no inicia sesión (vale para cualquier rol).
+  // Comparación estricta para no bloquear cuentas viejas sin el campo.
+  if (user.active === false) {
+    throw createAppError(401, "UNAUTHORIZED", "Cuenta desactivada");
+  }
+
   const token = generateToken({
     id: user._id.toString(),
     role: user.role,

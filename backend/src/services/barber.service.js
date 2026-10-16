@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { createHash } from "../utils/bcrypt.js";
 import { createAppError } from "../utils/appError.js";
 import { User } from "../models/User.js";
+import { Appointment } from "../models/Appointment.js";
 
 function toBarberDTO(barber) {
   return {
@@ -9,6 +10,7 @@ function toBarberDTO(barber) {
     name: barber.name,
     email: barber.email,
     role: barber.role,
+    active: barber.active ?? true,
     barberProfile: barber.barberProfile,
   };
 }
@@ -38,9 +40,14 @@ export async function createBarber({ name, email, password }) {
   };
 }
 
-export async function listBarbers() {
-  const barbers = await User.find({ role: "barber" })
-    .select("name email role barberProfile")
+export async function listBarbers({ includeInactive = false } = {}) {
+  const filter = { role: "barber" };
+  if (!includeInactive) {
+    // $ne:false incluye documentos viejos sin el campo
+    filter.active = { $ne: false };
+  }
+  const barbers = await User.find(filter)
+    .select("name email role active barberProfile")
     .lean();
   return barbers.map(toBarberDTO);
 }
@@ -51,7 +58,7 @@ export async function getBarberById(id) {
   }
 
   const barber = await User.findOne({ _id: id, role: "barber" })
-    .select("name email role barberProfile")
+    .select("name email role active barberProfile")
     .lean();
   if (!barber) {
     throw createAppError(404, "NOT_FOUND", "Barbero no encontrado");
@@ -85,6 +92,22 @@ export async function updateBarberProfile(id, patch) {
   if (patch.weeklyDaysOff !== undefined) {
     update["barberProfile.weeklyDaysOff"] = [...new Set(patch.weeklyDaysOff)];
   }
+  if (patch.active !== undefined) {
+    if (patch.active === false) {
+      const hasPending = await Appointment.exists({
+        barber_id: id,
+        status: "pending",
+      });
+      if (hasPending) {
+        throw createAppError(
+          409,
+          "CONFLICT",
+          "No se puede desactivar un barbero con turnos pendientes",
+        );
+      }
+    }
+    update.active = patch.active;
+  }
   if (Object.keys(update).length === 0) {
     throw createAppError(400, "VALIDATION_ERROR", "Nada para actualizar");
   }
@@ -94,7 +117,7 @@ export async function updateBarberProfile(id, patch) {
     { $set: update },
     { returnDocument: "after", runValidators: true },
   )
-    .select("name email role barberProfile")
+    .select("name email role active barberProfile")
     .lean();
 
   if (!barber) {

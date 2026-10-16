@@ -13,6 +13,7 @@ export type Barber = {
   name: string;
   email: string;
   role: string;
+  active: boolean;
   barberProfile?: {
     workingHours?: { start?: string; end?: string };
     daysOff?: string[];
@@ -69,8 +70,12 @@ export async function updateService(
   return res.data;
 }
 
-export async function listBarbers(): Promise<Barber[]> {
-  const res = await api.get<Barber[]>("/barbers");
+export async function listBarbers(
+  includeInactive = false,
+): Promise<Barber[]> {
+  const res = await api.get<Barber[]>("/barbers", {
+    params: includeInactive ? { all: "1" } : {},
+  });
   return res.data;
 }
 
@@ -86,6 +91,7 @@ export async function updateBarberProfile(
     workingHours?: { start?: string; end?: string };
     daysOff?: string[];
     weeklyDaysOff?: number[];
+    active?: boolean;
   },
 ): Promise<Barber> {
   const res = await api.patch<Barber>(`/barbers/${id}`, patch);
@@ -139,6 +145,26 @@ export async function updateAppointmentStatus(
 ): Promise<Appointment> {
   const res = await api.patch<Appointment>(`/appointments/${id}`, { status });
   return res.data;
+}
+
+// Separa próximos (pendientes futuros, asc) del historial (resto, desc).
+// Misma regla en agenda de cliente y de admin.
+export function partitionAppointments(
+  appointments: Appointment[],
+  now: number,
+): { upcoming: Appointment[]; history: Appointment[] } {
+  const upcoming = appointments
+    .filter(
+      (appointment) =>
+        appointment.status === "pending" &&
+        new Date(appointment.startAt).getTime() >= now,
+    )
+    .sort((a, b) => +new Date(a.startAt) - +new Date(b.startAt));
+  const upcomingIds = new Set(upcoming.map((appointment) => appointment.id));
+  const history = appointments
+    .filter((appointment) => !upcomingIds.has(appointment.id))
+    .sort((a, b) => +new Date(b.startAt) - +new Date(a.startAt));
+  return { upcoming, history };
 }
 
 export function getConflictSuggestion(err: unknown): string | null {

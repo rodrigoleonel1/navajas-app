@@ -4,6 +4,7 @@ import {
   listBarbers as listBarbersService,
   updateBarberProfile as updateBarberProfileService,
 } from "../services/barber.service.js";
+import { createAppError } from "../utils/appError.js";
 
 export async function createBarber(req, res, next) {
   try {
@@ -16,7 +17,16 @@ export async function createBarber(req, res, next) {
 
 export async function listBarbers(req, res, next) {
   try {
-    const barbers = await listBarbersService();
+    // ?all=1 incluye inactivos, solo admin. Sin flag: solo activos (público).
+    const includeInactive = req.query.all === "1";
+    if (includeInactive && req.user?.role !== "admin") {
+      throw createAppError(
+        req.user ? 403 : 401,
+        req.user ? "FORBIDDEN" : "UNAUTHORIZED",
+        req.user ? "Permisos insuficientes" : "Autenticación requerida",
+      );
+    }
+    const barbers = await listBarbersService({ includeInactive });
     res.json(barbers);
   } catch (err) {
     next(err);

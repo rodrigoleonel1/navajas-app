@@ -9,13 +9,15 @@ const workHour = z
 // daysOff son días calendario YYYY-MM-DD (se guardan como Date UTC 00:00).
 // weeklyDaysOff son días de semana recurrentes: 0=domingo ... 6=sábado.
 export const updateBarberProfileSchema = z.object({
-  name: z.string().trim().min(2).max(50).optional(),
+  name: z.string().trim().min(2, "Nombre mínimo 2 caracteres").max(50, "Nombre máximo 50 caracteres").optional(),
   workingHours: z
     .object({ start: workHour, end: workHour })
     .partial()
     .optional(),
   daysOff: z.array(z.iso.date("Fecha inválida, use YYYY-MM-DD")).optional(),
   weeklyDaysOff: z.array(z.number().int().min(0).max(6)).optional(),
+  // Baja lógica: false oculta al barbero sin borrarlo (trazabilidad)
+  active: z.boolean().optional(),
 }).refine(
   (data) => {
     const { start, end } = data.workingHours ?? {};

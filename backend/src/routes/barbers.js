@@ -1,6 +1,10 @@
 import { Router } from "express";
 import { validateBody } from "../middlewares/validateBody.js";
-import { authenticate, requireRole } from "../middlewares/auth.js";
+import {
+  authenticate,
+  optionalAuthenticate,
+  requireRole,
+} from "../middlewares/auth.js";
 import { createBarberSchema } from "../schemas/auth.schema.js";
 import { updateBarberProfileSchema } from "../schemas/barber.schema.js";
 import {
@@ -12,7 +16,7 @@ import {
 
 const router = Router();
 
-router.get("/", listBarbers);
+router.get("/", optionalAuthenticate, listBarbers);
 router.get("/:id", authenticate, requireRole("admin"), getBarberById);
 router.post(
   "/",
