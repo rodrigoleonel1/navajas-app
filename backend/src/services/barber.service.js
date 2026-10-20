@@ -1,6 +1,6 @@
-import mongoose from "mongoose";
 import { createHash } from "../utils/bcrypt.js";
 import { createAppError } from "../utils/appError.js";
+import { assertObjectId } from "../utils/objectId.js";
 import { User } from "../models/User.js";
 import { Appointment } from "../models/Appointment.js";
 
@@ -10,7 +10,7 @@ function toBarberDTO(barber) {
     name: barber.name,
     email: barber.email,
     role: barber.role,
-    active: barber.active ?? true,
+    active: barber.active,
     barberProfile: barber.barberProfile,
   };
 }
@@ -43,8 +43,7 @@ export async function createBarber({ name, email, password }) {
 export async function listBarbers({ includeInactive = false } = {}) {
   const filter = { role: "barber" };
   if (!includeInactive) {
-    // $ne:false incluye documentos viejos sin el campo
-    filter.active = { $ne: false };
+    filter.active = true;
   }
   const barbers = await User.find(filter)
     .select("name email role active barberProfile")
@@ -53,9 +52,7 @@ export async function listBarbers({ includeInactive = false } = {}) {
 }
 
 export async function getBarberById(id) {
-  if (!mongoose.isValidObjectId(id)) {
-    throw createAppError(400, "INVALID_ID", "ID de barbero inválido");
-  }
+  assertObjectId(id, "ID de barbero inválido");
 
   const barber = await User.findOne({ _id: id, role: "barber" })
     .select("name email role active barberProfile")
@@ -68,9 +65,7 @@ export async function getBarberById(id) {
 }
 
 export async function updateBarberProfile(id, patch) {
-  if (!mongoose.isValidObjectId(id)) {
-    throw createAppError(400, "INVALID_ID", "ID de barbero inválido");
-  }
+  assertObjectId(id, "ID de barbero inválido");
 
   const update = {};
   if (patch.name !== undefined) {

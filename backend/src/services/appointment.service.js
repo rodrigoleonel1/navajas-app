@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { createAppError } from "../utils/appError.js";
+import { toObjectIdOrThrow } from "../utils/objectId.js";
 import { Appointment } from "../models/Appointment.js";
 import { Service } from "../models/Service.js";
 import { User } from "../models/User.js";
@@ -57,13 +58,6 @@ export function businessDayStartUtc(dayKey) {
   return new Date(
     start.getTime() + (businessOffsetMs(guess) - businessOffsetMs(start)),
   );
-}
-
-function toObjectIdOrThrow(id, message = "ID inválido") {
-  if (!mongoose.isValidObjectId(id)) {
-    throw createAppError(400, "INVALID_ID", message);
-  }
-  return new mongoose.Types.ObjectId(id);
 }
 
 // Parsea un ISO8601 UTC o tira 400 VALIDATION_ERROR si es inválido.
@@ -182,7 +176,7 @@ async function getBarberOrThrow(barberId) {
   const barber = await User.findById(barberOid)
     .select("role name active barberProfile")
     .lean();
-  if (!barber || barber.role !== "barber" || barber.active === false) {
+  if (!barber || barber.role !== "barber" || !barber.active) {
     throw createAppError(404, "NOT_FOUND", "Barbero no encontrado");
   }
   return { barber, barberOid };

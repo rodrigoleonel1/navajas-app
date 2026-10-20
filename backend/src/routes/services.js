@@ -13,7 +13,6 @@ import {
   createService,
   getServiceById,
   listServices,
-  removeService,
   updateService,
 } from "../controllers/service.controller.js";
 
@@ -37,7 +36,5 @@ router.patch(
   validateBody(updateServiceSchema),
   updateService,
 );
-
-router.delete("/:id", authenticate, requireRole("admin"), removeService);
 
 export default router;

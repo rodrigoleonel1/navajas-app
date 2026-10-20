@@ -1,12 +1,6 @@
-import mongoose from "mongoose";
 import { createAppError } from "../utils/appError.js";
+import { assertObjectId } from "../utils/objectId.js";
 import { Service } from "../models/Service.js";
-
-function assertObjectId(id) {
-  if (!mongoose.isValidObjectId(id)) {
-    throw createAppError(400, "INVALID_ID", "ID de servicio inválido");
-  }
-}
 
 function toServiceDTO(doc) {
   return {
@@ -27,7 +21,7 @@ export async function listServices({ includeInactive = false } = {}) {
 }
 
 export async function getServiceById(id) {
-  assertObjectId(id);
+  assertObjectId(id, "ID de servicio inválido");
 
   const service = await Service.findById(id)
     .select("name duration price active")
@@ -56,7 +50,7 @@ export async function createService({ name, duration, price }) {
 }
 
 export async function updateService(id, patch) {
-  assertObjectId(id);
+  assertObjectId(id, "ID de servicio inválido");
 
   const update = {};
   if (patch.name !== undefined) {
@@ -74,24 +68,6 @@ export async function updateService(id, patch) {
     returnDocument: "after",
     runValidators: true,
   })
-    .select("name duration price active")
-    .lean();
-
-  if (!service) {
-    throw createAppError(404, "NOT_FOUND", "Servicio no encontrado");
-  }
-
-  return toServiceDTO(service);
-}
-
-export async function deactivateService(id) {
-  assertObjectId(id);
-
-  const service = await Service.findByIdAndUpdate(
-    id,
-    { active: false },
-    { returnDocument: "after" },
-  )
     .select("name duration price active")
     .lean();
 

@@ -53,8 +53,7 @@ export async function login({ email, password }) {
   }
 
   // Cuenta desactivada: no inicia sesión (vale para cualquier rol).
-  // Comparación estricta para no bloquear cuentas viejas sin el campo.
-  if (user.active === false) {
+  if (!user.active) {
     throw createAppError(401, "UNAUTHORIZED", "Cuenta desactivada");
   }
 

@@ -1,7 +1,6 @@
 import { createAppError } from "../utils/appError.js";
 import {
   createService as createServiceFn,
-  deactivateService as deactivateServiceFn,
   getServiceById as getServiceByIdFn,
   listServices as listServicesFn,
   updateService as updateServiceFn,
@@ -46,15 +45,6 @@ export async function getServiceById(req, res, next) {
 export async function updateService(req, res, next) {
   try {
     const service = await updateServiceFn(req.params.id, req.body);
-    res.json(service);
-  } catch (err) {
-    next(err);
-  }
-}
-
-export async function removeService(req, res, next) {
-  try {
-    const service = await deactivateServiceFn(req.params.id);
     res.json(service);
   } catch (err) {
     next(err);
