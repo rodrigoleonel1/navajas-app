@@ -14,15 +14,37 @@ export const updateAppointmentStatusSchema = z.object({
   status: z.enum(["completed", "cancelled"]),
 });
 
-export const listAppointmentsQuerySchema = z.object({
-  barberId: objectId.optional(),
-  date: z
-    .union([z.iso.date(), z.iso.datetime()], {
-      message: "Fecha inválida, use YYYY-MM-DD o ISO8601 UTC",
-    })
-    .optional(),
-  status: z.enum(["pending", "completed", "cancelled"]).optional(),
-});
+export const listAppointmentsQuerySchema = z
+  .object({
+    barberId: objectId.optional(),
+    date: z
+      .union([z.iso.date(), z.iso.datetime()], {
+        message: "Fecha inválida, use YYYY-MM-DD o ISO8601 UTC",
+      })
+      .optional(),
+    status: z.enum(["pending", "completed", "cancelled"]).optional(),
+    // Paginación opcional: sin limit no hay tope (así siguen admin y barbero,
+    // que ya están acotados por día). El cursor es el start_at del último item.
+    limit: z.coerce
+      .number({ message: "Límite inválido" })
+      .int("Límite inválido")
+      .min(1, "El límite mínimo es 1")
+      .max(100, "El límite máximo es 100")
+      .optional(),
+    cursor: z.iso
+      .datetime({ message: "Cursor inválido, use ISO8601 UTC" })
+      .optional(),
+    order: z.enum(["asc", "desc"], { message: "Orden inválido" }).optional(),
+    page: z.coerce
+      .number({ message: "Página inválida" })
+      .int("Página inválida")
+      .min(1, "La página mínima es 1")
+      .optional(),
+  })
+  .refine((data) => !data.page || data.limit, {
+    message: "La página necesita un límite de resultados",
+    path: ["page"],
+  });
 
 // Normaliza ?serviceIds=a,b,c | ?serviceIds=a&serviceIds=b | ?serviceIds[]=a a string[].
 function normalizeServiceIds(value) {

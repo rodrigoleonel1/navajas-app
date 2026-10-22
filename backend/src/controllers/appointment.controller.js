@@ -22,12 +22,18 @@ export async function createAppointment(req, res, next) {
 export async function listAppointments(req, res, next) {
   try {
     const query = req.validatedQuery ?? req.query;
-    const appointments = await listAppointmentsService({
+    const { appointments, total } = await listAppointmentsService({
       requester: { id: req.user.id, role: req.user.role },
       barberId: query.barberId,
       date: query.date,
       status: query.status,
+      limit: query.limit,
+      cursor: query.cursor,
+      order: query.order,
+      page: query.page,
     });
+    // Total del filtro, solo cuando hay paginación (el body sigue siendo el array).
+    if (total !== null) res.set("X-Total-Count", String(total));
     res.json(appointments);
   } catch (err) {
     next(err);

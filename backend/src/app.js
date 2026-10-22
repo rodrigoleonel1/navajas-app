@@ -11,7 +11,14 @@ import appointmentRoutes from "./routes/appointments.js";
 
 const app = express();
 
-app.use(cors({ origin: true, credentials: true }));
+// X-Total-Count viaja en la respuesta del listado paginado de turnos.
+app.use(
+  cors({
+    origin: true,
+    credentials: true,
+    exposedHeaders: ["X-Total-Count"],
+  }),
+);
 app.use(express.json());
 
 app.use(sanitizeInputs);

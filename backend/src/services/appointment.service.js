@@ -429,7 +429,16 @@ export async function createAppointment({
   return toAppointmentDTO(created.toObject());
 }
 
-export async function listAppointments({ requester, barberId, date, status }) {
+export async function listAppointments({
+  requester,
+  barberId,
+  date,
+  status,
+  limit,
+  cursor,
+  order,
+  page,
+}) {
   const filter = {};
 
   // Filtrado obligatorio por identidad (excepción: admin).
@@ -459,17 +468,47 @@ export async function listAppointments({ requester, barberId, date, status }) {
     filter.status = status;
   }
 
-  const appointments = await Appointment.find(filter)
+  // Cursor excluyente sobre start_at (paginación). Se combina con el rango de
+  // `date` si lo hay: el más restrictivo de los dos límites gana.
+  if (cursor) {
+    const cursorDate = new Date(cursor);
+    const isDesc = order === "desc";
+    const bound = { ...(filter.start_at ?? {}) };
+    const key = isDesc ? "$lt" : "$gt";
+    const previous = bound[key];
+    bound[key] =
+      previous instanceof Date
+        ? new Date(
+            isDesc
+              ? Math.min(previous.getTime(), cursorDate.getTime())
+              : Math.max(previous.getTime(), cursorDate.getTime()),
+          )
+        : cursorDate;
+    filter.start_at = bound;
+  }
+
+  // Sin limit no hay tope: admin y barbero listan el día completo como siempre.
+  // El total es del filtro completo (sin skip/limit) y solo se cuenta al paginar.
+  const total = limit ? await Appointment.countDocuments(filter) : null;
+
+  const query = Appointment.find(filter)
     .select(
       "barber_id client_id service_ids start_at end_at status price_snapshot duration_snapshot",
     )
-    .sort({ start_at: 1 })
+    .sort({ start_at: order === "desc" ? -1 : 1 })
     .populate("barber_id", "name")
     .populate("client_id", "name")
     .populate("service_ids", "name price duration")
     .lean();
 
-  return appointments.map(toAppointmentDTO);
+  if (limit) {
+    query.limit(limit);
+    if (page && page > 1) query.skip((page - 1) * limit);
+  }
+
+  const appointments = await query;
+
+  return { appointments: appointments.map(toAppointmentDTO), total };
 }
 
 // V1: el admin pasa un turno pendiente a completado o cancelado.
