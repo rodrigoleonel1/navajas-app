@@ -1,10 +1,11 @@
 import type { ReactNode } from "react";
-import { formatDayHour } from "../lib/datetime";
 import {
   APPOINTMENT_STATUS_LABELS,
   APPOINTMENT_STATUS_TONES,
+  serviceNames,
 } from "../lib/appointmentDisplay";
 import type { Appointment } from "../lib/appointments";
+import { formatWeekdayDayHour } from "../lib/datetime";
 import { Badge } from "./ui/Badge";
 
 export function AppointmentTable({
@@ -33,9 +34,6 @@ export function AppointmentTable({
         </thead>
         <tbody>
           {appointments.map((appointment) => {
-            const serviceNames = appointment.services
-              .map((service) => service.name ?? "Servicio")
-              .join(" + ");
             return (
               <tr
                 key={appointment.id}
@@ -43,9 +41,11 @@ export function AppointmentTable({
                 className="cursor-pointer border-b border-border last:border-0 transition-colors hover:bg-primary/5"
               >
                 <td className="px-4 py-3 font-medium whitespace-nowrap">
-                  {formatDayHour(appointment.startAt)}
+                  {formatWeekdayDayHour(appointment.startAt)}
                 </td>
-                <td className="px-4 py-3">{serviceNames}</td>
+                <td className="px-4 py-3">
+                  {serviceNames(appointment.services)}
+                </td>
                 <td className="px-4 py-3">
                   {appointment.barber.name ?? "—"}
                 </td>

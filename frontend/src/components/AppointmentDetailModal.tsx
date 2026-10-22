@@ -1,9 +1,11 @@
-import { formatHour, formatWeekdayDate } from "../lib/datetime";
 import {
   APPOINTMENT_STATUS_LABELS,
   APPOINTMENT_STATUS_TONES,
+  serviceNames,
 } from "../lib/appointmentDisplay";
 import type { Appointment } from "../lib/appointments";
+import { formatHour, formatWeekdayDate } from "../lib/datetime";
+import { formatPrice } from "../lib/format";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Modal } from "./ui/Modal";
@@ -21,9 +23,6 @@ export function AppointmentDetailModal({
   onCancel?: () => void;
   busy?: boolean;
 }) {
-  const serviceNames = appointment.services
-    .map((service) => service.name ?? "Servicio")
-    .join(" + ");
   const people = [
     appointment.barber.name ? `Barbero: ${appointment.barber.name}` : null,
     appointment.client.name ? `Cliente: ${appointment.client.name}` : null,
@@ -39,14 +38,16 @@ export function AppointmentDetailModal({
           {appointment.durationSnapshot} min
         </p>
         <div className="my-3 border-t border-dashed border-border" />
-        <p className="text-sm font-semibold">{serviceNames}</p>
+        <p className="text-sm font-semibold">
+          {serviceNames(appointment.services)}
+        </p>
         {people.length > 0 && (
           <p className="text-sm text-muted">{people.join(" · ")}</p>
         )}
         <div className="my-3 border-t border-dashed border-border" />
         <div className="flex items-center justify-center gap-3">
           <p className="font-barlow font-bold text-3xl">
-            ${appointment.priceSnapshot.toLocaleString("es-AR")}
+            {formatPrice(appointment.priceSnapshot)}
           </p>
           <Badge
             tone={APPOINTMENT_STATUS_TONES[appointment.status] ?? "muted"}

@@ -124,19 +124,64 @@ export async function createAppointment(input: {
   return res.data;
 }
 
-export async function listAppointments(params?: {
+export type AppointmentListParams = {
   barberId?: string;
   date?: string;
   status?: string;
-}): Promise<Appointment[]> {
-  const res = await api.get<Appointment[]>("/appointments", {
+  limit?: number;
+  cursor?: string;
+  order?: "asc" | "desc";
+  page?: number;
+};
+
+function getAppointments(params: AppointmentListParams) {
+  return api.get<Appointment[]>("/appointments", {
     params: {
-      ...(params?.barberId ? { barberId: params.barberId } : {}),
-      ...(params?.date ? { date: params.date } : {}),
-      ...(params?.status ? { status: params.status } : {}),
+      ...(params.barberId ? { barberId: params.barberId } : {}),
+      ...(params.date ? { date: params.date } : {}),
+      ...(params.status ? { status: params.status } : {}),
+      ...(params.limit ? { limit: params.limit } : {}),
+      ...(params.cursor ? { cursor: params.cursor } : {}),
+      ...(params.order ? { order: params.order } : {}),
+      ...(params.page ? { page: params.page } : {}),
     },
   });
+}
+
+// Sin limit devuelve todo el filtro (admin y barbero listan el día completo).
+export async function listAppointments(
+  params?: AppointmentListParams,
+): Promise<Appointment[]> {
+  const res = await getAppointments(params ?? {});
   return res.data;
+}
+
+// Una página del listado: el total del filtro llega en X-Total-Count.
+export async function listAppointmentsPage(params: {
+  page: number;
+  limit: number;
+  order?: "asc" | "desc";
+  barberId?: string;
+  status?: string;
+  cursor?: string;
+}): Promise<{ items: Appointment[]; total: number | null }> {
+  const res = await getAppointments(params);
+  const total = Number(res.headers["x-total-count"]);
+  return { items: res.data, total: Number.isFinite(total) ? total : null };
+}
+
+// Historial del cliente: los turnos anteriores a `before`, más nuevos primero.
+export async function listAppointmentHistory(params: {
+  before: string;
+  page: number;
+  limit: number;
+}): Promise<{ items: Appointment[]; total: number | null }> {
+  return listAppointmentsPage({
+    cursor: params.before,
+    order: "desc",
+    page: params.page,
+    limit: params.limit,
+  });
 }
 
 export async function updateAppointmentStatus(
@@ -145,26 +190,6 @@ export async function updateAppointmentStatus(
 ): Promise<Appointment> {
   const res = await api.patch<Appointment>(`/appointments/${id}`, { status });
   return res.data;
-}
-
-// Separa próximos (pendientes futuros, asc) del historial (resto, desc).
-// Misma regla en agenda de cliente y de admin.
-export function partitionAppointments(
-  appointments: Appointment[],
-  now: number,
-): { upcoming: Appointment[]; history: Appointment[] } {
-  const upcoming = appointments
-    .filter(
-      (appointment) =>
-        appointment.status === "pending" &&
-        new Date(appointment.startAt).getTime() >= now,
-    )
-    .sort((a, b) => +new Date(a.startAt) - +new Date(b.startAt));
-  const upcomingIds = new Set(upcoming.map((appointment) => appointment.id));
-  const history = appointments
-    .filter((appointment) => !upcomingIds.has(appointment.id))
-    .sort((a, b) => +new Date(b.startAt) - +new Date(a.startAt));
-  return { upcoming, history };
 }
 
 export function getConflictSuggestion(err: unknown): string | null {

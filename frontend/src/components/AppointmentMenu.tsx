@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
 import { MoreVertical } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 const MENU_WIDTH = 176;
 const MENU_GAP = 4;

@@ -1,23 +1,26 @@
 import { useEffect, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { AppointmentCard } from "../../components/AppointmentCard";
+import { AppointmentDetailModal } from "../../components/AppointmentDetailModal";
+import { AppointmentMenu } from "../../components/AppointmentMenu";
+import { AppointmentTable } from "../../components/AppointmentTable";
+import { DateField } from "../../components/ui/DateField";
+import { Pager } from "../../components/ui/Pager";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { Select } from "../../components/ui/Select";
-import { AppointmentCard } from "../../components/AppointmentCard";
-import { AppointmentTable } from "../../components/AppointmentTable";
-import { AppointmentDetailModal } from "../../components/AppointmentDetailModal";
-import { AppointmentMenu } from "../../components/AppointmentMenu";
-import { getErrorMessage } from "../../lib/api";
-import { shiftDayKey, toBusinessDayKey } from "../../lib/datetime";
-import { useToast } from "../../hooks/useToast";
+import { Switch } from "../../components/ui/Switch";
 import { useConfirm } from "../../hooks/useConfirm";
+import { useToast } from "../../hooks/useToast";
+import { getErrorMessage } from "../../lib/api";
 import {
   listAppointments,
+  listAppointmentsPage,
   listBarbers,
   updateAppointmentStatus,
   type Appointment,
   type Barber,
 } from "../../lib/appointments";
+import { toBusinessDayKey } from "../../lib/datetime";
 
 const STATUS_OPTIONS = [
   { value: "", label: "Todos" },
@@ -25,6 +28,40 @@ const STATUS_OPTIONS = [
   { value: "completed", label: "Completado" },
   { value: "cancelled", label: "Cancelado" },
 ];
+
+const PAGE_SIZE = 12;
+
+// Sin "Todas las fechas" lista el día completo; con el switch, pagina todo el
+// registro (pasado y futuro) de más nuevo a más viejo.
+async function fetchAppointments(params: {
+  allDates: boolean;
+  page: number;
+  barberId: string;
+  date: string;
+  status: string;
+}): Promise<{ items: Appointment[]; total: number | null }> {
+  const filters = {
+    ...(params.barberId ? { barberId: params.barberId } : {}),
+    ...(params.status ? { status: params.status } : {}),
+  };
+
+  if (params.allDates) {
+    return listAppointmentsPage({
+      ...filters,
+      page: params.page,
+      limit: PAGE_SIZE,
+      order: "desc",
+    });
+  }
+
+  return {
+    items: await listAppointments({
+      ...filters,
+      ...(params.date ? { date: params.date } : {}),
+    }),
+    total: null,
+  };
+}
 
 export function AdminPage() {
   const toast = useToast();
@@ -35,7 +72,10 @@ export function AdminPage() {
     toBusinessDayKey(new Date().toISOString()),
   );
   const [status, setStatus] = useState("");
+  const [allDates, setAllDates] = useState(false);
+  const [page, setPage] = useState(1);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [total, setTotal] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
   const [actingId, setActingId] = useState<string | null>(null);
@@ -61,15 +101,21 @@ export function AdminPage() {
       setLoading(true);
       setListError("");
       try {
-        const data = await listAppointments({
-          ...(barberId ? { barberId } : {}),
-          ...(date ? { date } : {}),
-          ...(status ? { status } : {}),
+        const { items, total: totalCount } = await fetchAppointments({
+          allDates,
+          page,
+          barberId,
+          date,
+          status,
         });
-        if (!cancelled) setAppointments(data);
+        if (!cancelled) {
+          setAppointments(items);
+          setTotal(totalCount);
+        }
       } catch (err) {
         if (!cancelled) {
           setAppointments([]);
+          setTotal(null);
           setListError(getErrorMessage(err, "Error al cargar turnos"));
         }
       } finally {
@@ -80,7 +126,7 @@ export function AdminPage() {
     return () => {
       cancelled = true;
     };
-  }, [barberId, date, status]);
+  }, [allDates, barberId, date, page, status]);
 
   async function handleStatusChange(
     appointment: Appointment,
@@ -100,18 +146,25 @@ export function AdminPage() {
       setDetail((current) =>
         current?.id === updated.id ? updated : current,
       );
-      const data = await listAppointments({
-        ...(barberId ? { barberId } : {}),
-        ...(date ? { date } : {}),
-        ...(status ? { status } : {}),
+      const { items, total: totalCount } = await fetchAppointments({
+        allDates,
+        page,
+        barberId,
+        date,
+        status,
       });
-      setAppointments(data);
+      setAppointments(items);
+      setTotal(totalCount);
     } catch (err) {
       toast.error(getErrorMessage(err, "Error al cambiar estado"));
     } finally {
       setActingId(null);
     }
   }
+
+  const totalPages =
+    total === null ? null : Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const hasNext = totalPages !== null && page < totalPages;
 
   return (
     <Section>
@@ -123,12 +176,31 @@ export function AdminPage() {
       />
 
       <div className="mt-8 bg-card border border-border rounded-2xl p-6">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <h3 className="font-barlow font-bold uppercase text-sm tracking-widest">
+            {allDates
+              ? `Todos los turnos (${total ?? appointments.length})`
+              : `Turnos (${appointments.length})`}
+          </h3>
+          <Switch
+            id="agenda-all-dates"
+            label="Todas las fechas"
+            checked={allDates}
+            onChange={(e) => {
+              setAllDates(e.target.checked);
+              setPage(1);
+            }}
+          />
+        </div>
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Select
             id="agenda-barber"
             label="Barbero"
             value={barberId}
-            onChange={(e) => setBarberId(e.target.value)}
+            onChange={(e) => {
+              setBarberId(e.target.value);
+              setPage(1);
+            }}
           >
             <option value="">Todos</option>
             {barbers.map((barber) => (
@@ -137,58 +209,28 @@ export function AdminPage() {
               </option>
             ))}
           </Select>
-          <div className="flex flex-col gap-1.5">
-            <label
-              htmlFor="agenda-date"
-              className="font-barlow text-xs font-semibold tracking-widest uppercase text-muted-light"
-            >
-              Fecha
-            </label>
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                aria-label="Día anterior"
-                onClick={() =>
-                  setDate((prev) =>
-                    shiftDayKey(
-                      prev || toBusinessDayKey(new Date().toISOString()),
-                      -1,
-                    ),
-                  )
-                }
-                className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:border-primary cursor-pointer"
-              >
-                <ChevronLeft size={16} aria-hidden="true" />
-              </button>
-              <input
-                id="agenda-date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full bg-background border rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-1 transition-colors border-border focus:border-primary focus:ring-primary"
-              />
-              <button
-                type="button"
-                aria-label="Día siguiente"
-                onClick={() =>
-                  setDate((prev) =>
-                    shiftDayKey(
-                      prev || toBusinessDayKey(new Date().toISOString()),
-                      1,
-                    ),
-                  )
-                }
-                className="flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full border border-border bg-background text-foreground transition-colors hover:border-primary cursor-pointer"
-              >
-                <ChevronRight size={16} aria-hidden="true" />
-              </button>
-            </div>
+          <div
+            className={allDates ? "opacity-40" : undefined}
+            inert={allDates || undefined}
+          >
+            <DateField
+              id="agenda-date"
+              label="Fecha"
+              value={date}
+              onChange={(value) => {
+                setDate(value);
+                setPage(1);
+              }}
+            />
           </div>
           <Select
             id="agenda-status"
             label="Estado"
             value={status}
-            onChange={(e) => setStatus(e.target.value)}
+            onChange={(e) => {
+              setStatus(e.target.value);
+              setPage(1);
+            }}
           >
             {STATUS_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -198,19 +240,18 @@ export function AdminPage() {
           </Select>
         </div>
 
-        <h3 className="mt-4 font-barlow font-bold uppercase text-sm tracking-widest mb-4">
-          Turnos ({appointments.length})
-        </h3>
-        {loading ? (
-          <p className="text-sm text-muted">Cargando turnos...</p>
+        {loading && appointments.length === 0 ? (
+          <p className="mt-6 text-sm text-muted">Cargando turnos...</p>
         ) : listError ? (
-          <p className="text-sm text-destructive">{listError}</p>
+          <p className="mt-6 text-sm text-destructive">{listError}</p>
         ) : appointments.length === 0 ? (
-          <p className="text-sm text-muted">
-            No hay turnos para esos filtros.
+          <p className="mt-6 text-sm text-muted">
+            {allDates
+              ? "No hay turnos en el registro."
+              : "No hay turnos para esos filtros."}
           </p>
         ) : (
-          <>
+          <div className="mt-6">
             <AppointmentTable
               appointments={appointments}
               onSelect={setDetail}
@@ -241,7 +282,7 @@ export function AdminPage() {
                 />
               )}
             />
-            <ul className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2 lg:hidden">
+            <ul className="mt-3 grid items-start gap-3 sm:grid-cols-2 lg:hidden">
               {appointments.map((appointment) => (
                 <AppointmentCard
                   key={appointment.id}
@@ -257,11 +298,23 @@ export function AdminPage() {
                       ? () => handleStatusChange(appointment, "cancelled")
                       : undefined
                   }
-                  onViewDetail={() => setDetail(appointment)}
                 />
               ))}
             </ul>
-          </>
+          </div>
+        )}
+        {allDates && (
+          <Pager
+            page={page}
+            totalPages={totalPages}
+            hasNext={hasNext}
+            loading={loading}
+            onPage={setPage}
+            label="turnos"
+            pageSize={PAGE_SIZE}
+            shown={appointments.length}
+            total={total}
+          />
         )}
       </div>
       {detail && (

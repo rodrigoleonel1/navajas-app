@@ -1,17 +1,14 @@
-import { formatWeekdayDateTime } from "../lib/datetime";
 import {
   APPOINTMENT_STATUS_LABELS,
   APPOINTMENT_STATUS_TONES,
+  serviceNames,
 } from "../lib/appointmentDisplay";
 import type { Appointment } from "../lib/appointments";
-import { Badge } from "./ui/Badge";
+import { formatWeekdayDateTime } from "../lib/datetime";
+import { formatPrice } from "../lib/format";
 import { AppointmentMenu } from "./AppointmentMenu";
-
-const STATUS_GRADIENTS: Record<string, string> = {
-  pending: "linear-gradient(180deg, rgba(34,211,238,0.16), transparent 70%)",
-  completed: "linear-gradient(180deg, rgba(96,165,250,0.16), transparent 70%)",
-  cancelled: "linear-gradient(180deg, rgba(239,68,68,0.12), transparent 70%)",
-};
+import { Badge } from "./ui/Badge";
+import { ListCard } from "./ui/ListCard";
 
 export function AppointmentCard({
   appointment,
@@ -30,9 +27,6 @@ export function AppointmentCard({
   onViewDetail?: () => void;
   busy?: boolean;
 }) {
-  const serviceNames = appointment.services
-    .map((service) => service.name ?? "Servicio")
-    .join(" + ");
   const people = [
     !hideBarber && appointment.barber.name
       ? `Barbero: ${appointment.barber.name}`
@@ -52,35 +46,32 @@ export function AppointmentCard({
       ? [{ label: "Cancelar turno", danger: true, onSelect: onCancel }]
       : []),
   ];
+  // Un turno cancelado se muestra atenuado salvo el badge de estado.
+  const cancelled = appointment.status === "cancelled";
   return (
-    <li
-      className="rounded-xl border border-border bg-background/40 bg-clip-padding-box px-4 py-3 flex flex-col"
-      style={{ backgroundImage: STATUS_GRADIENTS[appointment.status] }}
-    >
-      <span className="flex justify-between items-center gap-2">
-        <span className="font-barlow font-bold text-2xl leading-none">
-          {formatWeekdayDateTime(appointment.startAt)}
-        </span>
+    <ListCard
+      title={formatWeekdayDateTime(appointment.startAt)}
+      titleClassName={
+        cancelled
+          ? "line-through decoration-destructive decoration-2"
+          : undefined
+      }
+      faded={cancelled}
+      actions={
         <AppointmentMenu
           items={menuItems}
           busy={busy}
           ariaLabel="Acciones del turno"
         />
-      </span>
-      <span className="mt-1 text-sm font-semibold">
-        {serviceNames} · {appointment.durationSnapshot} min
-      </span>
-      {people.length > 0 && (
-        <span className="text-sm text-muted">{people.join(" · ")}</span>
-      )}
-      <span className="mt-auto pt-2 flex items-end justify-between gap-2">
-        <span className="text-lg font-semibold">
-          ${appointment.priceSnapshot.toLocaleString("es-AR")}
-        </span>
+      }
+      subtitle={`${serviceNames(appointment.services)} · ${appointment.durationSnapshot} min`}
+      detail={people.length > 0 ? people.join(" · ") : undefined}
+      footerLeft={formatPrice(appointment.priceSnapshot)}
+      footerRight={
         <Badge tone={APPOINTMENT_STATUS_TONES[appointment.status] ?? "muted"}>
           {APPOINTMENT_STATUS_LABELS[appointment.status] ?? appointment.status}
         </Badge>
-      </span>
-    </li>
+      }
+    />
   );
 }

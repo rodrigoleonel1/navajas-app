@@ -18,16 +18,6 @@ const dayHourFormatter = new Intl.DateTimeFormat("es-AR", {
   hour12: false,
 });
 
-const fullFormatter = new Intl.DateTimeFormat("es-AR", {
-  timeZone: BUSINESS_TZ,
-  day: "2-digit",
-  month: "2-digit",
-  year: "numeric",
-  hour: "2-digit",
-  minute: "2-digit",
-  hour12: false,
-});
-
 const dayKeyFormatter = new Intl.DateTimeFormat("en-CA", {
   timeZone: BUSINESS_TZ,
   year: "numeric",
@@ -43,25 +33,9 @@ export function formatDayHour(iso: string): string {
   return dayHourFormatter.format(new Date(iso));
 }
 
-export function formatFull(iso: string): string {
-  return fullFormatter.format(new Date(iso));
-}
-
 // Día comercial YYYY-MM-DD de un instante ISO.
 export function toBusinessDayKey(iso: string): string {
   return dayKeyFormatter.format(new Date(iso));
-}
-
-const weekdayDayFormatter = new Intl.DateTimeFormat("es-AR", {
-  timeZone: BUSINESS_TZ,
-  weekday: "short",
-  day: "numeric",
-});
-
-// Etiqueta corta de un día comercial ("sáb 3"). Mediodía UTC para no caer
-// en el filo del día en ninguna zona.
-export function formatWeekdayDay(dayKey: string): string {
-  return weekdayDayFormatter.format(new Date(`${dayKey}T12:00:00Z`));
 }
 
 const dateKeyFormatter = new Intl.DateTimeFormat("es-AR", {
@@ -91,12 +65,19 @@ const weekdayLongFormatter = new Intl.DateTimeFormat("es-AR", {
   weekday: "long",
 });
 
-// Fecha completa argentina ("Viernes 16/10, 09:30 hs").
+// Fecha completa argentina ("Viernes 16/10/2026, 09:30 hs").
 export function formatWeekdayDateTime(iso: string): string {
   const date = new Date(iso);
   const weekday = weekdayLongFormatter.format(date);
   const capitalized = weekday.charAt(0).toUpperCase() + weekday.slice(1);
-  return `${capitalized} ${formatDateKey(toBusinessDayKey(iso)).slice(0, 5)}, ${formatHour(iso)} hs`;
+  return `${capitalized} ${formatDateKey(toBusinessDayKey(iso))}, ${formatHour(iso)} hs`;
+}
+
+// Día corto + fecha + hora para tablas ("Mié 21/10/2026, 09:30 hs").
+export function formatWeekdayDayHour(iso: string): string {
+  const weekday = weekdayFormatter.format(new Date(iso));
+  const capitalized = weekday.charAt(0).toUpperCase() + weekday.slice(1);
+  return `${capitalized} ${formatDateKey(toBusinessDayKey(iso))}, ${formatHour(iso)} hs`;
 }
 
 // Día con semana ("Viernes 16/10").
