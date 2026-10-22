@@ -1,10 +1,8 @@
 import { Navigate } from "react-router-dom";
 import { getRole } from "../lib/auth";
 
+// /app/agenda despacha por rol; sin sesión, al login.
 export function RoleRedirect() {
-  const role = getRole();
-  if (role === "admin") return <Navigate to="/app/admin" replace />;
-  if (role === "barber") return <Navigate to="/app/barber" replace />;
-  if (role === "client") return <Navigate to="/app/client" replace />;
-  return <Navigate to="/login" replace />;
+  if (!getRole()) return <Navigate to="/login" replace />;
+  return <Navigate to="/app/agenda" replace />;
 }

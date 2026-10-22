@@ -1,4 +1,5 @@
 import { cn } from "../../lib/utils";
+import { inputClasses } from "./inputStyles";
 
 type InputProps = React.InputHTMLAttributes<HTMLInputElement> & {
   label: string;
@@ -20,13 +21,7 @@ export function Input({ label, id, className, error, ...props }: InputProps) {
         id={id}
         aria-invalid={hasError}
         aria-describedby={hasError ? `${id}-error` : undefined}
-        className={cn(
-          "w-full bg-background border rounded-lg px-3 py-2.5 text-sm text-foreground placeholder:text-muted focus:outline-none focus:ring-1 transition-colors",
-          hasError
-            ? "border-destructive focus:border-destructive focus:ring-destructive"
-            : "border-border focus:border-primary focus:ring-primary",
-          className,
-        )}
+        className={cn(inputClasses(hasError), className)}
         {...props}
       />
       {hasError && (

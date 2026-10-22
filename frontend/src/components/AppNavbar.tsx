@@ -1,11 +1,11 @@
 import { LogOut } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
+import { useMobileMenu } from "../hooks/useMobileMenu";
+import { clearAuth, getUser } from "../lib/auth";
 import { BrandLogo } from "./ui/BrandLogo";
 import { Button } from "./ui/Button";
 import { MobileNavLink } from "./ui/MobileNavLink";
 import { NavShell } from "./ui/NavShell";
-import { useMobileMenu } from "../hooks/useMobileMenu";
-import { clearAuth, getUser } from "../lib/auth";
 
 export function AppNavbar() {
   const navigate = useNavigate();
@@ -13,12 +13,8 @@ export function AppNavbar() {
   const role = user?.role as string | undefined;
   const { open, close, toggle } = useMobileMenu();
 
-  const home =
-    role === "admin"
-      ? "/app/admin"
-      : role === "barber"
-        ? "/app/barber"
-        : "/app/client";
+  // /app/agenda renderiza la agenda del rol logueado.
+  const home = "/app/agenda";
 
   const links =
     role === "admin"

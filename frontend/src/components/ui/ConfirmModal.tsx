@@ -6,8 +6,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Button } from "./Button";
 import { ConfirmContext, type ConfirmOptions } from "../../hooks/useConfirm";
+import { Button } from "./Button";
 
 export function ConfirmProvider({ children }: { children: ReactNode }) {
   const [pending, setPending] = useState<ConfirmOptions | null>(null);

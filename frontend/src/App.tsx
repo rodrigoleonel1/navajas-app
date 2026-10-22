@@ -1,22 +1,19 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { ProtectedRoute } from "./components/ProtectedRoute";
+import { RoleRedirect } from "./components/RoleRedirect";
+import { ConfirmProvider } from "./components/ui/ConfirmModal";
+import { ToastProvider } from "./components/ui/Toast";
+import { AppLayout } from "./layouts/AppLayout";
+import { AgendaPage } from "./pages/app/AgendaPage";
+import { BarberDetailPage } from "./pages/app/BarberDetailPage";
+import { BarberIngresosPage } from "./pages/app/BarberIngresosPage";
+import { BarbersPage } from "./pages/app/BarbersPage";
+import { ClientTurnosPage } from "./pages/app/ClientTurnosPage";
+import { ServiceDetailPage } from "./pages/app/ServiceDetailPage";
+import { ServicesPage } from "./pages/app/ServicesPage";
 import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
-import { AppLayout } from "./layouts/AppLayout";
-import { ProtectedRoute } from "./components/ProtectedRoute";
-import { RoleRedirect } from "./components/RoleRedirect";
-import { ToastProvider } from "./components/ui/Toast";
-import { ConfirmProvider } from "./components/ui/ConfirmModal";
-import { ClientPage } from "./pages/app/ClientPage";
-import { ClientTurnosPage } from "./pages/app/ClientTurnosPage";
-import { BarberPage } from "./pages/app/BarberPage";
-import { BarberIngresosPage } from "./pages/app/BarberIngresosPage";
-import { AdminPage } from "./pages/app/AdminPage";
-import { AgendaPage } from "./pages/app/AgendaPage";
-import { BarbersPage } from "./pages/app/BarbersPage";
-import { BarberDetailPage } from "./pages/app/BarberDetailPage";
-import { ServicesPage } from "./pages/app/ServicesPage";
-import { ServiceDetailPage } from "./pages/app/ServiceDetailPage";
 
 function App() {
   return (
@@ -39,14 +36,6 @@ function App() {
           <Route index element={<RoleRedirect />} />
           <Route path="agenda" element={<AgendaPage />} />
           <Route
-            path="client"
-            element={
-              <ProtectedRoute roles={["client"]}>
-                <ClientPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="client/turnos"
             element={
               <ProtectedRoute roles={["client"]}>
@@ -55,26 +44,10 @@ function App() {
             }
           />
           <Route
-            path="barber"
-            element={
-              <ProtectedRoute roles={["barber"]}>
-                <BarberPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
             path="barber/ingresos"
             element={
               <ProtectedRoute roles={["barber"]}>
                 <BarberIngresosPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="admin"
-            element={
-              <ProtectedRoute roles={["admin"]}>
-                <AdminPage />
               </ProtectedRoute>
             }
           />

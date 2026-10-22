@@ -1,6 +1,6 @@
+import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "react-router-dom";
 import { Footer } from "../components/Footer";
 import { Navbar } from "../components/Navbar";
@@ -8,8 +8,8 @@ import { Button } from "../components/ui/Button";
 import { Input } from "../components/ui/Input";
 import { PasswordInput } from "../components/ui/PasswordInput";
 import { SectionTitle } from "../components/ui/SectionTitle";
-import { api, getErrorMessage } from "../lib/api";
 import { useToast } from "../hooks/useToast";
+import { api, getErrorMessage } from "../lib/api";
 import { signupSchema, type SignupInput } from "../lib/schemas";
 
 export function SignupPage() {
@@ -32,10 +32,8 @@ export function SignupPage() {
       const { token, user } = res.data;
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
-      if (user.role === "admin") navigate("/app/admin", { replace: true });
-      else if (user.role === "barber")
-        navigate("/app/barber", { replace: true });
-      else navigate("/app/client", { replace: true });
+      // /app/agenda despacha por rol (admin, barbero o cliente).
+      navigate("/app/agenda", { replace: true });
     } catch (err) {
       toast.error(getErrorMessage(err, "Error al crear cuenta"));
     }

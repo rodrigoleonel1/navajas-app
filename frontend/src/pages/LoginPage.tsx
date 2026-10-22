@@ -1,7 +1,7 @@
+import { zodResolver } from "@hookform/resolvers/zod";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useNavigate } from "react-router-dom";
 import { Footer } from "../components/Footer";
 import { Navbar } from "../components/Navbar";
@@ -32,11 +32,8 @@ export function LoginPage() {
       const { token, user } = res.data;
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
-      // CA-2: redirect por rol
-      if (user.role === "admin") navigate("/app/admin", { replace: true });
-      else if (user.role === "barber")
-        navigate("/app/barber", { replace: true });
-      else navigate("/app/client", { replace: true });
+      // /app/agenda despacha por rol (admin, barbero o cliente).
+      navigate("/app/agenda", { replace: true });
     } catch (err) {
       setServerError(getErrorMessage(err, "Error al iniciar sesión"));
     }
