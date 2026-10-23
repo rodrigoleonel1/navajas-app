@@ -1,13 +1,13 @@
 import cors from "cors";
 import express from "express";
 import { config } from "./config.js";
-import { errorHandler, notFound } from "./middlewares/errorHandler.js";
 import { connectMongo } from "./middlewares/connectMongo.js";
+import { errorHandler, notFound } from "./middlewares/errorHandler.js";
 import { sanitizeInputs } from "./middlewares/sanitize.js";
+import appointmentRoutes from "./routes/appointments.js";
 import authRoutes from "./routes/auth.js";
 import barberRoutes from "./routes/barbers.js";
 import serviceRoutes from "./routes/services.js";
-import appointmentRoutes from "./routes/appointments.js";
 
 const app = express();
 

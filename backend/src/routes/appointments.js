@@ -1,19 +1,19 @@
 import { Router } from "express";
-import { validateBody } from "../middlewares/validateBody.js";
-import { validateQuery } from "../middlewares/validateQuery.js";
-import { authenticate, requireRole } from "../middlewares/auth.js";
-import {
-  createAppointmentSchema,
-  listAppointmentsQuerySchema,
-  availabilityQuerySchema,
-  updateAppointmentStatusSchema,
-} from "../schemas/appointment.schema.js";
 import {
   createAppointment,
-  listAppointments,
   getAvailability,
+  listAppointments,
   updateAppointmentStatus,
 } from "../controllers/appointment.controller.js";
+import { authenticate, requireRole } from "../middlewares/auth.js";
+import { validateBody } from "../middlewares/validateBody.js";
+import { validateQuery } from "../middlewares/validateQuery.js";
+import {
+  availabilityQuerySchema,
+  createAppointmentSchema,
+  listAppointmentsQuerySchema,
+  updateAppointmentStatusSchema,
+} from "../schemas/appointment.schema.js";
 
 const router = Router();
 

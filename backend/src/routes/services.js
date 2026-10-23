@@ -1,20 +1,20 @@
 import { Router } from "express";
-import { validateBody } from "../middlewares/validateBody.js";
-import {
-  authenticate,
-  optionalAuthenticate,
-  requireRole,
-} from "../middlewares/auth.js";
-import {
-  createServiceSchema,
-  updateServiceSchema,
-} from "../schemas/service.schema.js";
 import {
   createService,
   getServiceById,
   listServices,
   updateService,
 } from "../controllers/service.controller.js";
+import {
+  authenticate,
+  optionalAuthenticate,
+  requireRole,
+} from "../middlewares/auth.js";
+import { validateBody } from "../middlewares/validateBody.js";
+import {
+  createServiceSchema,
+  updateServiceSchema,
+} from "../schemas/service.schema.js";
 
 const router = Router();
 

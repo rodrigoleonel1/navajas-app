@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { connectDB } from "../db.js";
-import { createHash } from "../utils/bcrypt.js";
 import { User } from "../models/User.js";
+import { createHash } from "../utils/bcrypt.js";
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL?.toLowerCase().trim();
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD;

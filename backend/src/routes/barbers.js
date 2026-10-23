@@ -1,18 +1,18 @@
 import { Router } from "express";
-import { validateBody } from "../middlewares/validateBody.js";
-import {
-  authenticate,
-  optionalAuthenticate,
-  requireRole,
-} from "../middlewares/auth.js";
-import { createBarberSchema } from "../schemas/auth.schema.js";
-import { updateBarberProfileSchema } from "../schemas/barber.schema.js";
 import {
   createBarber,
   getBarberById,
   listBarbers,
   updateBarberProfile,
 } from "../controllers/barber.controller.js";
+import {
+  authenticate,
+  optionalAuthenticate,
+  requireRole,
+} from "../middlewares/auth.js";
+import { validateBody } from "../middlewares/validateBody.js";
+import { createBarberSchema } from "../schemas/auth.schema.js";
+import { updateBarberProfileSchema } from "../schemas/barber.schema.js";
 
 const router = Router();
 

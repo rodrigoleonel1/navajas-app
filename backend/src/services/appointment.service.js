@@ -1,64 +1,16 @@
 import mongoose from "mongoose";
-import { createAppError } from "../utils/appError.js";
-import { toObjectIdOrThrow } from "../utils/objectId.js";
 import { Appointment } from "../models/Appointment.js";
 import { Service } from "../models/Service.js";
 import { User } from "../models/User.js";
-
-// Milisegundos de un día (24h*60m*60s*1000ms).
-const DAY_MS = 24 * 60 * 60 * 1000;
-
-// Zona horaria comercial: la jornada, los francos y los slots se interpretan
-// en esta zona. El wire sigue siendo ISO8601 UTC; Vercel corre en UTC y eso
-// deja de importar porque nunca se usa la hora del sistema.
-export const BUSINESS_TZ = process.env.BUSINESS_TZ ?? "America/Argentina/Buenos_Aires";
-
-// Offset de la zona comercial para un instante dado (ms a sumar a UTC).
-function businessOffsetMs(date) {
-  const dtf = new Intl.DateTimeFormat("en-US", {
-    timeZone: BUSINESS_TZ,
-    hour12: false,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  });
-  const parts = Object.fromEntries(
-    dtf.formatToParts(date).map((part) => [part.type, part.value]),
-  );
-  const asUtc = Date.UTC(
-    Number(parts.year),
-    Number(parts.month) - 1,
-    Number(parts.day),
-    Number(parts.hour) % 24,
-    Number(parts.minute),
-    Number(parts.second),
-  );
-  return asUtc - date.getTime();
-}
-
-// Partes calendario de un instante en la zona comercial.
-export function tzParts(date) {
-  const shifted = new Date(date.getTime() + businessOffsetMs(date));
-  return {
-    dayKey: shifted.toISOString().slice(0, 10),
-    minutes: shifted.getUTCHours() * 60 + shifted.getUTCMinutes(),
-    weekday: shifted.getUTCDay(),
-  };
-}
-
-// Medianoche (00:00) de un día comercial YYYY-MM-DD expresada en UTC.
-export function businessDayStartUtc(dayKey) {
-  const [year, month, day] = dayKey.split("-").map(Number);
-  const guess = new Date(Date.UTC(year, month - 1, day));
-  const start = new Date(guess.getTime() - businessOffsetMs(guess));
-  // Refinamiento por si el offset cambia justo a medianoche (transición DST).
-  return new Date(
-    start.getTime() + (businessOffsetMs(guess) - businessOffsetMs(start)),
-  );
-}
+import { createAppError } from "../utils/appError.js";
+import {
+  businessDayStartUtc,
+  DAY_MS,
+  dayKeyUTC,
+  parseWorkHour,
+  tzParts,
+} from "../utils/businessTime.js";
+import { toObjectIdOrThrow } from "../utils/objectId.js";
 
 // Parsea un ISO8601 UTC o tira 400 VALIDATION_ERROR si es inválido.
 function parseISODate(value) {
@@ -67,25 +19,6 @@ function parseISODate(value) {
     throw createAppError(400, "VALIDATION_ERROR", "Fecha inválida, use ISO8601 UTC");
   }
   return date;
-}
-
-// Recorta un Date a su día calendario UTC ("2026-09-29"). Se usa para exigir
-// mismo día inicio/fin del turno y para comparar contra los francos (daysOff).
-// Día calendario UTC de un Date (para comparar francos/feriados guardados
-// como YYYY-MM-DD). Distinto de tzParts: esto es calendario UTC puro.
-function dayKeyUTC(date) {
-  return date.toISOString().slice(0, 10);
-}
-
-// Convierte "HH:MM" del workingHours a minutos en la misma escala.
-// Si el formato es inválido o falta, devuelve el fallback (09:00/18:00 por defecto).
-function parseWorkHour(hhmm, fallback) {
-  const match = /^(\d{2}):(\d{2})$/.exec(hhmm ?? "");
-  if (!match) return fallback;
-  const hours = Number(match[1]);
-  const minutes = Number(match[2]);
-  if (hours > 23 || minutes > 59) return fallback;
-  return hours * 60 + minutes;
 }
 
 // RN10: el turno debe caer dentro de la jornada del barbero y en un día

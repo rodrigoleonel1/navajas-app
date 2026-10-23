@@ -1,8 +1,8 @@
-import { createHash } from "../utils/bcrypt.js";
-import { createAppError } from "../utils/appError.js";
-import { assertObjectId } from "../utils/objectId.js";
-import { User } from "../models/User.js";
 import { Appointment } from "../models/Appointment.js";
+import { User } from "../models/User.js";
+import { createAppError } from "../utils/appError.js";
+import { createHash } from "../utils/bcrypt.js";
+import { assertObjectId } from "../utils/objectId.js";
 
 function toBarberDTO(barber) {
   return {

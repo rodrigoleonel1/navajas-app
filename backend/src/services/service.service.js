@@ -1,6 +1,6 @@
+import { Service } from "../models/Service.js";
 import { createAppError } from "../utils/appError.js";
 import { assertObjectId } from "../utils/objectId.js";
-import { Service } from "../models/Service.js";
 
 function toServiceDTO(doc) {
   return {

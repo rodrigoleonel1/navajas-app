@@ -1,7 +1,7 @@
 import {
   createAppointment as createAppointmentService,
-  listAppointments as listAppointmentsService,
   getAvailability as getAvailabilityService,
+  listAppointments as listAppointmentsService,
   updateAppointmentStatus as updateAppointmentStatusService,
 } from "../services/appointment.service.js";
 

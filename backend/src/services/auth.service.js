@@ -1,7 +1,7 @@
+import { User } from "../models/User.js";
+import { createAppError } from "../utils/appError.js";
 import { createHash, isValidPassword } from "../utils/bcrypt.js";
 import { generateToken } from "../utils/jwt.js";
-import { createAppError } from "../utils/appError.js";
-import { User } from "../models/User.js";
 
 // signup: crea cliente, valida duplicado
 export async function signup({ name, email, password }) {
