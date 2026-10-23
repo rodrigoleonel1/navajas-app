@@ -1,18 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { CalendarCheck, Clock } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "../../components/ui/Button";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
-import { Button } from "../../components/ui/Button";
 import { useToast } from "../../hooks/useToast";
 import { getErrorMessage } from "../../lib/api";
-import {
-  businessDayKeysFromToday,
-  formatDayHour,
-  formatDayLabel,
-  formatHour,
-  toBusinessDayKey,
-} from "../../lib/datetime";
 import {
   createAppointment,
   getAvailability,
@@ -23,13 +16,17 @@ import {
   type Barber,
   type Service,
 } from "../../lib/appointments";
+import {
+  businessDayKeysFromToday,
+  formatDayHour,
+  formatDayLabel,
+  formatHour,
+  toBusinessDayKey,
+} from "../../lib/datetime";
+import { formatPrice } from "../../lib/format";
 
 function toLocalDateKey(date: Date): string {
   return toBusinessDayKey(date.toISOString());
-}
-
-function formatPrice(price: number): string {
-  return `$${price.toLocaleString("es-AR")}`;
 }
 
 export function ClientPage() {
@@ -96,6 +93,26 @@ export function ClientPage() {
   }, [barberId, serviceIdsKey, canLoadStrip]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const stripNonWorkingDays = canLoadStrip ? nonWorkingDays : [];
+
+  // Tira de días: se desliza y centra el día elegido.
+  const dayStripRef = useRef<HTMLDivElement>(null);
+  const dayChipRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  // Centra el día elegido (por ejemplo al usar "Ir al próximo disponible").
+  useEffect(() => {
+    const container = dayStripRef.current;
+    const chip = dayChipRefs.current[date];
+    if (!container || !chip) return;
+    const containerRect = container.getBoundingClientRect();
+    const chipRect = chip.getBoundingClientRect();
+    container.scrollTo({
+      left:
+        container.scrollLeft +
+        (chipRect.left - containerRect.left) -
+        (container.clientWidth - chipRect.width) / 2,
+      behavior: "smooth",
+    });
+  }, [date]);
 
   useEffect(() => {
     if (!readyToSearch) return;
@@ -181,7 +198,7 @@ export function ClientPage() {
       {loadingCatalog ? (
         <p className="mt-6 text-sm text-muted">Cargando servicios...</p>
       ) : (
-        <div className="mt-8 flex flex-col gap-6 max-w-2xl mx-auto">
+        <div className="mt-8 flex w-full flex-col gap-6 lg:grid lg:grid-cols-2 lg:items-start">
           <div className="bg-card border border-border rounded-2xl p-6">
             <h3 className="font-barlow font-bold uppercase text-sm tracking-widest mb-4">
               1. Servicios
@@ -194,27 +211,29 @@ export function ClientPage() {
               <ul className="flex flex-col gap-2">
                 {services.map((service) => (
                   <li key={service.id}>
-                    <label className="flex justify-between items-center border border-border rounded-lg px-3 py-2 cursor-pointer has-checked:border-primary transition-colors">
-                      <span className="flex items-center gap-3">
+                    <label className="flex justify-between items-center gap-3 border border-border rounded-lg px-3 py-2 cursor-pointer has-checked:border-primary transition-colors">
+                      <span className="flex min-w-0 items-center gap-3">
                         <input
                           type="checkbox"
                           checked={serviceIds.includes(service.id)}
                           onChange={() => toggleService(service.id)}
-                          className="accent-primary h-4 w-4"
+                          className="accent-primary h-4 w-4 shrink-0"
                         />
-                        <span className="text-sm font-medium">
-                          {service.name}
-                        </span>
-                        <span className="text-xs text-muted inline-flex items-center gap-1">
-                          <Clock
-                            size={14}
-                            aria-hidden="true"
-                            className="opacity-60"
-                          />
-                          {service.duration} min
+                        <span className="flex min-w-0 flex-col">
+                          <span className="text-sm font-medium">
+                            {service.name}
+                          </span>
+                          <span className="text-xs text-muted inline-flex items-center gap-1 whitespace-nowrap">
+                            <Clock
+                              size={14}
+                              aria-hidden="true"
+                              className="opacity-60"
+                            />
+                            {service.duration} min
+                          </span>
                         </span>
                       </span>
-                      <span className="text-sm font-semibold">
+                      <span className="text-sm font-semibold shrink-0">
                         {formatPrice(service.price)}
                       </span>
                     </label>
@@ -229,147 +248,153 @@ export function ClientPage() {
             )}
           </div>
 
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <h3 className="font-barlow font-bold uppercase text-sm tracking-widest mb-4">
-              2. Barbero
-            </h3>
-            {barbers.length === 0 ? (
-              <p className="text-sm text-muted">
-                No hay barberos disponibles por el momento.
-              </p>
-            ) : (
-              <ul className="flex flex-col gap-2">
-                {barbers.map((barber) => (
-                  <li key={barber.id}>
-                    <label className="flex items-center gap-3 border border-border rounded-lg px-3 py-2 cursor-pointer has-checked:border-primary transition-colors">
-                      <input
-                        type="radio"
-                        name="barber"
-                        checked={barberId === barber.id}
-                        onChange={() => setBarberId(barber.id)}
-                        className="accent-primary h-4 w-4"
-                      />
-                      <span className="text-sm font-medium">{barber.name}</span>
-                    </label>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <h3 className="font-barlow font-bold uppercase text-sm tracking-widest mb-4">
-              3. Fecha y horario
-            </h3>
-            <div
-              className="flex gap-2 overflow-x-auto pb-2"
-              role="group"
-              aria-label="Elegir fecha"
-            >
-              {businessDayKeysFromToday(14).map((dayKey) => {
-                const disabled = stripNonWorkingDays.includes(dayKey);
-                const selected = date === dayKey;
-                return (
-                  <button
-                    key={dayKey}
-                    type="button"
-                    disabled={disabled}
-                    onClick={() => setDate(dayKey)}
-                    aria-pressed={selected}
-                    aria-label={`${formatDayLabel(dayKey)}${disabled ? " (no laborable)" : ""}`}
-                    className={
-                      selected
-                        ? "shrink-0 border border-primary bg-primary/10 rounded-lg px-3 py-2 text-sm font-semibold transition-colors"
-                        : disabled
-                          ? "shrink-0 border border-border rounded-lg px-3 py-2 text-sm text-muted opacity-40 cursor-not-allowed"
-                          : "shrink-0 border border-border rounded-lg px-3 py-2 text-sm hover:border-primary transition-colors"
-                    }
-                  >
-                    {formatDayLabel(dayKey)}
-                  </button>
-                );
-              })}
-            </div>
-            <div className="mt-4">
-              {!readyToSearch ? (
+          <div className="flex flex-col gap-6">
+            <div className="bg-card border border-border rounded-2xl p-6">
+              <h3 className="font-barlow font-bold uppercase text-sm tracking-widest mb-4">
+                2. Barbero
+              </h3>
+              {barbers.length === 0 ? (
                 <p className="text-sm text-muted">
-                  Elegí al menos un servicio y un barbero para ver horarios.
+                  No hay barberos disponibles por el momento.
                 </p>
-              ) : loadingSlots ? (
-                <p className="text-sm text-muted">Buscando horarios...</p>
-              ) : slotsError ? (
-                <p className="text-sm text-destructive">{slotsError}</p>
-              ) : shownAvailability && shownAvailability.slots.length === 0 ? (
-                <div className="flex flex-col gap-3">
-                  <p className="text-sm text-muted">Sin horarios ese día.</p>
-                  {shownAvailability.nextAvailable && (
-                    <Button
-                      variant="outline"
-                      className="self-start"
-                      onClick={() => {
-                        const next = shownAvailability.nextAvailable;
-                        if (!next) return;
-                        setDate(toBusinessDayKey(next.startAt));
-                        setSelectedSlot(next.startAt);
-                      }}
-                    >
-                      <CalendarCheck size={14} aria-hidden="true" />
-                      Ir al próximo disponible:{" "}
-                      {formatDayHour(
-                        shownAvailability.nextAvailable.startAt,
-                      )}
-                    </Button>
-                  )}
-                </div>
               ) : (
-                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                  {shownAvailability?.slots.map((slot) => (
+                <ul className="flex flex-col gap-2">
+                  {barbers.map((barber) => (
+                    <li key={barber.id}>
+                      <label className="flex items-center gap-3 border border-border rounded-lg px-3 py-2 cursor-pointer has-checked:border-primary transition-colors">
+                        <input
+                          type="radio"
+                          name="barber"
+                          checked={barberId === barber.id}
+                          onChange={() => setBarberId(barber.id)}
+                          className="accent-primary h-4 w-4"
+                        />
+                        <span className="text-sm font-medium">{barber.name}</span>
+                      </label>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+
+            <div className="bg-card border border-border rounded-2xl p-6">
+              <h3 className="font-barlow font-bold uppercase text-sm tracking-widest mb-4">
+                3. Fecha y horario
+              </h3>
+              <div
+                ref={dayStripRef}
+                className="flex gap-2 overflow-x-auto scroll-smooth scrollbar-thumb-only pb-2"
+                role="group"
+                aria-label="Elegir fecha"
+              >
+                {businessDayKeysFromToday(14).map((dayKey) => {
+                  const disabled = stripNonWorkingDays.includes(dayKey);
+                  const selected = date === dayKey;
+                  return (
                     <button
-                      key={slot.startAt}
+                      key={dayKey}
+                      ref={(element) => {
+                        dayChipRefs.current[dayKey] = element;
+                      }}
                       type="button"
-                      onClick={() => setSelectedSlot(slot.startAt)}
-                      aria-pressed={selectedSlot === slot.startAt}
+                      disabled={disabled}
+                      onClick={() => setDate(dayKey)}
+                      aria-pressed={selected}
+                      aria-label={`${formatDayLabel(dayKey)}${disabled ? " (no laborable)" : ""}`}
                       className={
-                        selectedSlot === slot.startAt
-                          ? "border border-primary bg-primary/10 rounded-lg px-2 py-2 text-sm font-semibold transition-colors"
-                          : "border border-border rounded-lg px-2 py-2 text-sm hover:border-primary transition-colors"
+                        selected
+                          ? "shrink-0 border border-primary bg-primary/10 rounded-lg px-3 py-2 text-sm font-semibold transition-colors"
+                          : disabled
+                            ? "shrink-0 border border-border rounded-lg px-3 py-2 text-sm text-muted opacity-40 cursor-not-allowed"
+                            : "shrink-0 border border-border rounded-lg px-3 py-2 text-sm hover:border-primary transition-colors"
                       }
                     >
-                      {formatHour(slot.startAt)}
+                      {formatDayLabel(dayKey)}
                     </button>
-                  ))}
-                </div>
-              )}
+                  );
+                })}
+              </div>
+              <div className="mt-4">
+                {!readyToSearch ? (
+                  <p className="text-sm text-muted">
+                    Elegí al menos un servicio y un barbero para ver horarios.
+                  </p>
+                ) : loadingSlots ? (
+                  <p className="text-sm text-muted">Buscando horarios...</p>
+                ) : slotsError ? (
+                  <p className="text-sm text-destructive">{slotsError}</p>
+                ) : shownAvailability && shownAvailability.slots.length === 0 ? (
+                  <div className="flex flex-col gap-3">
+                    <p className="text-sm text-muted">Sin horarios ese día.</p>
+                    {shownAvailability.nextAvailable && (
+                      <Button
+                        variant="outline"
+                        className="self-start"
+                        onClick={() => {
+                          const next = shownAvailability.nextAvailable;
+                          if (!next) return;
+                          setDate(toBusinessDayKey(next.startAt));
+                          setSelectedSlot(next.startAt);
+                        }}
+                      >
+                        <CalendarCheck size={14} aria-hidden="true" />
+                        Ir al próximo disponible:{" "}
+                        {formatDayHour(
+                          shownAvailability.nextAvailable.startAt,
+                        )}
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                    {shownAvailability?.slots.map((slot) => (
+                      <button
+                        key={slot.startAt}
+                        type="button"
+                        onClick={() => setSelectedSlot(slot.startAt)}
+                        aria-pressed={selectedSlot === slot.startAt}
+                        className={
+                          selectedSlot === slot.startAt
+                            ? "border border-primary bg-primary/10 rounded-lg px-2 py-2 text-sm font-semibold transition-colors"
+                            : "border border-border rounded-lg px-2 py-2 text-sm hover:border-primary transition-colors"
+                        }
+                      >
+                        {formatHour(slot.startAt)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
+
+            {bookError && (
+              <div className="bg-card border border-destructive/50 rounded-2xl p-4">
+                <p className="text-sm text-destructive">{bookError}</p>
+                {suggestion && (
+                  <Button
+                    variant="primaryBlock"
+                    className="mt-3"
+                    disabled={isBooking}
+                    onClick={() => {
+                      setSelectedSlot(suggestion);
+                      handleConfirm(suggestion);
+                    }}
+                  >
+                    <CalendarCheck size={14} aria-hidden="true" />
+                    Reservar {formatDayHour(suggestion)}
+                  </Button>
+                )}
+              </div>
+            )}
+
+            <Button
+              variant="primaryBlock"
+              disabled={!selectedSlot || isBooking}
+              onClick={() => handleConfirm()}
+            >
+              {isBooking ? "Reservando..." : "Confirmar turno"}
+            </Button>
           </div>
-
-          {bookError && (
-            <div className="bg-card border border-destructive/50 rounded-2xl p-4">
-              <p className="text-sm text-destructive">{bookError}</p>
-              {suggestion && (
-                <Button
-                  variant="primaryBlock"
-                  className="mt-3"
-                  disabled={isBooking}
-                  onClick={() => {
-                    setSelectedSlot(suggestion);
-                    handleConfirm(suggestion);
-                  }}
-                >
-                  <CalendarCheck size={14} aria-hidden="true" />
-                  Reservar {formatDayHour(suggestion)}
-                </Button>
-              )}
-            </div>
-          )}
-
-          <Button
-            variant="primaryBlock"
-            disabled={!selectedSlot || isBooking}
-            onClick={() => handleConfirm()}
-          >
-            {isBooking ? "Reservando..." : "Confirmar turno"}
-          </Button>
         </div>
       )}
     </Section>

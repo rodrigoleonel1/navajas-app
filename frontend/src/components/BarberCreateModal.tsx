@@ -1,12 +1,12 @@
-import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { Input } from "./ui/Input";
-import { PasswordInput } from "./ui/PasswordInput";
-import { Button } from "./ui/Button";
-import { Modal } from "./ui/Modal";
-import { api, getErrorMessage } from "../lib/api";
+import { useForm } from "react-hook-form";
 import { useToast } from "../hooks/useToast";
+import { api, getErrorMessage } from "../lib/api";
 import { createBarberSchema, type CreateBarberInput } from "../lib/schemas";
+import { Button } from "./ui/Button";
+import { Input } from "./ui/Input";
+import { Modal } from "./ui/Modal";
+import { PasswordInput } from "./ui/PasswordInput";
 
 export function BarberCreateModal({
   onClose,

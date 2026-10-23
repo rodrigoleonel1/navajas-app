@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
+import { AppointmentCard } from "../../components/AppointmentCard";
+import { DateField } from "../../components/ui/DateField";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
-import { Input } from "../../components/ui/Input";
-import { AppointmentCard } from "../../components/AppointmentCard";
 import { getErrorMessage } from "../../lib/api";
-import { getUser } from "../../lib/auth";
-import { formatDateKey, toBusinessDayKey } from "../../lib/datetime";
 import {
   listAppointments,
   type Appointment,
 } from "../../lib/appointments";
+import { getUser } from "../../lib/auth";
+import { formatDateKey, toBusinessDayKey } from "../../lib/datetime";
 
 export function BarberPage() {
   const barberName = getUser()?.name ?? "Barbero";
@@ -54,12 +54,11 @@ export function BarberPage() {
 
       <div className="mt-8 bg-card border border-border rounded-2xl p-6">
         <div className="max-w-xs">
-          <Input
+          <DateField
             id="agenda-date"
             label="Día"
-            type="date"
             value={date}
-            onChange={(e) => e.target.value && setDate(e.target.value)}
+            onChange={setDate}
           />
         </div>
         <h3 className="mt-4 font-barlow font-bold uppercase text-sm tracking-widest mb-4">
@@ -72,7 +71,7 @@ export function BarberPage() {
         ) : appointments.length === 0 ? (
           <p className="text-sm text-muted">No tenés turnos ese día.</p>
         ) : (
-          <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 xl:grid-cols-3">
+          <ul className="grid items-start gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {appointments.map((appointment) => (
               <AppointmentCard
                 key={appointment.id}

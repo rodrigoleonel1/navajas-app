@@ -1,18 +1,18 @@
+import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { Button } from "../../components/ui/Button";
+import { Input } from "../../components/ui/Input";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
-import { Input } from "../../components/ui/Input";
-import { Button } from "../../components/ui/Button";
-import { getErrorMessage } from "../../lib/api";
-import { formatDateKey } from "../../lib/datetime";
 import { useToast } from "../../hooks/useToast";
+import { getErrorMessage } from "../../lib/api";
 import {
   getBarberById,
   updateBarberProfile,
   type Barber,
 } from "../../lib/appointments";
+import { formatDateKey } from "../../lib/datetime";
 
 const WEEKDAYS = [
   { value: 1, label: "Lun" },

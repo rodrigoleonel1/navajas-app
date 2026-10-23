@@ -1,15 +1,17 @@
-import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { AppointmentMenu } from "../../components/AppointmentMenu";
+import { BarberCreateModal } from "../../components/BarberCreateModal";
+import { BarberTable } from "../../components/BarberTable";
+import { Badge } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
+import { ListCard } from "../../components/ui/ListCard";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
-import { Button } from "../../components/ui/Button";
-import { BarberTable } from "../../components/BarberTable";
-import { BarberCreateModal } from "../../components/BarberCreateModal";
-import { AppointmentMenu } from "../../components/AppointmentMenu";
-import { Badge } from "../../components/ui/Badge";
-import { getErrorMessage } from "../../lib/api";
+import { Switch } from "../../components/ui/Switch";
 import { useToast } from "../../hooks/useToast";
+import { getErrorMessage } from "../../lib/api";
 import { listBarbers, updateBarberProfile } from "../../lib/appointments";
 import type { Barber } from "../../lib/appointments";
 
@@ -88,19 +90,16 @@ export function BarbersPage() {
       />
 
       <div className="mt-6 bg-card border border-border rounded-2xl p-6">
-        <div className="flex flex-wrap items-center gap-2 mb-4">
+        <div className="flex flex-wrap items-center gap-4 mb-4">
           <h3 className="font-barlow font-bold uppercase text-sm tracking-widest mr-auto">
             Listado ({barbers.length})
           </h3>
-          <label className="flex items-center gap-2 text-xs text-muted cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showInactive}
-              onChange={(e) => setShowInactive(e.target.checked)}
-              className="accent-primary h-4 w-4"
-            />
-            Ver inactivos
-          </label>
+          <Switch
+            id="show-inactive"
+            label="Ver inactivos"
+            checked={showInactive}
+            onChange={(e) => setShowInactive(e.target.checked)}
+          />
           <div className="w-full sm:w-auto sm:flex sm:justify-end">
             <Button
               variant="primaryBlock"
@@ -130,31 +129,31 @@ export function BarbersPage() {
               onEdit={(barber) => navigate(`/app/barbers/${barber.id}`)}
               onToggle={handleToggle}
             />
-            <ul className="flex flex-col gap-3 lg:hidden">
+            <ul className="grid items-start gap-3 sm:grid-cols-2 lg:hidden">
               {barbers.map((barber) => (
-                <li
+                <ListCard
                   key={barber.id}
-                  className="flex justify-between items-center gap-2 border border-border rounded-lg px-3 py-2"
-                >
-                  <span className="flex flex-col">
-                    <span className="text-sm font-medium flex items-center gap-2">
-                      {barber.name}
-                      {!barber.active && (
-                        <Badge tone="danger">Inactivo</Badge>
-                      )}
-                    </span>
-                    <span className="text-xs text-muted">
-                      {barber.email} ·{" "}
-                      {barber.barberProfile?.workingHours?.start ?? "09:00"}–
-                      {barber.barberProfile?.workingHours?.end ?? "18:00"}
-                    </span>
-                  </span>
-                  <AppointmentMenu
-                    ariaLabel={`Acciones de ${barber.name}`}
-                    busy={togglingId === barber.id}
-                    items={barberMenuItems(barber)}
-                  />
-                </li>
+                  title={barber.name}
+                  actions={
+                    <AppointmentMenu
+                      ariaLabel={`Acciones de ${barber.name}`}
+                      busy={togglingId === barber.id}
+                      items={barberMenuItems(barber)}
+                    />
+                  }
+                  subtitle={barber.email}
+                  detail={
+                    (barber.barberProfile?.daysOff?.length ?? 0) > 0
+                      ? `${barber.barberProfile?.daysOff?.length} días libres`
+                      : "Sin días libres"
+                  }
+                  footerLeft={`${barber.barberProfile?.workingHours?.start ?? "09:00"}–${barber.barberProfile?.workingHours?.end ?? "18:00"}`}
+                  footerRight={
+                    <Badge tone={barber.active ? "success" : "danger"}>
+                      {barber.active ? "Activo" : "Inactivo"}
+                    </Badge>
+                  }
+                />
               ))}
             </ul>
           </>

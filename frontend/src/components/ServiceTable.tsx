@@ -1,6 +1,7 @@
+import type { Service } from "../lib/appointments";
+import { formatPrice } from "../lib/format";
 import { AppointmentMenu } from "./AppointmentMenu";
 import { Badge } from "./ui/Badge";
-import type { Service } from "../lib/appointments";
 
 export function ServiceTable({
   services,
@@ -38,7 +39,7 @@ export function ServiceTable({
                 {service.duration} min
               </td>
               <td className="px-4 py-3 text-muted whitespace-nowrap">
-                ${service.price.toLocaleString("es-AR")}
+                {formatPrice(service.price)}
               </td>
               <td className="px-4 py-3">
                 {service.active ? (

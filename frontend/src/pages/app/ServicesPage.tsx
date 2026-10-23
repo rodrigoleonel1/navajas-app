@@ -1,20 +1,23 @@
-import { useEffect, useState } from "react";
 import { Plus } from "lucide-react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { AppointmentMenu } from "../../components/AppointmentMenu";
+import { ServiceCreateModal } from "../../components/ServiceCreateModal";
+import { ServiceTable } from "../../components/ServiceTable";
+import { Badge } from "../../components/ui/Badge";
+import { Button } from "../../components/ui/Button";
+import { ListCard } from "../../components/ui/ListCard";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
-import { Button } from "../../components/ui/Button";
-import { Badge } from "../../components/ui/Badge";
-import { ServiceTable } from "../../components/ServiceTable";
-import { ServiceCreateModal } from "../../components/ServiceCreateModal";
-import { AppointmentMenu } from "../../components/AppointmentMenu";
-import { getErrorMessage } from "../../lib/api";
+import { Switch } from "../../components/ui/Switch";
 import { useToast } from "../../hooks/useToast";
+import { getErrorMessage } from "../../lib/api";
 import {
   listServices,
   updateService,
   type Service,
 } from "../../lib/appointments";
+import { formatPrice } from "../../lib/format";
 
 export function ServicesPage() {
   const navigate = useNavigate();
@@ -91,19 +94,16 @@ export function ServicesPage() {
       />
 
       <div className="mt-8 bg-card border border-border rounded-2xl p-6">
-        <div className="flex flex-wrap items-center gap-2 mb-4">
+        <div className="flex flex-wrap items-center gap-4 mb-4">
           <h3 className="font-barlow font-bold uppercase text-sm tracking-widest mr-auto">
             Listado ({services.length})
           </h3>
-          <label className="flex items-center gap-2 text-xs text-muted cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showInactive}
-              onChange={(e) => setShowInactive(e.target.checked)}
-              className="accent-primary h-4 w-4"
-            />
-            Ver inactivos
-          </label>
+          <Switch
+            id="show-inactive"
+            label="Ver inactivos"
+            checked={showInactive}
+            onChange={(e) => setShowInactive(e.target.checked)}
+          />
           <div className="w-full sm:w-auto sm:flex sm:justify-end">
             <Button
               variant="primaryBlock"
@@ -131,28 +131,26 @@ export function ServicesPage() {
               onEdit={(service) => navigate(`/app/services/${service.id}`)}
               onToggle={handleToggle}
             />
-            <ul className="flex flex-col gap-3 lg:hidden">
+            <ul className="grid items-start gap-3 sm:grid-cols-2 lg:hidden">
               {services.map((service) => (
-                <li
+                <ListCard
                   key={service.id}
-                  className="flex justify-between items-center gap-2 border border-border rounded-lg px-3 py-2"
-                >
-                  <span className="flex flex-col">
-                    <span className="text-sm font-medium flex items-center gap-2">
-                      {service.name}
-                      {!service.active && <Badge tone="danger">Inactivo</Badge>}
-                    </span>
-                    <span className="text-xs text-muted">
-                      {service.duration} min — $
-                      {service.price.toLocaleString("es-AR")}
-                    </span>
-                  </span>
-                  <AppointmentMenu
-                    ariaLabel={`Acciones de ${service.name}`}
-                    busy={togglingId === service.id}
-                    items={serviceMenuItems(service)}
-                  />
-                </li>
+                  title={service.name}
+                  actions={
+                    <AppointmentMenu
+                      ariaLabel={`Acciones de ${service.name}`}
+                      busy={togglingId === service.id}
+                      items={serviceMenuItems(service)}
+                    />
+                  }
+                  subtitle={`${service.duration} min`}
+                  footerLeft={formatPrice(service.price)}
+                  footerRight={
+                    <Badge tone={service.active ? "success" : "danger"}>
+                      {service.active ? "Activo" : "Inactivo"}
+                    </Badge>
+                  }
+                />
               ))}
             </ul>
           </>

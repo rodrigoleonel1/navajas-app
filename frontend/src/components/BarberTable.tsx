@@ -1,6 +1,6 @@
+import type { Barber } from "../lib/appointments";
 import { AppointmentMenu } from "./AppointmentMenu";
 import { Badge } from "./ui/Badge";
-import type { Barber } from "../lib/appointments";
 
 export function BarberTable({
   barbers,

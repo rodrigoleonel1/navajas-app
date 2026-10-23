@@ -1,20 +1,21 @@
+import { zodResolver } from "@hookform/resolvers/zod";
+import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { Button } from "../../components/ui/Button";
+import { Input } from "../../components/ui/Input";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
-import { Input } from "../../components/ui/Input";
-import { Button } from "../../components/ui/Button";
-import { getErrorMessage } from "../../lib/api";
 import { useToast } from "../../hooks/useToast";
-import { serviceSchema, type ServiceInput } from "../../lib/schemas";
+import { getErrorMessage } from "../../lib/api";
 import {
   getServiceById,
   updateService,
   type Service,
 } from "../../lib/appointments";
+import { formatPrice } from "../../lib/format";
+import { serviceSchema, type ServiceInput } from "../../lib/schemas";
 
 export function ServiceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -70,17 +71,6 @@ export function ServiceDetailPage() {
     }
   };
 
-  const setActive = async (active: boolean) => {
-    if (!id) return;
-    try {
-      const updated = await updateService(id, { active });
-      setService(updated);
-      toast.success(active ? "Servicio activado" : "Servicio desactivado");
-    } catch (err) {
-      toast.error(getErrorMessage(err, "Error al cambiar estado"));
-    }
-  };
-
   if (loading) {
     return (
       <Section>
@@ -124,7 +114,7 @@ export function ServiceDetailPage() {
         eyebrow="Panel — Admin"
         title={service.name}
         highlight="detalle."
-        description={`${service.duration} min — $${service.price.toLocaleString("es-AR")}`}
+        description={`${service.duration} min — ${formatPrice(service.price)}`}
       />
       <Link
         to="/app/services"
@@ -134,15 +124,15 @@ export function ServiceDetailPage() {
         Volver al listado
       </Link>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          noValidate
-          className="flex flex-col gap-4 bg-card border border-border rounded-2xl p-6"
-        >
-          <h3 className="font-barlow font-bold uppercase text-sm tracking-widest">
-            Editar servicio
-          </h3>
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        noValidate
+        className="mt-6 flex flex-col gap-4 bg-card border border-border rounded-2xl p-6"
+      >
+        <h3 className="font-barlow font-bold uppercase text-sm tracking-widest">
+          Editar servicio
+        </h3>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Input
             id="name"
             label="Nombre"
@@ -165,31 +155,15 @@ export function ServiceDetailPage() {
             error={errors.price?.message}
             {...register("price", { valueAsNumber: true })}
           />
-          <Button variant="primaryBlock" disabled={isSubmitting}>
-            {isSubmitting ? "Guardando..." : "Guardar cambios"}
-          </Button>
-        </form>
-
-        <div className="bg-card border border-border rounded-2xl p-6 flex flex-col gap-4">
-          <h3 className="font-barlow font-bold uppercase text-sm tracking-widest">
-            Estado
-          </h3>
-          <p className="text-sm text-muted">
-            {service.active
-              ? "Visible en la reserva de los clientes."
-              : "Oculto de la reserva de los clientes."}
-          </p>
-          {service.active ? (
-            <Button variant="outline" onClick={() => setActive(false)}>
-              Desactivar
-            </Button>
-          ) : (
-            <Button variant="outline" onClick={() => setActive(true)}>
-              Activar
-            </Button>
-          )}
         </div>
-      </div>
+        <Button
+          variant="primaryBlock"
+          className="w-full sm:w-auto sm:self-end"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Guardando..." : "Guardar cambios"}
+        </Button>
+      </form>
     </Section>
   );
 }

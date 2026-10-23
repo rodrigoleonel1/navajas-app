@@ -57,6 +57,26 @@ body {
   -webkit-text-stroke: 1.4px var(--primary);
 }
 
+/* Scrollbar sin pista: solo se ve la parte arrastrable (el thumb). */
+.scrollbar-thumb-only {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(237, 232, 224, 0.16) transparent;
+}
+.scrollbar-thumb-only::-webkit-scrollbar {
+  height: 6px;
+  width: 6px;
+}
+.scrollbar-thumb-only::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thumb-only::-webkit-scrollbar-thumb {
+  background: rgba(237, 232, 224, 0.16);
+  border-radius: 9999px;
+}
+.scrollbar-thumb-only::-webkit-scrollbar-thumb:hover {
+  background: rgba(237, 232, 224, 0.3);
+}
+
 /* overlays con pseudo-elementos */
 .hero-section::before {
   content: "";
