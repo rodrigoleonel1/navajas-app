@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
+import { Loader } from "../../components/ui/Loader";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { useToast } from "../../hooks/useToast";
@@ -120,9 +121,9 @@ export function BarberDetailPage() {
           eyebrow="Panel — Admin"
           title="Barbero"
           highlight="detalle."
-          description="Cargando datos del barbero."
+          description="Detalle del barbero."
         />
-        <p className="mt-6 text-sm text-muted">Cargando...</p>
+        <Loader label="Cargando datos del barbero..." height="page" />
       </Section>
     );
   }

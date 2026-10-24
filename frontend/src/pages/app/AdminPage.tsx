@@ -4,6 +4,7 @@ import { AppointmentDetailModal } from "../../components/AppointmentDetailModal"
 import { AppointmentMenu } from "../../components/AppointmentMenu";
 import { AppointmentTable } from "../../components/AppointmentTable";
 import { DateField } from "../../components/ui/DateField";
+import { Loader } from "../../components/ui/Loader";
 import { Pager } from "../../components/ui/Pager";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
@@ -240,8 +241,8 @@ export function AdminPage() {
           </Select>
         </div>
 
-        {loading && appointments.length === 0 ? (
-          <p className="mt-6 text-sm text-muted">Cargando turnos...</p>
+        {loading ? (
+          <Loader label="Cargando turnos..." height="card" />
         ) : listError ? (
           <p className="mt-6 text-sm text-destructive">{listError}</p>
         ) : appointments.length === 0 ? (

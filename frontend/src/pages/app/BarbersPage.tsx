@@ -7,6 +7,7 @@ import { BarberTable } from "../../components/BarberTable";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { ListCard } from "../../components/ui/ListCard";
+import { Loader } from "../../components/ui/Loader";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { Switch } from "../../components/ui/Switch";
@@ -23,11 +24,13 @@ export function BarbersPage() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [showCreate, setShowCreate] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
     async function loadBarbers() {
+      setLoading(true);
       setListError("");
       try {
         const data = await listBarbers(showInactive);
@@ -37,6 +40,8 @@ export function BarbersPage() {
           setBarbers([]);
           setListError(getErrorMessage(err, "Error al cargar barberos"));
         }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     }
     loadBarbers();
@@ -115,7 +120,9 @@ export function BarbersPage() {
         {listError && (
           <p className="text-sm text-destructive mb-4">{listError}</p>
         )}
-        {barbers.length === 0 ? (
+        {loading ? (
+          <Loader label="Cargando barberos..." height="card" />
+        ) : barbers.length === 0 ? (
           <p className="text-sm text-muted">
             {listError
               ? "Reintentá recargando la página."

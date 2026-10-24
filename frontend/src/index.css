@@ -153,10 +153,35 @@ body {
   animation: dialog-in 0.2s cubic-bezier(0.21, 1.02, 0.73, 1) both;
 }
 
+/* loader de área: cuatro puntos con pulso escalonado */
+@keyframes loader-dot {
+  0%,
+  80%,
+  100% {
+    transform: scale(0.55);
+    opacity: 0.25;
+  }
+  40% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.loader-dot {
+  animation: loader-dot 1.2s infinite ease-in-out;
+  box-shadow: 0 0 12px rgba(96, 165, 250, 0.45);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-toast-in,
   .animate-toast-out,
   .animate-dialog-in {
     animation: none;
+  }
+
+  .loader-dot {
+    animation: none;
+    opacity: 0.9;
+    transform: none;
   }
 }

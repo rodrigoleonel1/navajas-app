@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AppointmentCard } from "../../components/AppointmentCard";
+import { Loader } from "../../components/ui/Loader";
 import { Pager } from "../../components/ui/Pager";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
@@ -105,7 +106,7 @@ export function ClientTurnosPage() {
       />
 
       {loading ? (
-        <p className="mt-6 text-sm text-muted">Cargando turnos...</p>
+        <Loader label="Cargando turnos..." height="page" />
       ) : listError ? (
         <p className="mt-6 text-sm text-destructive">{listError}</p>
       ) : (

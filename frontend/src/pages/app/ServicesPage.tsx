@@ -7,6 +7,7 @@ import { ServiceTable } from "../../components/ServiceTable";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { ListCard } from "../../components/ui/ListCard";
+import { Loader } from "../../components/ui/Loader";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { Switch } from "../../components/ui/Switch";
@@ -25,6 +26,7 @@ export function ServicesPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [showInactive, setShowInactive] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
+  const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
   const [showCreate, setShowCreate] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
@@ -32,6 +34,7 @@ export function ServicesPage() {
   useEffect(() => {
     let cancelled = false;
     async function loadServices() {
+      setLoading(true);
       setListError("");
       try {
         const data = await listServices(showInactive);
@@ -41,6 +44,8 @@ export function ServicesPage() {
           setServices([]);
           setListError(getErrorMessage(err, "Error al cargar servicios"));
         }
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     }
     loadServices();
@@ -119,7 +124,9 @@ export function ServicesPage() {
         {listError && (
           <p className="text-sm text-destructive mb-4">{listError}</p>
         )}
-        {services.length === 0 ? (
+        {loading ? (
+          <Loader label="Cargando servicios..." height="card" />
+        ) : services.length === 0 ? (
           <p className="text-sm text-muted">
             {listError ? "Reintentá recargando la página." : "No hay servicios aún."}
           </p>

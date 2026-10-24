@@ -2,6 +2,7 @@ import { CalendarCheck, Clock } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/Button";
+import { Loader } from "../../components/ui/Loader";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { useToast } from "../../hooks/useToast";
@@ -196,7 +197,7 @@ export function ClientPage() {
       )}
 
       {loadingCatalog ? (
-        <p className="mt-6 text-sm text-muted">Cargando servicios...</p>
+        <Loader label="Cargando servicios..." height="page" />
       ) : (
         <div className="mt-8 flex w-full flex-col gap-6 lg:grid lg:grid-cols-2 lg:items-start">
           <div className="bg-card border border-border rounded-2xl p-6">
@@ -320,7 +321,11 @@ export function ClientPage() {
                     Elegí al menos un servicio y un barbero para ver horarios.
                   </p>
                 ) : loadingSlots ? (
-                  <p className="text-sm text-muted">Buscando horarios...</p>
+                  <Loader
+                    label="Buscando horarios..."
+                    size="sm"
+                    className="py-4"
+                  />
                 ) : slotsError ? (
                   <p className="text-sm text-destructive">{slotsError}</p>
                 ) : shownAvailability && shownAvailability.slots.length === 0 ? (

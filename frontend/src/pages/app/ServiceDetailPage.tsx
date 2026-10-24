@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form";
 import { Link, useParams } from "react-router-dom";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
+import { Loader } from "../../components/ui/Loader";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { useToast } from "../../hooks/useToast";
@@ -78,9 +79,9 @@ export function ServiceDetailPage() {
           eyebrow="Panel — Admin"
           title="Servicio"
           highlight="detalle."
-          description="Cargando datos del servicio."
+          description="Detalle del servicio."
         />
-        <p className="mt-6 text-sm text-muted">Cargando...</p>
+        <Loader label="Cargando datos del servicio..." height="page" />
       </Section>
     );
   }

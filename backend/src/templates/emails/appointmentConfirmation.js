@@ -4,6 +4,10 @@ import {
   formatBusinessTime,
 } from "../../utils/businessTime.js";
 
+// Mismos colores que el tema principal de la app.
+const PRIMARY_COLOR = "#60a5fa";
+const PRIMARY_FOREGROUND = "#11100f";
+
 function escapeHtml(value) {
   return String(value ?? "")
     .replaceAll("&", "&amp;")
@@ -93,7 +97,7 @@ export function buildAppointmentConfirmation(payload = {}) {
         <td align="center">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;overflow:hidden;">
             <tr>
-              <td style="background:#111111;padding:20px 24px;color:#ffffff;font-size:18px;letter-spacing:2px;font-weight:bold;">
+              <td style="background:${PRIMARY_COLOR};padding:20px 24px;color:${PRIMARY_FOREGROUND};font-size:18px;letter-spacing:2px;font-weight:bold;">
                 NAVAJAS BARBER
               </td>
             </tr>
@@ -107,7 +111,7 @@ export function buildAppointmentConfirmation(payload = {}) {
                   ${rows}
                 </table>
                 <p style="margin:24px 0 0;text-align:center;">
-                  <a href="${escapeHtml(appUrl)}" style="display:inline-block;background:#111111;color:#ffffff;text-decoration:none;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:bold;">
+                  <a href="${escapeHtml(appUrl)}" style="display:inline-block;background:${PRIMARY_COLOR};color:${PRIMARY_FOREGROUND};text-decoration:none;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:bold;">
                     Ver mis turnos
                   </a>
                 </p>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { AppointmentCard } from "../../components/AppointmentCard";
 import { DateField } from "../../components/ui/DateField";
+import { Loader } from "../../components/ui/Loader";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { getErrorMessage } from "../../lib/api";
@@ -65,7 +66,7 @@ export function BarberPage() {
           Turnos del {formatDateKey(date)} ({appointments.length})
         </h3>
         {loading ? (
-          <p className="text-sm text-muted">Cargando turnos...</p>
+          <Loader label="Cargando turnos..." height="card" />
         ) : listError ? (
           <p className="text-sm text-destructive">{listError}</p>
         ) : appointments.length === 0 ? (
