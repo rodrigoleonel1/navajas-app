@@ -270,7 +270,7 @@ Historias de usuario
 
 Criterio de Aceptación 
 
-* CA-9: Toda notificación se registra en la colección notifications de Mongo, con canal, estado y regla de origen.  
+* CA-9: Toda notificación se registra en la colección notifications de Mongo, con canal y estado.
 * CA-10: El recordatorio de 24hs se dispara mediante un job programado (Vercel Cron) que revisa turnos próximos.  
 * CA-11: Al cancelar un turno (por el cliente o por el admin) o al marcarlo como inasistencia, el sistema dispara automáticamente una notificación (email \+ in-app) informando al cliente el cambio de estado y el motivo, según corresponda. 
 

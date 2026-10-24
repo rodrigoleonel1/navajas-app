@@ -1,3 +1,4 @@
+import { waitUntil } from "@vercel/functions";
 import mongoose from "mongoose";
 import { Appointment } from "../models/Appointment.js";
 import { Service } from "../models/Service.js";
@@ -11,6 +12,10 @@ import {
   tzParts,
 } from "../utils/businessTime.js";
 import { toObjectIdOrThrow } from "../utils/objectId.js";
+import {
+  createNotification,
+  sendNotification,
+} from "./notification.service.js";
 
 // Parsea un ISO8601 UTC o tira 400 VALIDATION_ERROR si es inválido.
 function parseISODate(value) {
@@ -101,7 +106,8 @@ async function resolveDurationAndPrice(serviceIds) {
     (total, id) => total + servicesById.get(id).price,
     0,
   );
-  return { serviceOids, duration, price };
+  const orderedServices = serviceIds.map((id) => servicesById.get(id));
+  return { serviceOids, services: orderedServices, duration, price };
 }
 
 async function getBarberOrThrow(barberId) {
@@ -263,6 +269,68 @@ function toAppointmentDTO(doc) {
   };
 }
 
+// Mantiene vivo el envío en Vercel sin bloquear la respuesta HTTP. En local
+// no hay contexto de Vercel, así que se usa el comportamiento anterior.
+function scheduleNotificationSend(notificationId) {
+  const sendPromise = sendNotification(notificationId).catch((err) => {
+    console.error(
+      "[appointment] no se pudo enviar la confirmación",
+      err?.code || "",
+      err?.message || err,
+    );
+  });
+
+  if (process.env.VERCEL) {
+    try {
+      waitUntil(sendPromise);
+      return;
+    } catch (err) {
+      console.error(
+        "[appointment] no se pudo registrar waitUntil",
+        err?.message || err,
+      );
+    }
+  }
+
+  void sendPromise;
+}
+
+// Encola la confirmación por email (RN0) después de crear el turno. El envío
+// no bloquea la respuesta: si falla, queda registrado en la notificación para
+// poder reintentarlo más adelante.
+async function enqueueAppointmentConfirmation({
+  appointment,
+  client,
+  barber,
+  services,
+}) {
+  try {
+    const notification = await createNotification({
+      appointmentId: appointment._id,
+      targetUser: { id: client._id, email: client.email },
+      type: "confirmacion_turno",
+      payload: {
+        clientName: client.name,
+        barberName: barber.name,
+        services: services.map((service) => service.name),
+        startAt: new Date(appointment.start_at).toISOString(),
+        endAt: new Date(appointment.end_at).toISOString(),
+        duration: appointment.duration_snapshot,
+        price: appointment.price_snapshot,
+      },
+    });
+
+    scheduleNotificationSend(notification._id);
+  } catch (err) {
+    // Un fallo al encolar tampoco debe afectar la reserva.
+    console.error(
+      "[appointment] no se pudo crear la notificación",
+      err?.code || "",
+      err?.message || err,
+    );
+  }
+}
+
 export async function createAppointment({
   clientId,
   barberId,
@@ -278,10 +346,17 @@ export async function createAppointment({
     );
   }
 
+  const client = await User.findById(clientOid)
+    .select("name email role active")
+    .lean();
+  if (!client || client.role !== "client" || client.active === false) {
+    throw createAppError(404, "NOT_FOUND", "Cliente no encontrado");
+  }
+
   const start = parseISODate(startAt);
 
   // RN2: duración total y precio base = suma de los servicios elegidos.
-  const { serviceOids, duration, price } =
+  const { serviceOids, services, duration, price } =
     await resolveDurationAndPrice(serviceIds);
   const end = new Date(start.getTime() + duration * 60 * 1000);
 
@@ -359,7 +434,18 @@ export async function createAppointment({
     await session.endSession();
   }
 
-  return toAppointmentDTO(created.toObject());
+  const appointmentDTO = toAppointmentDTO(created.toObject());
+
+  // RN0: confirmación por email. La reserva ya está confirmada; un fallo de
+  // email no la afecta.
+  await enqueueAppointmentConfirmation({
+    appointment: created,
+    client,
+    barber,
+    services,
+  });
+
+  return appointmentDTO;
 }
 
 export async function listAppointments({

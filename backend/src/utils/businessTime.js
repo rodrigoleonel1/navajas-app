@@ -72,3 +72,31 @@ export function parseWorkHour(hhmm, fallback) {
   if (hours > 23 || minutes > 59) return fallback;
   return hours * 60 + minutes;
 }
+
+const businessDateFormatter = new Intl.DateTimeFormat("es-AR", {
+  timeZone: BUSINESS_TZ,
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+  year: "numeric",
+});
+
+const businessTimeFormatter = new Intl.DateTimeFormat("es-AR", {
+  timeZone: BUSINESS_TZ,
+  hour: "2-digit",
+  minute: "2-digit",
+  hourCycle: "h23",
+});
+
+// Fecha larga en la zona comercial: "Jueves 10 de septiembre de 2026".
+export function formatBusinessDate(value) {
+  const text = businessDateFormatter
+    .format(new Date(value))
+    .replace(",", "");
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+// Hora en la zona comercial: "15:00".
+export function formatBusinessTime(value) {
+  return businessTimeFormatter.format(new Date(value));
+}
