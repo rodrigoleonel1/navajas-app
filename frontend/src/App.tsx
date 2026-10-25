@@ -9,6 +9,7 @@ import { BarberDetailPage } from "./pages/app/BarberDetailPage";
 import { BarberIngresosPage } from "./pages/app/BarberIngresosPage";
 import { BarbersPage } from "./pages/app/BarbersPage";
 import { ClientTurnosPage } from "./pages/app/ClientTurnosPage";
+import { HolidaysPage } from "./pages/app/HolidaysPage";
 import { ServiceDetailPage } from "./pages/app/ServiceDetailPage";
 import { ServicesPage } from "./pages/app/ServicesPage";
 import { LandingPage } from "./pages/LandingPage";
@@ -72,6 +73,14 @@ function App() {
             element={
               <ProtectedRoute roles={["admin"]}>
                 <ServicesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="holidays"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <HolidaysPage />
               </ProtectedRoute>
             }
           />

@@ -244,8 +244,18 @@ export function BarberDetailPage() {
 
         <div className="bg-card border border-border rounded-2xl p-6">
           <h3 className="font-barlow font-bold uppercase text-sm tracking-widest mb-4">
-            Francos puntuales
+            Francos / vacaciones
           </h3>
+          <p className="mb-3 text-xs text-muted">
+            Los feriados del negocio se configuran en{" "}
+            <Link
+              to="/app/holidays"
+              className="text-primary hover:underline"
+            >
+              Feriados
+            </Link>
+            .
+          </p>
           {daysOff.length === 0 ? (
             <p className="text-sm text-muted">Sin francos configurados.</p>
           ) : (
