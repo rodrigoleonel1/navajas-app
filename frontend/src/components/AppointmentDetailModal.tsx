@@ -31,7 +31,13 @@ export function AppointmentDetailModal({
     appointment.client.name ? `Cliente: ${appointment.client.name}` : null,
   ].filter(Boolean);
   const extra = appointment.extra ?? 0;
-  const basePrice = Math.max(appointment.priceSnapshot - extra, 0);
+  const voucherDiscount = appointment.voucherDiscount ?? 0;
+  // price_snapshot = base + recargo - vale.
+  const basePrice = Math.max(
+    appointment.priceSnapshot - extra + voucherDiscount,
+    0,
+  );
+  const hasBreakdown = extra > 0 || voucherDiscount > 0;
   const statusNote =
     appointment.status === "cancelled" && appointment.cancelType
       ? CANCEL_TYPE_LABELS[appointment.cancelType]
@@ -67,10 +73,13 @@ export function AppointmentDetailModal({
               appointment.status}
           </Badge>
         </div>
-        {extra > 0 && (
+        {hasBreakdown && (
           <p className="mt-1 text-xs text-muted">
-            Precio base {formatPrice(basePrice)} · Recargo 20%{" "}
-            {formatPrice(extra)}
+            Precio base {formatPrice(basePrice)}
+            {extra > 0 && <> · Recargo 20% {formatPrice(extra)}</>}
+            {voucherDiscount > 0 && (
+              <> · Vale aplicado -{formatPrice(voucherDiscount)}</>
+            )}
           </p>
         )}
         {statusNote && (

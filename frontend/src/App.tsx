@@ -10,9 +10,11 @@ import { BarberDetailPage } from "./pages/app/BarberDetailPage";
 import { BarberIngresosPage } from "./pages/app/BarberIngresosPage";
 import { BarbersPage } from "./pages/app/BarbersPage";
 import { ClientTurnosPage } from "./pages/app/ClientTurnosPage";
+import { ClientVouchersPage } from "./pages/app/ClientVouchersPage";
 import { HolidaysPage } from "./pages/app/HolidaysPage";
 import { ServiceDetailPage } from "./pages/app/ServiceDetailPage";
 import { ServicesPage } from "./pages/app/ServicesPage";
+import { VoucherConfigPage } from "./pages/app/VoucherConfigPage";
 import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
@@ -42,6 +44,22 @@ function App() {
             element={
               <ProtectedRoute roles={["client"]}>
                 <ClientTurnosPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="client/vales"
+            element={
+              <ProtectedRoute roles={["client"]}>
+                <ClientVouchersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="voucher-config"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <VoucherConfigPage />
               </ProtectedRoute>
             }
           />

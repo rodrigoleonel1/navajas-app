@@ -173,14 +173,18 @@ export function AdminPage() {
       message:
         nextStatus === "completed"
           ? "Marcar turno como completado?"
-          : "El horario queda libre y no cuenta como inasistencia.",
+          : "El turno se cancela con anticipación, sin penalización. Se emitirá un vale del 20% para el cliente.",
       confirmLabel: nextStatus === "completed" ? "Completar" : "Confirmar",
     });
     if (!confirmed) return;
     setActingId(appointment.id);
     try {
       const updated = await updateAppointmentStatus(appointment.id, nextStatus);
-      toast.success(`Turno ${label}`);
+      toast.success(
+        nextStatus === "cancelled"
+          ? "Turno cancelado. Se emitió un vale del 20%."
+          : `Turno ${label}`,
+      );
       setDetail((current) =>
         current?.id === updated.id ? updated : current,
       );

@@ -64,6 +64,9 @@ export function AppointmentCard({
       : null,
     appointment.status === "no_show" ? "Horario no liberado" : null,
     appointment.extra > 0 ? "Incluye recargo del 20%" : null,
+    (appointment.voucherDiscount ?? 0) > 0
+      ? "Incluye vale de descuento"
+      : null,
   ].filter(Boolean);
   const detail = [...people, ...notes].join(" · ");
   // Un turno cancelado se muestra atenuado salvo el badge de estado.

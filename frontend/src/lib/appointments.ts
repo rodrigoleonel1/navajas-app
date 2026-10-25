@@ -49,6 +49,8 @@ export type Appointment = {
   cancelType: CancelType | null;
   extra: number;
   priceSnapshot: number;
+  voucherId: string | null;
+  voucherDiscount: number;
   durationSnapshot: number;
 };
 

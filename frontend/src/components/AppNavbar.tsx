@@ -29,6 +29,7 @@ export function AppNavbar() {
             label: "Liquidaciones",
             index: "05",
           },
+          { to: "/app/voucher-config", label: "Config. vales", index: "06" },
         ]
       : role === "barber"
         ? [
@@ -38,6 +39,7 @@ export function AppNavbar() {
         : [
             { to: "/app/agenda", label: "Reservar", index: "01" },
             { to: "/app/client/turnos", label: "Mis turnos", index: "02" },
+            { to: "/app/client/vales", label: "Vales", index: "03" },
           ];
 
   const handleLogout = () => {

@@ -19,12 +19,14 @@ import {
 } from "../../lib/appointments";
 import {
   businessDayKeysFromToday,
+  formatDateKey,
   formatDayHour,
   formatDayLabel,
   formatHour,
   toBusinessDayKey,
 } from "../../lib/datetime";
 import { formatPrice } from "../../lib/format";
+import { listVouchers, type Voucher } from "../../lib/vouchers";
 
 function toLocalDateKey(date: Date): string {
   return toBusinessDayKey(date.toISOString());
@@ -35,6 +37,7 @@ export function ClientPage() {
   const toast = useToast();
   const [services, setServices] = useState<Service[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>([]);
+  const [activeVouchers, setActiveVouchers] = useState<Voucher[]>([]);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
   const [catalogError, setCatalogError] = useState("");
 
@@ -67,6 +70,22 @@ export function ClientPage() {
       }
     }
     loadCatalog();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    listVouchers()
+      .then((list) => {
+        if (!cancelled) {
+          setActiveVouchers(list.filter((voucher) => voucher.status === "active"));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setActiveVouchers([]);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const readyToSearch = serviceIds.length > 0 && barberId !== "" && date !== "";
@@ -167,9 +186,16 @@ export function ClientPage() {
         serviceIds,
         startAt,
       });
+      const voucherDiscount = appointment.voucherDiscount ?? 0;
+      const bookingNotes = [
+        appointment.extra > 0 ? "recargo del 20%" : null,
+        voucherDiscount > 0
+          ? `vale aplicado (-${formatPrice(voucherDiscount)})`
+          : null,
+      ].filter(Boolean);
       toast.success(
-        appointment.extra > 0
-          ? "Turno reservado con recargo del 20% por inasistencias."
+        bookingNotes.length > 0
+          ? `Turno reservado con ${bookingNotes.join(" y ")}.`
           : "Turno reservado",
       );
       navigate("/app/client/turnos");
@@ -393,6 +419,24 @@ export function ClientPage() {
                     Reservar {formatDayHour(suggestion)}
                   </Button>
                 )}
+              </div>
+            )}
+
+            {activeVouchers.length > 0 && (
+              <div className="bg-card border border-primary/40 rounded-2xl p-4">
+                <p className="text-sm font-semibold text-primary">
+                  Vale del {activeVouchers[0].discountPercent}% disponible
+                </p>
+                <p className="mt-1 text-xs text-muted">
+                  {activeVouchers.length > 1
+                    ? "Se aplicará el vale que vence primero al confirmar."
+                    : "Se aplicará automáticamente al confirmar."}{" "}
+                  Vence el{" "}
+                  {formatDateKey(
+                    toBusinessDayKey(activeVouchers[0].expiresAt),
+                  )}
+                  .
+                </p>
               </div>
             )}
 
