@@ -56,6 +56,14 @@ export function businessDayStartUtc(dayKey) {
   );
 }
 
+// Suma (o resta con delta negativo) días calendario a un YYYY-MM-DD.
+export function shiftDayKey(dayKey, delta) {
+  const [year, month, day] = dayKey.split("-").map(Number);
+  return new Date(Date.UTC(year, month - 1, day) + delta * DAY_MS)
+    .toISOString()
+    .slice(0, 10);
+}
+
 // Día calendario UTC de un Date ("2026-09-29"), para comparar francos y
 // feriados guardados como YYYY-MM-DD. Distinto de tzParts: UTC puro.
 export function dayKeyUTC(date) {

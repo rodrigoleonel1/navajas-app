@@ -2,6 +2,7 @@ import { LogOut } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMobileMenu } from "../hooks/useMobileMenu";
 import { clearAuth, getUser } from "../lib/auth";
+import { NotificationBell } from "./NotificationBell";
 import { BrandLogo } from "./ui/BrandLogo";
 import { Button } from "./ui/Button";
 import { MobileNavLink } from "./ui/MobileNavLink";
@@ -57,6 +58,7 @@ export function AppNavbar() {
 
   const actions = (
     <>
+      {role === "client" && <NotificationBell />}
       <span className="hidden md:inline text-xs text-muted">{user?.email}</span>
       <Button
         variant="outline"

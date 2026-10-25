@@ -108,7 +108,7 @@ Reglas **RN0–RN11** definidas en `docs/FRD-Navajas.md:93-107`:
 - **RN6:** cálculo de comisión 60/40 sobre precio histórico.
 - **RN7:** cancelación por admin → vale 20% con caducidad configurada.
 - **RN8:** cada 10 turnos completados (10°,20°...) → vale fidelidad 30%.
-- **RN9:** recordatorio 24h antes (Vercel Cron).
+- **RN9:** recordatorio del día anterior (Vercel Cron diario; ver Notificaciones y recordatorios).
 - **RN11:** gestión de ofertas/combos con % descuento.
 
 #### Cancelación, inasistencias y recargo (RN3/RN4/RN5)
@@ -137,6 +137,32 @@ El día de imputación es el día comercial de `start_at` en `America/Argentina/
 
 La pantalla del barbero (`/app/barber/ingresos`) muestra la comisión con un gráfico Recharts. La pantalla del admin (`/app/daily-earnings`, label “Liquidaciones”) muestra comisión, parte local y total por barbero. No se registra el pago ni se marca la liquidación como pagada en esta versión.
 
+#### Notificaciones in-app y recordatorios (RN0/RN9)
+
+Cada evento de turno crea dos registros en `notifications`: uno por `email` y otro por `in_app`. Los emails nacen `pending` y se envían de forma asíncrona con reintentos; los avisos in-app nacen `sent` y quedan pendientes de lectura hasta que el cliente los abre (`read_at`). La creación es idempotente por `appointment_id + type + channel`.
+
+Eventos notificados: confirmación (RN0), cancelación (RN3), inasistencia (RN4) y recordatorio (RN9). El cliente ve una campana en el navbar con el contador de no leídos. El frontend hace polling cada 30 segundos y lo pausa cuando la pestaña está oculta; al abrir el panel también refresca. La bandeja no tiene página dedicada en esta versión.
+
+El recordatorio corre con **Vercel Cron** una vez por día. El plan Hobby solo permite una ejecución diaria, así que el schedule es `0 15 * * *` UTC: **12:00 de Argentina** (Vercel puede ejecutarlo dentro de la hora, entre 12:00 y 12:59). El endpoint busca turnos `pending` del **día comercial siguiente** y crea el email + aviso in-app. No es una ventana exacta de 24 h: según la hora del turno, el aviso llega aproximadamente entre 12 y 36 h antes. La idempotencia evita duplicados si Vercel reintenta la ejecución.
+
+El endpoint del cron se protege con `Authorization: Bearer <CRON_SECRET>`. Configurar `CRON_SECRET` en Vercel y en `backend/.env` para desarrollo local. Si la variable falta, el endpoint responde `503 CRON_NOT_CONFIGURED`. Para probarlo localmente:
+
+```bash
+curl -H "Authorization: Bearer $CRON_SECRET" \
+  http://localhost:3000/api/cron/reminders
+```
+
+Endpoints de bandeja (solo `client`):
+
+```text
+GET   /api/notifications?limit=20
+PATCH /api/notifications/:id/read
+PATCH /api/notifications/read-all
+GET   /api/cron/reminders             # Authorization: Bearer <CRON_SECRET>
+```
+
+`GET /api/notifications` devuelve `{ items, unread }`. El límite máximo es 50 y el default 20. Los avisos incluyen `title`, `message`, `link`, `createdAt` y `readAt`.
+
 Los controllers únicamente deben recibir la petición, delegar al service y construir la respuesta HTTP.
 
 ### API REST
@@ -162,7 +188,10 @@ PATCH  /api/appointments/:id/no-show    # admin
 GET    /api/vouchers
 GET    /api/offers
 POST   /api/ratings
-GET    /api/notifications
+GET    /api/notifications?limit=20              # cliente: bandeja in-app
+PATCH  /api/notifications/:id/read              # cliente
+PATCH  /api/notifications/read-all              # cliente
+GET    /api/cron/reminders                      # Vercel Cron (CRON_SECRET)
 ```
 
 Ejemplos:
@@ -334,6 +363,30 @@ holidaySchema.index({ date: 1 }, { unique: true });
 
 La disponibilidad de un barbero se bloquea si el día es feriado global **o** franco semanal **o** franco puntual. Los feriados se consultan por rango y se pasan como `Set` de `YYYY-MM-DD` a la lógica de slots.
 
+#### `notifications`
+
+```js
+// Idempotencia: un registro por turno + tipo + canal.
+notificationSchema.index(
+  { appointment_id: 1, type: 1, channel: 1 },
+  { unique: true },
+);
+// Bandeja in-app: últimos avisos del cliente.
+notificationSchema.index({
+  target_user_id: 1,
+  channel: 1,
+  status: 1,
+  created_at: -1,
+});
+// Contador de no leídos.
+notificationSchema.index({
+  target_user_id: 1,
+  channel: 1,
+  status: 1,
+  read_at: 1,
+});
+```
+
 ### Transacciones al crear un turno
 
 La creación de un turno debe ejecutarse dentro de una transacción de MongoDB usando:
@@ -359,7 +412,7 @@ await session.withTransaction(async () => {
   // 4. Guardar price_snapshot y duration_snapshot FINALES (histórico real cobrado)
   // 5. Crear Appointment
 });
-// 6. Encolar Notification (outbox) fuera de la transacción → email (Nodemailer/Resend) + in-app eventual
+// 6. Encolar Notification (outbox) fuera de la transacción → email (Nodemailer/Resend) + in-app
 ```
 
 - Si cualquier paso 1-5 falla → rollback.
@@ -466,6 +519,10 @@ Los roles deben utilizarse para proteger operaciones sensibles, especialmente la
 | `POST /api/barbers` |  |  | ✓ | CA-3, alta barbero |
 | `GET /api/barbers/me/earnings` |  | ✓ |  | `barber_id = req.user.id`; rango máximo 366 días |
 | `GET /api/barbers/daily-earnings` |  |  | ✓ | Liquidación diaria; activos con cero turnos incluidos |
+| `GET /api/notifications` | ✓ (propios) |  |  | `target_user_id = req.user.id`; solo canal `in_app` |
+| `PATCH /api/notifications/:id/read` | ✓ (propio) |  |  | Verifica ownership del aviso |
+| `PATCH /api/notifications/read-all` | ✓ (propios) |  |  | Marca todos los no leídos |
+| `GET /api/cron/reminders` |  |  |  | Protegido por `CRON_SECRET`, no por JWT |
 | `POST /api/offers` |  |  | ✓ | RN11 |
 | `GET /api/vouchers` | ✓ (propios) |  |  | `client_id = req.user.id` |
 
@@ -658,7 +715,7 @@ Ejemplo:
 Esto es crítico para los cálculos de ventanas temporales:
 
 - **RN3:** cancelación con `>= 24h`, `4–24h` y `< 4h`.
-- **RN9:** recordatorios mediante Vercel Cron.
+- **RN9:** recordatorios mediante Vercel Cron diario a las 12:00 de Argentina.
 
 Las fechas deben convertirse correctamente a UTC en los límites FE/BE para evitar errores por zona horaria.
 

@@ -17,6 +17,9 @@ export const config = {
   // Base pública del frontend: se usa en los links de los emails.
   APP_URL: process.env.APP_URL || "http://localhost:5173",
 
+  // Secreto que Vercel Cron envía como Authorization: Bearer <CRON_SECRET>.
+  CRON_SECRET: process.env.CRON_SECRET || "",
+
   // Email transaccional. Por defecto no envía nada real.
   EMAIL_PROVIDER: (process.env.EMAIL_PROVIDER || "console").toLowerCase().trim(),
   EMAIL_TIMEOUT_MS: parseInt(process.env.EMAIL_TIMEOUT_MS || "5000", 10),

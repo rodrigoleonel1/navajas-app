@@ -1,4 +1,3 @@
-import { waitUntil } from "@vercel/functions";
 import mongoose from "mongoose";
 import { Appointment } from "../models/Appointment.js";
 import { BookingLock } from "../models/BookingLock.js";
@@ -21,8 +20,8 @@ import {
 import { toObjectIdOrThrow } from "../utils/objectId.js";
 import { loadHolidayKeys } from "./holiday.service.js";
 import {
-  createNotification,
-  sendNotification,
+  createAppointmentNotifications,
+  scheduleNotificationSend,
 } from "./notification.service.js";
 
 const APPOINTMENT_FIELDS =
@@ -354,35 +353,9 @@ function toAppointmentDTO(doc, { now = new Date() } = {}) {
   };
 }
 
-// Mantiene vivo el envío en Vercel sin bloquear la respuesta HTTP. En local
-// no hay contexto de Vercel, así que se usa el comportamiento anterior.
-function scheduleNotificationSend(notificationId) {
-  const sendPromise = sendNotification(notificationId).catch((err) => {
-    console.error(
-      "[appointment] no se pudo enviar la confirmación",
-      err?.code || "",
-      err?.message || err,
-    );
-  });
-
-  if (process.env.VERCEL) {
-    try {
-      waitUntil(sendPromise);
-      return;
-    } catch (err) {
-      console.error(
-        "[appointment] no se pudo registrar waitUntil",
-        err?.message || err,
-      );
-    }
-  }
-
-  void sendPromise;
-}
-
-// Encola la confirmación por email (RN0) después de crear el turno. El envío
-// no bloquea la respuesta: si falla, queda registrado en la notificación para
-// poder reintentarlo más adelante.
+// Encola la confirmación por email + in-app (RN0) después de crear el turno.
+// El envío no bloquea la respuesta: si falla, queda registrado en la
+// notificación para poder reintentarlo más adelante.
 async function enqueueAppointmentConfirmation({
   appointment,
   client,
@@ -390,7 +363,7 @@ async function enqueueAppointmentConfirmation({
   services,
 }) {
   try {
-    const notification = await createNotification({
+    const { email } = await createAppointmentNotifications({
       appointmentId: appointment._id,
       targetUser: { id: client._id, email: client.email },
       type: "confirmacion_turno",
@@ -406,7 +379,7 @@ async function enqueueAppointmentConfirmation({
       },
     });
 
-    scheduleNotificationSend(notification._id);
+    if (email) scheduleNotificationSend(email._id, "appointment");
   } catch (err) {
     // Un fallo al encolar tampoco debe afectar la reserva.
     console.error(
@@ -422,7 +395,7 @@ async function enqueueAppointmentConfirmation({
 async function enqueueStatusNotification({ appointment, type, cancelType = null }) {
   try {
     const client = appointment.client_id;
-    const notification = await createNotification({
+    const { email } = await createAppointmentNotifications({
       appointmentId: appointment._id,
       targetUser: { id: client._id, email: client.email },
       type,
@@ -440,7 +413,7 @@ async function enqueueStatusNotification({ appointment, type, cancelType = null 
       },
     });
 
-    scheduleNotificationSend(notification._id);
+    if (email) scheduleNotificationSend(email._id, "appointment");
   } catch (err) {
     // El cambio de estado ya quedó guardado; un fallo de email no lo revierte.
     console.error(

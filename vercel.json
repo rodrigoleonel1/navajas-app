@@ -8,6 +8,12 @@
       "includeFiles": "backend/src/**"
     }
   },
+  "crons": [
+    {
+      "path": "/api/cron/reminders",
+      "schedule": "0 15 * * *"
+    }
+  ],
   "rewrites": [
     { "source": "/api/(.*)", "destination": "/api/index.js" },
     { "source": "/(.*)", "destination": "/index.html" }

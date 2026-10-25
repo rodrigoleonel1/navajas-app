@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-// Canales soportados. `in_app` queda preparado para V2.
+// Canales soportados: email transaccional y aviso dentro de la app.
 export const NOTIFICATION_CHANNELS = ["email", "in_app"];
 
 // Tipos de notificación (template/contenido).
@@ -48,7 +48,12 @@ const notificationSchema = new mongoose.Schema(
       default: "pending",
       required: true,
     },
-    // Snapshot de los datos usados para renderizar el email.
+    // Solo para canal in_app: momento en que el cliente abrió el aviso.
+    read_at: {
+      type: Date,
+      default: null,
+    },
+    // Snapshot de los datos usados para renderizar el email o el aviso.
     payload: {
       type: mongoose.Schema.Types.Mixed,
       required: true,
@@ -80,5 +85,19 @@ notificationSchema.index(
 notificationSchema.index({ status: 1, attempts: 1, created_at: 1 });
 // Recuperar notificaciones que quedaron en "sending".
 notificationSchema.index({ status: 1, updated_at: 1 });
+// Bandeja in-app: últimos avisos del cliente.
+notificationSchema.index({
+  target_user_id: 1,
+  channel: 1,
+  status: 1,
+  created_at: -1,
+});
+// Contador de avisos in-app no leídos.
+notificationSchema.index({
+  target_user_id: 1,
+  channel: 1,
+  status: 1,
+  read_at: 1,
+});
 
 export const Notification = mongoose.model("Notification", notificationSchema);
