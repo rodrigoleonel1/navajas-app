@@ -1,6 +1,7 @@
 import {
   APPOINTMENT_STATUS_LABELS,
   APPOINTMENT_STATUS_TONES,
+  CANCEL_TYPE_LABELS,
   serviceNames,
 } from "../lib/appointmentDisplay";
 import type { Appointment } from "../lib/appointments";
@@ -16,6 +17,7 @@ export function AppointmentCard({
   hideClient = false,
   onComplete,
   onCancel,
+  onNoShow,
   onViewDetail,
   busy = false,
 }: {
@@ -24,6 +26,7 @@ export function AppointmentCard({
   hideClient?: boolean;
   onComplete?: () => void;
   onCancel?: () => void;
+  onNoShow?: () => void;
   onViewDetail?: () => void;
   busy?: boolean;
 }) {
@@ -42,10 +45,27 @@ export function AppointmentCard({
     ...(onComplete
       ? [{ label: "Completar turno", onSelect: onComplete }]
       : []),
+    ...(onNoShow
+      ? [
+          {
+            label: "Marcar inasistencia",
+            danger: true,
+            onSelect: onNoShow,
+          },
+        ]
+      : []),
     ...(onCancel
       ? [{ label: "Cancelar turno", danger: true, onSelect: onCancel }]
       : []),
   ];
+  const notes = [
+    appointment.status === "cancelled" && appointment.cancelType
+      ? CANCEL_TYPE_LABELS[appointment.cancelType]
+      : null,
+    appointment.status === "no_show" ? "Horario no liberado" : null,
+    appointment.extra > 0 ? "Incluye recargo del 20%" : null,
+  ].filter(Boolean);
+  const detail = [...people, ...notes].join(" · ");
   // Un turno cancelado se muestra atenuado salvo el badge de estado.
   const cancelled = appointment.status === "cancelled";
   return (
@@ -65,7 +85,7 @@ export function AppointmentCard({
         />
       }
       subtitle={`${serviceNames(appointment.services)} · ${appointment.durationSnapshot} min`}
-      detail={people.length > 0 ? people.join(" · ") : undefined}
+      detail={detail || undefined}
       footerLeft={formatPrice(appointment.priceSnapshot)}
       footerRight={
         <Badge tone={APPOINTMENT_STATUS_TONES[appointment.status] ?? "muted"}>

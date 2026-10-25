@@ -1,8 +1,10 @@
 import { Router } from "express";
 import {
+  cancelAppointment,
   createAppointment,
   getAvailability,
   listAppointments,
+  markNoShow,
   updateAppointmentStatus,
 } from "../controllers/appointment.controller.js";
 import { authenticate, requireRole } from "../middlewares/auth.js";
@@ -37,6 +39,20 @@ router.get(
   authenticate,
   validateQuery(listAppointmentsQuerySchema),
   listAppointments,
+);
+
+router.patch(
+  "/:id/cancel",
+  authenticate,
+  requireRole("client"),
+  cancelAppointment,
+);
+
+router.patch(
+  "/:id/no-show",
+  authenticate,
+  requireRole("admin"),
+  markNoShow,
 );
 
 router.patch(

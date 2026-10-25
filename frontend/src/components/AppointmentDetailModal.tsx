@@ -1,6 +1,7 @@
 import {
   APPOINTMENT_STATUS_LABELS,
   APPOINTMENT_STATUS_TONES,
+  CANCEL_TYPE_LABELS,
   serviceNames,
 } from "../lib/appointmentDisplay";
 import type { Appointment } from "../lib/appointments";
@@ -15,18 +16,28 @@ export function AppointmentDetailModal({
   onClose,
   onComplete,
   onCancel,
+  onNoShow,
   busy = false,
 }: {
   appointment: Appointment;
   onClose: () => void;
   onComplete?: () => void;
   onCancel?: () => void;
+  onNoShow?: () => void;
   busy?: boolean;
 }) {
   const people = [
     appointment.barber.name ? `Barbero: ${appointment.barber.name}` : null,
     appointment.client.name ? `Cliente: ${appointment.client.name}` : null,
   ].filter(Boolean);
+  const extra = appointment.extra ?? 0;
+  const basePrice = Math.max(appointment.priceSnapshot - extra, 0);
+  const statusNote =
+    appointment.status === "cancelled" && appointment.cancelType
+      ? CANCEL_TYPE_LABELS[appointment.cancelType]
+      : appointment.status === "no_show"
+        ? "Horario no liberado"
+        : null;
   return (
     <Modal title="Detalle del turno" onClose={onClose}>
       <div className="text-center">
@@ -56,9 +67,18 @@ export function AppointmentDetailModal({
               appointment.status}
           </Badge>
         </div>
+        {extra > 0 && (
+          <p className="mt-1 text-xs text-muted">
+            Precio base {formatPrice(basePrice)} · Recargo 20%{" "}
+            {formatPrice(extra)}
+          </p>
+        )}
+        {statusNote && (
+          <p className="mt-2 text-xs text-muted">{statusNote}</p>
+        )}
       </div>
-      {(onComplete || onCancel) && (
-        <div className="mt-6 flex gap-2">
+      {(onComplete || onCancel || onNoShow) && (
+        <div className="mt-6 flex flex-col gap-2 sm:flex-row">
           {onComplete && (
             <Button
               variant="primaryBlock"
@@ -67,6 +87,16 @@ export function AppointmentDetailModal({
               onClick={onComplete}
             >
               Completar
+            </Button>
+          )}
+          {onNoShow && (
+            <Button
+              variant="danger"
+              className="flex-1"
+              disabled={busy}
+              onClick={onNoShow}
+            >
+              Inasistencia
             </Button>
           )}
           {onCancel && (

@@ -162,12 +162,16 @@ export function ClientPage() {
     setBookError("");
     setSuggestion(null);
     try {
-      await createAppointment({
+      const appointment = await createAppointment({
         barberId,
         serviceIds,
         startAt,
       });
-      toast.success("Turno reservado");
+      toast.success(
+        appointment.extra > 0
+          ? "Turno reservado con recargo del 20% por inasistencias."
+          : "Turno reservado",
+      );
       navigate("/app/client/turnos");
     } catch (err) {
       const nextSuggestion = getConflictSuggestion(err);

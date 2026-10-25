@@ -8,8 +8,9 @@ export const createAppointmentSchema = z.object({
   startAt: z.iso.datetime({ message: "Fecha inválida, use ISO8601 UTC" }),
 });
 
-// V1: el admin solo puede pasar un turno pendiente a completado o cancelado.
-// La ausencia (no_show) es V2 y exige cambio de modelo.
+// El admin puede completar o cancelar un turno pendiente.
+// La inasistencia (no_show) se marca por el endpoint dedicado, que valida
+// la tolerancia de 15 minutos de RN4.
 export const updateAppointmentStatusSchema = z.object({
   status: z.enum(["completed", "cancelled"]),
 });
@@ -22,7 +23,9 @@ export const listAppointmentsQuerySchema = z
         message: "Fecha inválida, use YYYY-MM-DD o ISO8601 UTC",
       })
       .optional(),
-    status: z.enum(["pending", "completed", "cancelled"]).optional(),
+    status: z
+      .enum(["pending", "completed", "cancelled", "no_show"])
+      .optional(),
     // Paginación opcional: sin limit no hay tope (así siguen admin y barbero,
     // que ya están acotados por día). El cursor es el start_at del último item.
     limit: z.coerce

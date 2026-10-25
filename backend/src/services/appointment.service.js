@@ -13,12 +13,69 @@ import {
   tzParts,
   utcDayStart,
 } from "../utils/businessTime.js";
+import {
+  getCancellationPolicy,
+  isNoShowEligible,
+} from "../utils/cancellation.js";
 import { toObjectIdOrThrow } from "../utils/objectId.js";
 import { loadHolidayKeys } from "./holiday.service.js";
 import {
   createNotification,
   sendNotification,
 } from "./notification.service.js";
+
+const APPOINTMENT_FIELDS =
+  "barber_id client_id service_ids start_at end_at status cancel_type extra price_snapshot duration_snapshot";
+
+// Un turno ocupa la agenda si está pendiente, si el cliente no se presentó
+// o si canceló con menos de 4 h (cancel_type blocked).
+function blockingAppointmentFilter(extra = {}) {
+  return {
+    ...extra,
+    $or: [
+      { status: "pending" },
+      { status: "no_show" },
+      { status: "cancelled", cancel_type: "blocked" },
+    ],
+  };
+}
+
+function twoMonthsAgo(now = new Date()) {
+  const cutoff = new Date(now);
+  cutoff.setMonth(cutoff.getMonth() - 2);
+  return cutoff;
+}
+
+// RN5: al reservar se cuentan las inasistencias no usadas de los últimos
+// 2 meses. Con 3 o más se aplica el recargo y se marcan como usadas.
+async function applyPenaltyIfNeeded({ clientOid, basePrice, session, now }) {
+  const cutoff = twoMonthsAgo(now);
+  const noShows = await Appointment.find({
+    client_id: clientOid,
+    penalty_used: false,
+    start_at: { $gte: cutoff },
+    $or: [
+      { status: "no_show" },
+      { status: "cancelled", cancel_type: { $in: ["late", "blocked"] } },
+    ],
+  })
+    .select("_id")
+    .session(session)
+    .lean();
+
+  if (noShows.length < 3) {
+    return { extra: 0, price: basePrice };
+  }
+
+  await Appointment.updateMany(
+    { _id: { $in: noShows.map((item) => item._id) } },
+    { $set: { penalty_used: true } },
+    { session },
+  );
+
+  const extra = Math.round(basePrice * 0.2);
+  return { extra, price: basePrice + extra };
+}
 
 // Parsea un ISO8601 UTC o tira 400 VALIDATION_ERROR si es inválido.
 function parseISODate(value) {
@@ -252,7 +309,7 @@ function toBusinessDayKey(date) {
   return tzParts(parseISODate(date)).dayKey;
 }
 
-function toAppointmentDTO(doc) {
+function toAppointmentDTO(doc, { now = new Date() } = {}) {
   const barber =
     doc.barber_id && typeof doc.barber_id === "object"
       ? {
@@ -280,6 +337,13 @@ function toAppointmentDTO(doc) {
       )
     : [];
 
+  const cancelType =
+    doc.status === "cancelled"
+      ? doc.cancel_type ?? null
+      : doc.status === "pending"
+        ? getCancellationPolicy(doc.start_at, now)?.kind ?? null
+        : null;
+
   return {
     id: doc._id.toString(),
     barber,
@@ -288,6 +352,8 @@ function toAppointmentDTO(doc) {
     startAt: new Date(doc.start_at).toISOString(),
     endAt: new Date(doc.end_at).toISOString(),
     status: doc.status,
+    cancelType,
+    extra: doc.extra ?? 0,
     priceSnapshot: doc.price_snapshot,
     durationSnapshot: doc.duration_snapshot,
   };
@@ -341,6 +407,7 @@ async function enqueueAppointmentConfirmation({
         endAt: new Date(appointment.end_at).toISOString(),
         duration: appointment.duration_snapshot,
         price: appointment.price_snapshot,
+        extra: appointment.extra ?? 0,
       },
     });
 
@@ -349,6 +416,40 @@ async function enqueueAppointmentConfirmation({
     // Un fallo al encolar tampoco debe afectar la reserva.
     console.error(
       "[appointment] no se pudo crear la notificación",
+      err?.code || "",
+      err?.message || err,
+    );
+  }
+}
+
+// Encola el email de cancelación o inasistencia. El turno debe venir
+// populado con client_id (name, email), barber_id (name) y service_ids (name).
+async function enqueueStatusNotification({ appointment, type, cancelType = null }) {
+  try {
+    const client = appointment.client_id;
+    const notification = await createNotification({
+      appointmentId: appointment._id,
+      targetUser: { id: client._id, email: client.email },
+      type,
+      payload: {
+        clientName: client.name,
+        barberName: appointment.barber_id?.name ?? "",
+        services: (appointment.service_ids ?? [])
+          .map((service) => service?.name)
+          .filter(Boolean),
+        startAt: new Date(appointment.start_at).toISOString(),
+        endAt: new Date(appointment.end_at).toISOString(),
+        price: appointment.price_snapshot,
+        extra: appointment.extra ?? 0,
+        cancelType,
+      },
+    });
+
+    scheduleNotificationSend(notification._id);
+  } catch (err) {
+    // El cambio de estado ya quedó guardado; un fallo de email no lo revierte.
+    console.error(
+      "[appointment] no se pudo crear la notificación de estado",
       err?.code || "",
       err?.message || err,
     );
@@ -364,12 +465,13 @@ async function buildConflictError({ barberOid, start, duration, barberProfile })
     const horizonEnd = new Date(start.getTime() + 14 * DAY_MS);
     const startDay = utcDayStart(tzParts(start).dayKey);
     const [upcoming, holidayKeys] = await Promise.all([
-      Appointment.find({
-        barber_id: barberOid,
-        status: "pending",
-        start_at: { $lt: horizonEnd },
-        end_at: { $gt: start },
-      })
+      Appointment.find(
+        blockingAppointmentFilter({
+          barber_id: barberOid,
+          start_at: { $lt: horizonEnd },
+          end_at: { $gt: start },
+        }),
+      )
         .select("start_at end_at")
         .lean(),
       loadHolidayKeys({
@@ -428,8 +530,12 @@ export async function createAppointment({
   const start = parseISODate(startAt);
 
   // RN2: duración total y precio base = suma de los servicios elegidos.
-  const { serviceOids, services, duration, price } =
-    await resolveDurationAndPrice(serviceIds);
+  const {
+    serviceOids,
+    services,
+    duration,
+    price: basePrice,
+  } = await resolveDurationAndPrice(serviceIds);
   const end = new Date(start.getTime() + duration * 60 * 1000);
 
   const { barber, barberOid } = await getBarberOrThrow(barberId);
@@ -461,12 +567,13 @@ export async function createAppointment({
         );
 
         // RN1: la verificación definitiva va dentro de la transacción.
-        const overlap = await Appointment.exists({
-          barber_id: barberOid,
-          status: "pending",
-          start_at: { $lt: end },
-          end_at: { $gt: start },
-        }).session(session);
+        const overlap = await Appointment.exists(
+          blockingAppointmentFilter({
+            barber_id: barberOid,
+            start_at: { $lt: end },
+            end_at: { $gt: start },
+          }),
+        ).session(session);
 
         if (overlap) {
           throw createAppError(
@@ -475,6 +582,15 @@ export async function createAppointment({
             "Horario no disponible para ese barbero",
           );
         }
+
+        // RN5: si el cliente tiene 3 inasistencias recientes sin usar,
+        // esta reserva lleva el recargo del 20%.
+        const penalty = await applyPenaltyIfNeeded({
+          clientOid,
+          basePrice,
+          session,
+          now: new Date(),
+        });
 
         const docs = await Appointment.create(
           [
@@ -485,7 +601,8 @@ export async function createAppointment({
               start_at: start,
               end_at: end,
               status: "pending",
-              price_snapshot: price,
+              extra: penalty.extra,
+              price_snapshot: penalty.price,
               duration_snapshot: duration,
             },
           ],
@@ -599,9 +716,7 @@ export async function listAppointments({
   const total = limit ? await Appointment.countDocuments(filter) : null;
 
   const query = Appointment.find(filter)
-    .select(
-      "barber_id client_id service_ids start_at end_at status price_snapshot duration_snapshot",
-    )
+    .select(APPOINTMENT_FIELDS)
     .sort({ start_at: order === "desc" ? -1 : 1 })
     .populate("barber_id", "name")
     .populate("client_id", "name")
@@ -618,8 +733,8 @@ export async function listAppointments({
   return { appointments: appointments.map(toAppointmentDTO), total };
 }
 
-// V1: el admin pasa un turno pendiente a completado o cancelado.
-// Al salir de pending el horario se libera solo (solapes solo cuentan pending).
+// El admin pasa un turno pendiente a completado o cancelado.
+// La cancelación admin libera el horario y no cuenta inasistencia.
 export async function updateAppointmentStatus({ id, status }) {
   if (!["completed", "cancelled"].includes(status)) {
     throw createAppError(400, "VALIDATION_ERROR", "Estado inválido");
@@ -637,17 +752,139 @@ export async function updateAppointmentStatus({ id, status }) {
     );
   }
   appointment.status = status;
+  if (status === "cancelled") {
+    appointment.cancel_type = "free";
+  }
   await appointment.save();
 
   const populated = await Appointment.findById(appointmentOid)
-    .select(
-      "barber_id client_id service_ids start_at end_at status price_snapshot duration_snapshot",
-    )
+    .select(APPOINTMENT_FIELDS)
     .populate("barber_id", "name")
     .populate("client_id", "name")
     .populate("service_ids", "name price duration")
     .lean();
   return toAppointmentDTO(populated);
+}
+
+// RN3: cancelación del cliente. El backend decide la ventana y libera o no
+// el horario según corresponda.
+export async function cancelAppointment({ id, requester }) {
+  const appointmentOid = toObjectIdOrThrow(id, "ID de turno inválido");
+  const appointment = await Appointment.findById(appointmentOid)
+    .select(APPOINTMENT_FIELDS)
+    .populate("client_id", "name email")
+    .populate("barber_id", "name")
+    .populate("service_ids", "name")
+    .lean();
+
+  if (!appointment) {
+    throw createAppError(404, "NOT_FOUND", "Turno no encontrado");
+  }
+
+  const clientId =
+    appointment.client_id?._id?.toString() ??
+    appointment.client_id?.toString();
+  if (requester.role === "client" && clientId !== requester.id) {
+    throw createAppError(403, "FORBIDDEN", "No podés cancelar este turno");
+  }
+  if (appointment.status !== "pending") {
+    throw createAppError(
+      400,
+      "APPOINTMENT_NOT_PENDING",
+      "Solo se puede cancelar un turno pendiente",
+    );
+  }
+
+  const now = new Date();
+  const policy = getCancellationPolicy(appointment.start_at, now);
+  if (!policy) {
+    throw createAppError(
+      400,
+      "APPOINTMENT_ALREADY_STARTED",
+      "El turno ya comenzó y no se puede cancelar",
+    );
+  }
+
+  const updated = await Appointment.findOneAndUpdate(
+    { _id: appointmentOid, status: "pending" },
+    { $set: { status: "cancelled", cancel_type: policy.kind } },
+    { returnDocument: "after" },
+  )
+    .select(APPOINTMENT_FIELDS)
+    .populate("client_id", "name email")
+    .populate("barber_id", "name")
+    .populate("service_ids", "name")
+    .lean();
+
+  if (!updated) {
+    throw createAppError(
+      400,
+      "APPOINTMENT_NOT_PENDING",
+      "Solo se puede cancelar un turno pendiente",
+    );
+  }
+
+  await enqueueStatusNotification({
+    appointment: updated,
+    type: "cancelacion_turno",
+    cancelType: policy.kind,
+  });
+
+  return toAppointmentDTO(updated, { now });
+}
+
+// RN4: el admin marca inasistencia después de la tolerancia de 15 minutos.
+export async function markNoShow({ id }) {
+  const appointmentOid = toObjectIdOrThrow(id, "ID de turno inválido");
+  const appointment = await Appointment.findById(appointmentOid)
+    .select(APPOINTMENT_FIELDS)
+    .lean();
+
+  if (!appointment) {
+    throw createAppError(404, "NOT_FOUND", "Turno no encontrado");
+  }
+  if (appointment.status !== "pending") {
+    throw createAppError(
+      400,
+      "APPOINTMENT_NOT_PENDING",
+      "Solo se puede marcar inasistencia en un turno pendiente",
+    );
+  }
+
+  const now = new Date();
+  if (!isNoShowEligible(appointment.start_at, now)) {
+    throw createAppError(
+      400,
+      "NO_SHOW_TOO_EARLY",
+      "Todavía no pasaron los 15 minutos de tolerancia",
+    );
+  }
+
+  const updated = await Appointment.findOneAndUpdate(
+    { _id: appointmentOid, status: "pending" },
+    { $set: { status: "no_show" } },
+    { returnDocument: "after" },
+  )
+    .select(APPOINTMENT_FIELDS)
+    .populate("client_id", "name email")
+    .populate("barber_id", "name")
+    .populate("service_ids", "name")
+    .lean();
+
+  if (!updated) {
+    throw createAppError(
+      400,
+      "APPOINTMENT_NOT_PENDING",
+      "Solo se puede marcar inasistencia en un turno pendiente",
+    );
+  }
+
+  await enqueueStatusNotification({
+    appointment: updated,
+    type: "inasistencia_turno",
+  });
+
+  return toAppointmentDTO(updated, { now });
 }
 
 export async function getAvailability({
@@ -680,12 +917,13 @@ export async function getAvailability({
   const holidayEnd = new Date(holidayStart.getTime() + horizonDays * DAY_MS);
 
   const [upcoming, holidayKeys] = await Promise.all([
-    Appointment.find({
-      barber_id: barberOid,
-      status: "pending",
-      start_at: { $lt: horizonEnd },
-      end_at: { $gt: baseDay },
-    })
+    Appointment.find(
+      blockingAppointmentFilter({
+        barber_id: barberOid,
+        start_at: { $lt: horizonEnd },
+        end_at: { $gt: baseDay },
+      }),
+    )
       .select("start_at end_at")
       .lean(),
     loadHolidayKeys({ from: holidayStart, to: holidayEnd }),

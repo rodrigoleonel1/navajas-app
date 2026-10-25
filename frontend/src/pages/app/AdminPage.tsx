@@ -17,6 +17,7 @@ import {
   listAppointments,
   listAppointmentsPage,
   listBarbers,
+  markNoShow,
   updateAppointmentStatus,
   type Appointment,
   type Barber,
@@ -28,6 +29,7 @@ const STATUS_OPTIONS = [
   { value: "pending", label: "Pendiente" },
   { value: "completed", label: "Completado" },
   { value: "cancelled", label: "Cancelado" },
+  { value: "no_show", label: "Inasistencia" },
 ];
 
 const PAGE_SIZE = 12;
@@ -129,6 +131,18 @@ export function AdminPage() {
     };
   }, [allDates, barberId, date, page, status]);
 
+  async function reloadAppointments() {
+    const { items, total: totalCount } = await fetchAppointments({
+      allDates,
+      page,
+      barberId,
+      date,
+      status,
+    });
+    setAppointments(items);
+    setTotal(totalCount);
+  }
+
   async function handleStatusChange(
     appointment: Appointment,
     nextStatus: "completed" | "cancelled",
@@ -136,7 +150,10 @@ export function AdminPage() {
     const label = nextStatus === "completed" ? "completado" : "cancelado";
     const confirmed = await confirm({
       title: `${nextStatus === "completed" ? "Completar" : "Cancelar"} turno`,
-      message: `Marcar turno como ${label}?`,
+      message:
+        nextStatus === "completed"
+          ? "Marcar turno como completado?"
+          : "El horario queda libre y no cuenta como inasistencia.",
       confirmLabel: nextStatus === "completed" ? "Completar" : "Confirmar",
     });
     if (!confirmed) return;
@@ -147,17 +164,33 @@ export function AdminPage() {
       setDetail((current) =>
         current?.id === updated.id ? updated : current,
       );
-      const { items, total: totalCount } = await fetchAppointments({
-        allDates,
-        page,
-        barberId,
-        date,
-        status,
-      });
-      setAppointments(items);
-      setTotal(totalCount);
+      await reloadAppointments();
     } catch (err) {
       toast.error(getErrorMessage(err, "Error al cambiar estado"));
+    } finally {
+      setActingId(null);
+    }
+  }
+
+  async function handleNoShow(appointment: Appointment) {
+    const confirmed = await confirm({
+      title: "Marcar inasistencia",
+      message:
+        "El horario no se libera y se suma al contador del cliente. Solo se puede marcar después de 15 minutos del inicio.",
+      confirmLabel: "Marcar inasistencia",
+      cancelLabel: "Volver",
+    });
+    if (!confirmed) return;
+    setActingId(appointment.id);
+    try {
+      const updated = await markNoShow(appointment.id);
+      toast.success("Inasistencia registrada");
+      setDetail((current) =>
+        current?.id === updated.id ? updated : current,
+      );
+      await reloadAppointments();
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Error al marcar la inasistencia"));
     } finally {
       setActingId(null);
     }
@@ -272,6 +305,11 @@ export function AdminPage() {
                               handleStatusChange(appointment, "completed"),
                           },
                           {
+                            label: "Marcar inasistencia",
+                            danger: true,
+                            onSelect: () => handleNoShow(appointment),
+                          },
+                          {
                             label: "Cancelar turno",
                             danger: true,
                             onSelect: () =>
@@ -292,6 +330,11 @@ export function AdminPage() {
                   onComplete={
                     appointment.status === "pending"
                       ? () => handleStatusChange(appointment, "completed")
+                      : undefined
+                  }
+                  onNoShow={
+                    appointment.status === "pending"
+                      ? () => handleNoShow(appointment)
                       : undefined
                   }
                   onCancel={
@@ -326,6 +369,11 @@ export function AdminPage() {
           onComplete={
             detail.status === "pending"
               ? () => handleStatusChange(detail, "completed")
+              : undefined
+          }
+          onNoShow={
+            detail.status === "pending"
+              ? () => handleNoShow(detail)
               : undefined
           }
           onCancel={

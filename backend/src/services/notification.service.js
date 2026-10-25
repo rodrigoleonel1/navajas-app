@@ -1,5 +1,7 @@
 import { Notification } from "../models/Notification.js";
+import { buildAppointmentCancellation } from "../templates/emails/appointmentCancellation.js";
 import { buildAppointmentConfirmation } from "../templates/emails/appointmentConfirmation.js";
+import { buildAppointmentNoShow } from "../templates/emails/appointmentNoShow.js";
 import { createAppError } from "../utils/appError.js";
 import { toObjectIdOrThrow } from "../utils/objectId.js";
 import { sendEmail } from "./email/email.service.js";
@@ -101,6 +103,21 @@ async function markAsFailed(notificationId, code, message) {
   return { status: "failed", error: lastError };
 }
 
+function buildNotificationContent(notification) {
+  const payload = notification.payload ?? {};
+
+  switch (notification.type) {
+    case "confirmacion_turno":
+      return buildAppointmentConfirmation(payload);
+    case "cancelacion_turno":
+      return buildAppointmentCancellation(payload);
+    case "inasistencia_turno":
+      return buildAppointmentNoShow(payload);
+    default:
+      throw new Error(`Template no soportado: ${notification.type}`);
+  }
+}
+
 // Toma una notificación, la renderiza, la envía y actualiza su estado.
 // Nunca propaga el error de envío: lo registra y devuelve "failed" para que
 // la reserva no se vea afectada.
@@ -151,7 +168,7 @@ export async function sendNotification(notificationId) {
 
   let content;
   try {
-    content = buildAppointmentConfirmation(notification.payload ?? {});
+    content = buildNotificationContent(notification);
   } catch (err) {
     console.error(
       `[notification] error de template ${notification._id}: ${err.message}`,

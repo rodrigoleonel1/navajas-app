@@ -26,6 +26,8 @@ export type Slot = {
   endAt: string;
 };
 
+export type CancelType = "free" | "late" | "blocked";
+
 export type Availability = {
   barberId: string;
   date: string;
@@ -44,6 +46,8 @@ export type Appointment = {
   startAt: string;
   endAt: string;
   status: string;
+  cancelType: CancelType | null;
+  extra: number;
   priceSnapshot: number;
   durationSnapshot: number;
 };
@@ -189,6 +193,16 @@ export async function updateAppointmentStatus(
   status: "completed" | "cancelled",
 ): Promise<Appointment> {
   const res = await api.patch<Appointment>(`/appointments/${id}`, { status });
+  return res.data;
+}
+
+export async function cancelAppointment(id: string): Promise<Appointment> {
+  const res = await api.patch<Appointment>(`/appointments/${id}/cancel`);
+  return res.data;
+}
+
+export async function markNoShow(id: string): Promise<Appointment> {
+  const res = await api.patch<Appointment>(`/appointments/${id}/no-show`);
   return res.data;
 }
 

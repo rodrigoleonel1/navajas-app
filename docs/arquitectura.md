@@ -111,6 +111,24 @@ Reglas **RN0–RN11** definidas en `docs/FRD-Navajas.md:93-107`:
 - **RN9:** recordatorio 24h antes (Vercel Cron).
 - **RN11:** gestión de ofertas/combos con % descuento.
 
+#### Cancelación, inasistencias y recargo (RN3/RN4/RN5)
+
+Ventanas de cancelación del cliente:
+
+| Momento | `cancel_type` | Libera horario | Cuenta inasistencia |
+| :--- | :--- | :---: | :---: |
+| `>= 24 h` | `free` | Sí | No |
+| `4–24 h` | `late` | Sí | Sí |
+| `< 4 h` | `blocked` | No | Sí |
+
+Un turno ya iniciado no se puede cancelar. El admin cancela con `PATCH /api/appointments/:id` y `status: "cancelled"`; se guarda `cancel_type: "free"` (libera el horario y no cuenta inasistencia). La inasistencia se marca con `PATCH /api/appointments/:id/no-show` recién 15 minutos después del inicio; pasa a `status: "no_show"` y no libera el horario.
+
+Un turno ocupa la agenda si está `pending`, `no_show` o `cancelled` con `cancel_type: "blocked"`. Los turnos `cancelled` `free`/`late` y los `completed` liberan el horario.
+
+RN5 se evalúa al reservar: se cuentan los turnos del cliente con `no_show` o `cancelled` `late`/`blocked` de los últimos 2 meses que tengan `penalty_used: false`. Con 3 o más, la reserva nueva suma un recargo del 20% en `extra` (redondeado con `Math.round`), `price_snapshot` guarda el total final y esas inasistencias pasan a `penalty_used: true` para reiniciar el contador. No se guarda `base_price`: el precio base se deriva como `price_snapshot - extra`.
+
+La API expone `cancelType` y `extra`. En un turno `pending`, `cancelType` es la ventana proyectada; en `cancelled`, el valor real; en otros estados, `null`. `priceSnapshot` es el total final.
+
 Los controllers únicamente deben recibir la petición, delegar al service y construir la respuesta HTTP.
 
 ### API REST
@@ -128,9 +146,9 @@ PATCH  /api/holidays/:id
 DELETE /api/holidays/:id
 POST   /api/appointments
 GET    /api/appointments?barberId=...&date=...
-PATCH  /api/appointments/:id/cancel
-PATCH  /api/appointments/:id/complete
-PATCH  /api/appointments/:id/no-show
+PATCH  /api/appointments/:id            # admin: completed | cancelled
+PATCH  /api/appointments/:id/cancel     # cliente
+PATCH  /api/appointments/:id/no-show    # admin
 GET    /api/vouchers
 GET    /api/offers
 POST   /api/ratings
@@ -143,11 +161,12 @@ Ejemplos:
 POST /api/appointments
 GET /api/appointments?barberId=...&date=2026-09-11
 PATCH /api/appointments/:id/cancel
+PATCH /api/appointments/:id/no-show
 ```
 
 Los endpoints `/api/holidays` son exclusivos del rol `admin`. La disponibilidad los refleja automáticamente en `nonWorkingDays` y bloquea la reserva con `HOLIDAY`.
 
-> Antes documentado como `/appointments/:id/cancel` sin prefijo → normalizado a `PATCH /api/appointments/:id/cancel` (RPC controlado; alternativa REST pura `PATCH /api/appointments/:id {status:'cancelled'}`).
+> `PATCH /api/appointments/:id/cancel` es del cliente y no acepta body. El admin usa `PATCH /api/appointments/:id` con `{status:'completed'|'cancelled'}`. La inasistencia tiene endpoint propio para validar la tolerancia de 15 minutos.
 
 ### Manejo de errores
 
@@ -256,7 +275,7 @@ Ejemplo conceptual:
 
 ```js
 Appointment.find(query)
-  .select('barber_id client_id start_at end_at status price_snapshot')
+  .select('barber_id client_id start_at end_at status cancel_type extra price_snapshot')
   .lean();
 ```
 
@@ -273,6 +292,8 @@ Los índices son especialmente importantes para la consulta de disponibilidad de
 appointmentSchema.index({ barber_id: 1, start_at: 1, end_at: 1, status: 1 });
 // historial cliente
 appointmentSchema.index({ client_id: 1, start_at: 1 });
+// RN5: inasistencias del cliente todavía no usadas para el recargo
+appointmentSchema.index({ client_id: 1, penalty_used: 1, start_at: 1 });
 // rango temporal general
 appointmentSchema.index({ start_at: 1 });
 ```
@@ -384,9 +405,10 @@ Nunca modificar el precio histórico almacenado en un turno.
 ```text
 price_snapshot
 duration_snapshot
+extra
 ```
 
-Esto permite que un cambio posterior en el servicio no altere la información histórica de turnos ya creados.
+`price_snapshot` es el total final cobrado y `extra` el recargo aplicado (0 si no hubo). El precio base se deriva como `price_snapshot - extra`. Esto permite que un cambio posterior en el servicio no altere la información histórica de turnos ya creados.
 
 ---
 
@@ -428,9 +450,9 @@ Los roles deben utilizarse para proteger operaciones sensibles, especialmente la
 | :--- | :---: | :---: | :---: | :--- |
 | `POST /api/appointments` | ✓ |  |  | `client_id = req.user.id` |
 | `GET /api/appointments` | ✓ (propios) | ✓ (propios) | ✓ (todos) | `if role !== 'admin' filter by req.user.id` — CA-15 |
-| `PATCH /api/appointments/:id/cancel` | ✓ (propio) |  | ✓ (emite vale RN7) | verificar ownership |
-| `PATCH /api/appointments/:id/complete` |  |  | ✓ | RN6, RN8 |
-| `PATCH /api/appointments/:id/no-show` |  |  | ✓ | RN4, RN5 |
+| `PATCH /api/appointments/:id` |  |  | ✓ | `completed` o `cancelled`; cancelación admin libre |
+| `PATCH /api/appointments/:id/cancel` | ✓ (propio) |  |  | RN3, verificar ownership |
+| `PATCH /api/appointments/:id/no-show` |  |  | ✓ | RN4, tolerancia 15 min |
 | `POST /api/barbers` |  |  | ✓ | CA-3, alta barbero |
 | `GET /api/barbers/me/earnings` |  | ✓ |  | `barber_id = req.user.id` |
 | `POST /api/offers` |  |  | ✓ | RN11 |

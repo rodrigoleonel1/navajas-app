@@ -4,20 +4,38 @@ import { Loader } from "../../components/ui/Loader";
 import { Pager } from "../../components/ui/Pager";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
+import { useConfirm } from "../../hooks/useConfirm";
 import { useToast } from "../../hooks/useToast";
 import { getErrorMessage } from "../../lib/api";
 import {
+  cancelAppointment,
   listAppointmentHistory,
   listAppointments,
   type Appointment,
+  type CancelType,
 } from "../../lib/appointments";
 
 // El historial se pagina de a 12: puede tener cientos de turnos y 12 llena
 // justo las filas de 2 y de 3 columnas (1, 2 y 3 son divisores).
 const HISTORY_PAGE_SIZE = 12;
 
+const CANCEL_MESSAGES: Record<CancelType, string> = {
+  free: "Cancelás con al menos 24 h. No hay penalización y el horario queda libre.",
+  late: "Cancelás entre 4 y 24 h. El horario queda libre, pero se registra una inasistencia.",
+  blocked:
+    "Cancelás con menos de 4 h. El horario NO se libera y se registra una inasistencia.",
+};
+
+const CANCEL_SUCCESS: Record<CancelType, string> = {
+  free: "Turno cancelado sin penalización.",
+  late: "Turno cancelado. Se registró una inasistencia.",
+  blocked:
+    "Turno cancelado. Se registró una inasistencia y el horario no se liberó.",
+};
+
 export function ClientTurnosPage() {
   const toast = useToast();
+  const confirm = useConfirm();
   // Corte fijo entre próximos e historial, tomado al entrar a la página.
   const [boundIso] = useState(() => new Date().toISOString());
   const [upcoming, setUpcoming] = useState<Appointment[]>([]);
@@ -27,6 +45,7 @@ export function ClientTurnosPage() {
   const [loadedPage, setLoadedPage] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
+  const [actingId, setActingId] = useState<string | null>(null);
   const historyRef = useRef<HTMLDivElement | null>(null);
   const firstLoadRef = useRef(true);
 
@@ -96,6 +115,34 @@ export function ClientTurnosPage() {
   const hasNext =
     totalPages === null ? history.length === HISTORY_PAGE_SIZE : page < totalPages;
 
+  async function handleCancel(appointment: Appointment) {
+    const cancelType = appointment.cancelType;
+    if (appointment.status !== "pending" || !cancelType) return;
+
+    const confirmed = await confirm({
+      title: "Cancelar turno",
+      message: CANCEL_MESSAGES[cancelType],
+      confirmLabel: "Cancelar turno",
+      cancelLabel: "Volver",
+    });
+    if (!confirmed) return;
+
+    setActingId(appointment.id);
+    try {
+      const updated = await cancelAppointment(appointment.id);
+      setUpcoming((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item)),
+      );
+      toast.success(
+        CANCEL_SUCCESS[updated.cancelType ?? cancelType] ?? "Turno cancelado",
+      );
+    } catch (err) {
+      toast.error(getErrorMessage(err, "Error al cancelar el turno"));
+    } finally {
+      setActingId(null);
+    }
+  }
+
   return (
     <Section>
       <SectionHeader
@@ -126,6 +173,13 @@ export function ClientTurnosPage() {
                     key={appointment.id}
                     appointment={appointment}
                     hideClient
+                    busy={actingId === appointment.id}
+                    onCancel={
+                      appointment.status === "pending" &&
+                      appointment.cancelType
+                        ? () => handleCancel(appointment)
+                        : undefined
+                    }
                   />
                 ))}
               </ul>

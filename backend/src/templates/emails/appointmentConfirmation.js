@@ -40,6 +40,7 @@ export function buildAppointmentConfirmation(payload = {}) {
     endAt,
     duration,
     price,
+    extra = 0,
   } = payload;
 
   const dateLabel = startAt ? formatBusinessDate(startAt) : "";
@@ -52,7 +53,13 @@ export function buildAppointmentConfirmation(payload = {}) {
     ? services.join(", ")
     : "Servicio";
   const durationLabel = duration ? `${duration} min` : "";
-  const priceLabel = formatPrice(price);
+  const totalValue = Number(price) || 0;
+  const extraValue = Number(extra) || 0;
+  const baseValue = Math.max(totalValue - extraValue, 0);
+  const hasExtra = extraValue > 0;
+  const priceLabel = formatPrice(totalValue);
+  const baseLabel = formatPrice(baseValue);
+  const extraLabel = formatPrice(extraValue);
   const appUrl = `${config.APP_URL.replace(/\/+$/, "")}/app/client/turnos`;
 
   const subject = dateLabel
@@ -69,8 +76,13 @@ export function buildAppointmentConfirmation(payload = {}) {
     `Fecha: ${dateLabel}`,
     `Hora: ${timeLabel}`,
     durationLabel ? `Duración: ${durationLabel}` : null,
+    hasExtra ? `Precio base: ${baseLabel}` : null,
+    hasExtra ? `Recargo por inasistencias (20%): ${extraLabel}` : null,
     `Total: ${priceLabel}`,
     "",
+    hasExtra
+      ? "Se aplicó un recargo del 20% por inasistencias. El contador se reinició."
+      : null,
     `Ver mis turnos: ${appUrl}`,
     "",
     "Si no podés asistir, avisanos desde Mis turnos.",
@@ -86,6 +98,8 @@ export function buildAppointmentConfirmation(payload = {}) {
     detailRow("Fecha", dateLabel),
     detailRow("Hora", timeLabel),
     durationLabel ? detailRow("Duración", durationLabel) : "",
+    hasExtra ? detailRow("Precio base", baseLabel) : "",
+    hasExtra ? detailRow("Recargo (20%)", extraLabel) : "",
     detailRow("Total", priceLabel, true),
   ].join("");
 
@@ -110,6 +124,11 @@ export function buildAppointmentConfirmation(payload = {}) {
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                   ${rows}
                 </table>
+                ${
+                  hasExtra
+                    ? `<p style="margin:16px 0 0;font-size:12px;color:#777777;">Se aplicó un recargo del 20% por inasistencias. El contador se reinició.</p>`
+                    : ""
+                }
                 <p style="margin:24px 0 0;text-align:center;">
                   <a href="${escapeHtml(appUrl)}" style="display:inline-block;background:${PRIMARY_COLOR};color:${PRIMARY_FOREGROUND};text-decoration:none;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:bold;">
                     Ver mis turnos

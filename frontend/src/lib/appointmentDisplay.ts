@@ -4,6 +4,7 @@ export const APPOINTMENT_STATUS_LABELS: Record<string, string> = {
   pending: "Pendiente",
   completed: "Completado",
   cancelled: "Cancelado",
+  no_show: "Inasistencia",
 };
 
 export const APPOINTMENT_STATUS_TONES: Record<
@@ -13,6 +14,13 @@ export const APPOINTMENT_STATUS_TONES: Record<
   pending: "warning",
   completed: "primary",
   cancelled: "danger",
+  no_show: "danger",
+};
+
+export const CANCEL_TYPE_LABELS: Record<string, string> = {
+  free: "Sin penalización",
+  late: "Inasistencia registrada",
+  blocked: "Inasistencia · Horario no liberado",
 };
 
 // "Corte clásico + Barba" a partir de los servicios del turno.

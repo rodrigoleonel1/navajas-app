@@ -37,9 +37,26 @@ const appointmentSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ["pending", "completed", "cancelled"],
+      enum: ["pending", "completed", "cancelled", "no_show"],
       default: "pending",
       required: true,
+    },
+    // RN3: solo aplica a turnos cancelados.
+    // free: libera y no cuenta; late: libera y cuenta; blocked: no libera y cuenta.
+    cancel_type: {
+      type: String,
+      enum: ["free", "late", "blocked"],
+    },
+    // RN5: la inasistencia ya se usó para aplicar el recargo del 20%.
+    penalty_used: {
+      type: Boolean,
+      default: false,
+    },
+    // Monto del recargo aplicado a esta reserva (0 si no hubo recargo).
+    extra: {
+      type: Number,
+      default: 0,
+      min: 0,
     },
     // Precio histórico real cobrado (inmutable tras cambios Service)
     price_snapshot: {
@@ -66,6 +83,8 @@ const appointmentSchema = new mongoose.Schema(
 appointmentSchema.index({ barber_id: 1, start_at: 1, end_at: 1, status: 1 });
 // Historial cliente ordenado
 appointmentSchema.index({ client_id: 1, start_at: 1 });
+// RN5: inasistencias del cliente todavía no usadas para el recargo
+appointmentSchema.index({ client_id: 1, penalty_used: 1, start_at: 1 });
 // Rango temporal general 
 appointmentSchema.index({ start_at: 1 });
 

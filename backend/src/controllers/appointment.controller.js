@@ -1,7 +1,9 @@
 import {
+  cancelAppointment as cancelAppointmentService,
   createAppointment as createAppointmentService,
   getAvailability as getAvailabilityService,
   listAppointments as listAppointmentsService,
+  markNoShow as markNoShowService,
   updateAppointmentStatus as updateAppointmentStatusService,
 } from "../services/appointment.service.js";
 
@@ -63,6 +65,27 @@ export async function updateAppointmentStatus(req, res, next) {
       id: req.params.id,
       status: req.body.status,
     });
+    res.json(appointment);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function cancelAppointment(req, res, next) {
+  try {
+    const appointment = await cancelAppointmentService({
+      id: req.params.id,
+      requester: { id: req.user.id, role: req.user.role },
+    });
+    res.json(appointment);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function markNoShow(req, res, next) {
+  try {
+    const appointment = await markNoShowService({ id: req.params.id });
     res.json(appointment);
   } catch (err) {
     next(err);
