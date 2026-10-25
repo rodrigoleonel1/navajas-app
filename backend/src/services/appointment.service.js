@@ -11,8 +11,10 @@ import {
   dayKeyUTC,
   parseWorkHour,
   tzParts,
+  utcDayStart,
 } from "../utils/businessTime.js";
 import { toObjectIdOrThrow } from "../utils/objectId.js";
+import { loadHolidayKeys } from "./holiday.service.js";
 import {
   createNotification,
   sendNotification,
@@ -28,23 +30,31 @@ function parseISODate(value) {
 }
 
 // RN10: el turno debe caer dentro de la jornada del barbero y en un día
-// que no sea franco, franco semanal ni feriado. Todo en zona comercial.
-function isNonWorkingDay(parts, barberProfile) {
+// que no sea franco, franco semanal ni feriado global. Todo en zona comercial.
+// Devuelve el motivo del bloqueo o null si el día es laborable.
+function getNonWorkingReason(parts, barberProfile, holidayKeys = new Set()) {
+  if (holidayKeys.has(parts.dayKey)) {
+    return "holiday";
+  }
   const weeklyDaysOff = barberProfile?.weeklyDaysOff ?? [];
   if (weeklyDaysOff.includes(parts.weekday)) {
-    return true;
+    return "weekly";
   }
   const daysOff = barberProfile?.daysOff ?? [];
   if (
     daysOff.some((dayOff) => dayKeyUTC(new Date(dayOff)) === parts.dayKey)
   ) {
-    return true;
+    return "one-off";
   }
-  const holidays = barberProfile?.holidays ?? [];
-  return holidays.some((holiday) => dayKeyUTC(new Date(holiday)) === parts.dayKey);
+  return null;
 }
 
-function assertWithinBarberAvailability(start, end, barberProfile) {
+function assertWithinBarberAvailability(
+  start,
+  end,
+  barberProfile,
+  holidayKeys = new Set(),
+) {
   const workingHours = barberProfile?.workingHours ?? {};
   const open = parseWorkHour(workingHours.start, 9 * 60);
   const close = parseWorkHour(workingHours.end, 18 * 60);
@@ -67,7 +77,19 @@ function assertWithinBarberAvailability(start, end, barberProfile) {
     );
   }
 
-  if (isNonWorkingDay(startParts, barberProfile)) {
+  const nonWorkingReason = getNonWorkingReason(
+    startParts,
+    barberProfile,
+    holidayKeys,
+  );
+  if (nonWorkingReason === "holiday") {
+    throw createAppError(
+      400,
+      "HOLIDAY",
+      "El negocio no trabaja ese día",
+    );
+  }
+  if (nonWorkingReason) {
     throw createAppError(
       400,
       "BARBER_DAY_OFF",
@@ -154,6 +176,7 @@ function findNextAvailable({
   from,
   duration,
   barberProfile,
+  holidayKeys = new Set(),
   bookings,
   step,
   horizonDays,
@@ -169,7 +192,7 @@ function findNextAvailable({
   for (let dayOffset = 0; dayOffset < horizonDays; dayOffset += 1) {
     const dayStart = new Date(baseDay.getTime() + dayOffset * DAY_MS);
     const dayParts = tzParts(dayStart);
-    if (isNonWorkingDay(dayParts, barberProfile)) continue;
+    if (getNonWorkingReason(dayParts, barberProfile, holidayKeys)) continue;
 
     let startOffset = open;
     if (dayOffset === 0) {
@@ -339,14 +362,21 @@ async function buildConflictError({ barberOid, start, duration, barberProfile })
   let suggestedStartAt;
   try {
     const horizonEnd = new Date(start.getTime() + 14 * DAY_MS);
-    const upcoming = await Appointment.find({
-      barber_id: barberOid,
-      status: "pending",
-      start_at: { $lt: horizonEnd },
-      end_at: { $gt: start },
-    })
-      .select("start_at end_at")
-      .lean();
+    const startDay = utcDayStart(tzParts(start).dayKey);
+    const [upcoming, holidayKeys] = await Promise.all([
+      Appointment.find({
+        barber_id: barberOid,
+        status: "pending",
+        start_at: { $lt: horizonEnd },
+        end_at: { $gt: start },
+      })
+        .select("start_at end_at")
+        .lean(),
+      loadHolidayKeys({
+        from: startDay,
+        to: new Date(startDay.getTime() + 14 * DAY_MS),
+      }),
+    ]);
     const bookings = upcoming.map((booking) => ({
       start: new Date(booking.start_at),
       end: new Date(booking.end_at),
@@ -355,6 +385,7 @@ async function buildConflictError({ barberOid, start, duration, barberProfile })
       from: start,
       duration,
       barberProfile,
+      holidayKeys,
       bookings,
       step: 30,
       horizonDays: 14,
@@ -403,8 +434,18 @@ export async function createAppointment({
 
   const { barber, barberOid } = await getBarberOrThrow(barberId);
 
-  // RN10: jornada + francos + feriados.
-  assertWithinBarberAvailability(start, end, barber.barberProfile);
+  // RN10: jornada + francos + feriados globales del negocio.
+  const startDay = utcDayStart(tzParts(start).dayKey);
+  const holidayKeys = await loadHolidayKeys({
+    from: startDay,
+    to: new Date(startDay.getTime() + DAY_MS),
+  });
+  assertWithinBarberAvailability(
+    start,
+    end,
+    barber.barberProfile,
+    holidayKeys,
+  );
 
   const session = await mongoose.startSession();
   let created;
@@ -635,15 +676,20 @@ export async function getAvailability({
   const requestedKey = toBusinessDayKey(date);
   const baseDay = businessDayStartUtc(requestedKey);
   const horizonEnd = new Date(baseDay.getTime() + horizonDays * DAY_MS);
+  const holidayStart = utcDayStart(requestedKey);
+  const holidayEnd = new Date(holidayStart.getTime() + horizonDays * DAY_MS);
 
-  const upcoming = await Appointment.find({
-    barber_id: barberOid,
-    status: "pending",
-    start_at: { $lt: horizonEnd },
-    end_at: { $gt: baseDay },
-  })
-    .select("start_at end_at")
-    .lean();
+  const [upcoming, holidayKeys] = await Promise.all([
+    Appointment.find({
+      barber_id: barberOid,
+      status: "pending",
+      start_at: { $lt: horizonEnd },
+      end_at: { $gt: baseDay },
+    })
+      .select("start_at end_at")
+      .lean(),
+    loadHolidayKeys({ from: holidayStart, to: holidayEnd }),
+  ]);
   const bookings = upcoming.map((booking) => ({
     start: new Date(booking.start_at),
     end: new Date(booking.end_at),
@@ -655,7 +701,13 @@ export async function getAvailability({
   const now = new Date();
 
   let slots = [];
-  if (!isNonWorkingDay(tzParts(baseDay), barber.barberProfile)) {
+  if (
+    !getNonWorkingReason(
+      tzParts(baseDay),
+      barber.barberProfile,
+      holidayKeys,
+    )
+  ) {
     slots = generateDaySlots({
       dayStart: baseDay,
       open,
@@ -671,18 +723,21 @@ export async function getAvailability({
     from: new Date(Math.max(baseDay.getTime(), now.getTime())),
     duration,
     barberProfile: barber.barberProfile,
+    holidayKeys,
     bookings,
     step,
     horizonDays,
   });
 
-  // Días no laborables del horizonte (solo calendario, sin queries extra)
-  // para que el front deshabilite esos días sin pedir availability por día.
+  // Días no laborables del horizonte (francos + feriados globales) para que
+  // el front deshabilite esos días sin pedir availability por día.
   const nonWorkingDays = [];
   for (let dayOffset = 0; dayOffset < horizonDays; dayOffset += 1) {
     const dayStart = new Date(baseDay.getTime() + dayOffset * DAY_MS);
     const dayParts = tzParts(dayStart);
-    if (isNonWorkingDay(dayParts, barber.barberProfile)) {
+    if (
+      getNonWorkingReason(dayParts, barber.barberProfile, holidayKeys)
+    ) {
       nonWorkingDays.push(dayParts.dayKey);
     }
   }

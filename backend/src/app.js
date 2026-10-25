@@ -7,6 +7,7 @@ import { sanitizeInputs } from "./middlewares/sanitize.js";
 import appointmentRoutes from "./routes/appointments.js";
 import authRoutes from "./routes/auth.js";
 import barberRoutes from "./routes/barbers.js";
+import holidayRoutes from "./routes/holidays.js";
 import serviceRoutes from "./routes/services.js";
 
 const app = express();
@@ -31,6 +32,7 @@ app.use(connectMongo);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/barbers", barberRoutes);
+app.use("/api/holidays", holidayRoutes);
 app.use("/api/services", serviceRoutes);
 app.use("/api/appointments", appointmentRoutes);
 

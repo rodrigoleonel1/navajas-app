@@ -31,7 +31,6 @@ const userSchema = new mongoose.Schema(
         end: { type: String, default: "18:00" },
       },
       daysOff: { type: [Date], default: [] },
-      holidays: { type: [Date], default: [] },
       // Francos semanales recurrentes: 0=domingo ... 6=sábado
       weeklyDaysOff: { type: [Number], default: [] },
     },

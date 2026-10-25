@@ -62,6 +62,12 @@ export function dayKeyUTC(date) {
   return date.toISOString().slice(0, 10);
 }
 
+// Medianoche UTC de un día calendario YYYY-MM-DD. Se usa para entidades
+// date-only como Holiday, no para días comerciales (esos usan businessDayStartUtc).
+export function utcDayStart(dayKey) {
+  return new Date(`${dayKey}T00:00:00.000Z`);
+}
+
 // Convierte "HH:MM" del workingHours a minutos. Si el formato es inválido o
 // falta, devuelve el fallback.
 export function parseWorkHour(hhmm, fallback) {
