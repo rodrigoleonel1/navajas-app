@@ -41,6 +41,7 @@ export function buildAppointmentConfirmation(payload = {}) {
     duration,
     price,
     extra = 0,
+    voucherDiscount = 0,
   } = payload;
 
   const dateLabel = startAt ? formatBusinessDate(startAt) : "";
@@ -55,11 +56,16 @@ export function buildAppointmentConfirmation(payload = {}) {
   const durationLabel = duration ? `${duration} min` : "";
   const totalValue = Number(price) || 0;
   const extraValue = Number(extra) || 0;
-  const baseValue = Math.max(totalValue - extraValue, 0);
+  const voucherValue = Number(voucherDiscount) || 0;
+  // price_snapshot = base + recargo - vale.
+  const baseValue = Math.max(totalValue - extraValue + voucherValue, 0);
   const hasExtra = extraValue > 0;
+  const hasVoucher = voucherValue > 0;
+  const showBreakdown = hasExtra || hasVoucher;
   const priceLabel = formatPrice(totalValue);
   const baseLabel = formatPrice(baseValue);
   const extraLabel = formatPrice(extraValue);
+  const voucherLabel = formatPrice(voucherValue);
   const appUrl = `${config.APP_URL.replace(/\/+$/, "")}/app/client/turnos`;
 
   const subject = dateLabel
@@ -76,13 +82,15 @@ export function buildAppointmentConfirmation(payload = {}) {
     `Fecha: ${dateLabel}`,
     `Hora: ${timeLabel}`,
     durationLabel ? `Duración: ${durationLabel}` : null,
-    hasExtra ? `Precio base: ${baseLabel}` : null,
+    showBreakdown ? `Precio base: ${baseLabel}` : null,
     hasExtra ? `Recargo por inasistencias (20%): ${extraLabel}` : null,
+    hasVoucher ? `Vale: -${voucherLabel}` : null,
     `Total: ${priceLabel}`,
     "",
     hasExtra
       ? "Se aplicó un recargo del 20% por inasistencias. El contador se reinició."
       : null,
+    hasVoucher ? "Se aplicó un vale de descuento." : null,
     `Ver mis turnos: ${appUrl}`,
     "",
     "Si no podés asistir, avisanos desde Mis turnos.",
@@ -98,8 +106,9 @@ export function buildAppointmentConfirmation(payload = {}) {
     detailRow("Fecha", dateLabel),
     detailRow("Hora", timeLabel),
     durationLabel ? detailRow("Duración", durationLabel) : "",
-    hasExtra ? detailRow("Precio base", baseLabel) : "",
+    showBreakdown ? detailRow("Precio base", baseLabel) : "",
     hasExtra ? detailRow("Recargo (20%)", extraLabel) : "",
+    hasVoucher ? detailRow("Vale", `-${voucherLabel}`) : "",
     detailRow("Total", priceLabel, true),
   ].join("");
 
@@ -127,6 +136,11 @@ export function buildAppointmentConfirmation(payload = {}) {
                 ${
                   hasExtra
                     ? `<p style="margin:16px 0 0;font-size:12px;color:#777777;">Se aplicó un recargo del 20% por inasistencias. El contador se reinició.</p>`
+                    : ""
+                }
+                ${
+                  hasVoucher
+                    ? `<p style="margin:16px 0 0;font-size:12px;color:#777777;">Se aplicó un vale de descuento.</p>`
                     : ""
                 }
                 <p style="margin:24px 0 0;text-align:center;">

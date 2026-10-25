@@ -30,7 +30,7 @@ const MESSAGES = {
     "Tu turno fue cancelado. Se registró una inasistencia y el horario no se liberó.",
 };
 
-// Template de cancelación del cliente (RN3).
+// Template de cancelación del cliente (RN3) y del admin (RN7).
 export function buildAppointmentCancellation(payload = {}) {
   const {
     clientName = "cliente",
@@ -39,6 +39,7 @@ export function buildAppointmentCancellation(payload = {}) {
     startAt,
     endAt,
     cancelType = "free",
+    cancelledByAdmin = false,
   } = payload;
 
   const dateLabel = startAt ? formatBusinessDate(startAt) : "";
@@ -48,17 +49,29 @@ export function buildAppointmentCancellation(payload = {}) {
     ? `${startLabel} a ${endLabel} hs`
     : `${startLabel} hs`;
   const servicesLabel = services.length ? services.join(", ") : "Servicio";
-  const message = MESSAGES[cancelType] ?? MESSAGES.free;
+  const isAdminCancellation = Boolean(cancelledByAdmin);
+  const message = isAdminCancellation
+    ? "El local canceló tu turno con anticipación. No hay penalización y el horario quedó libre."
+    : MESSAGES[cancelType] ?? MESSAGES.free;
+  const voucherNote = isAdminCancellation
+    ? "Además, te emitimos un vale del 20% de descuento para tu próxima visita."
+    : "";
   const appUrl = `${config.APP_URL.replace(/\/+$/, "")}/app/client/turnos`;
+  const voucherUrl = `${config.APP_URL.replace(/\/+$/, "")}/app/client/vales`;
 
-  const subject = dateLabel
-    ? `Turno cancelado — Navajas Barber, ${dateLabel} a las ${startLabel}`
-    : "Turno cancelado — Navajas Barber";
+  const subject = isAdminCancellation
+    ? dateLabel
+      ? `Turno cancelado por el local — Navajas Barber, ${dateLabel} a las ${startLabel}`
+      : "Turno cancelado por el local — Navajas Barber"
+    : dateLabel
+      ? `Turno cancelado — Navajas Barber, ${dateLabel} a las ${startLabel}`
+      : "Turno cancelado — Navajas Barber";
 
   const text = [
     `Hola ${clientName},`,
     "",
     message,
+    voucherNote || null,
     "",
     `Barbero: ${barberName}`,
     `Servicios: ${servicesLabel}`,
@@ -66,9 +79,12 @@ export function buildAppointmentCancellation(payload = {}) {
     `Hora: ${timeLabel}`,
     "",
     `Ver mis turnos: ${appUrl}`,
+    isAdminCancellation ? `Ver mis vales: ${voucherUrl}` : null,
     "",
     "Navajas",
-  ].join("\n");
+  ]
+    .filter((line) => line !== null)
+    .join("\n");
 
   const rows = [
     detailRow("Barbero", barberName),
@@ -98,6 +114,11 @@ export function buildAppointmentCancellation(payload = {}) {
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                   ${rows}
                 </table>
+                ${
+                  voucherNote
+                    ? `<p style="margin:16px 0 0;font-size:12px;color:#777777;">${escapeHtml(voucherNote)} <a href="${escapeHtml(voucherUrl)}" style="color:${PRIMARY_COLOR};">Ver mis vales</a></p>`
+                    : ""
+                }
                 <p style="margin:24px 0 0;text-align:center;">
                   <a href="${escapeHtml(appUrl)}" style="display:inline-block;background:${PRIMARY_COLOR};color:${PRIMARY_FOREGROUND};text-decoration:none;padding:12px 20px;border-radius:8px;font-size:14px;font-weight:bold;">
                     Ver mis turnos

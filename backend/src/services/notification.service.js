@@ -4,6 +4,7 @@ import { buildAppointmentCancellation } from "../templates/emails/appointmentCan
 import { buildAppointmentConfirmation } from "../templates/emails/appointmentConfirmation.js";
 import { buildAppointmentNoShow } from "../templates/emails/appointmentNoShow.js";
 import { buildAppointmentReminder } from "../templates/emails/appointmentReminder.js";
+import { buildVoucherIssued } from "../templates/emails/voucherIssued.js";
 import {
   formatBusinessDate,
   formatBusinessTime,
@@ -207,6 +208,8 @@ function buildNotificationContent(notification) {
       return buildAppointmentNoShow(payload);
     case "recordatorio_turno":
       return buildAppointmentReminder(payload);
+    case "vale_emitido":
+      return buildVoucherIssued(payload);
     default:
       throw new Error(`Template no soportado: ${notification.type}`);
   }
@@ -226,14 +229,20 @@ function buildInAppContent(notification) {
     ? ` con ${payload.barberName}`
     : "";
   const link = "/app/client/turnos";
+  const voucherLink = "/app/client/vales";
 
   switch (notification.type) {
-    case "confirmacion_turno":
+    case "confirmacion_turno": {
+      const voucherNote =
+        Number(payload.voucherDiscount) > 0
+          ? " Se aplicó un vale de descuento."
+          : "";
       return {
         title: "Turno confirmado",
-        message: `Tu turno${barberLabel} quedó confirmado${whenLabel ? ` para el ${whenLabel}` : ""}.`,
+        message: `Tu turno${barberLabel} quedó confirmado${whenLabel ? ` para el ${whenLabel}` : ""}.${voucherNote}`,
         link,
       };
+    }
     case "recordatorio_turno":
       return {
         title: "Recordatorio de turno",
@@ -241,6 +250,13 @@ function buildInAppContent(notification) {
         link,
       };
     case "cancelacion_turno": {
+      if (payload.cancelledByAdmin) {
+        return {
+          title: "Turno cancelado por el local",
+          message: `El local canceló tu turno${whenLabel ? ` del ${whenLabel}` : ""} con anticipación. No hay penalización y el horario quedó libre.`,
+          link,
+        };
+      }
       const cancelMessage =
         CANCEL_MESSAGES[payload.cancelType] ?? CANCEL_MESSAGES.free;
       return {
@@ -255,12 +271,17 @@ function buildInAppContent(notification) {
         message: `Se registró una inasistencia para tu turno${barberLabel}${whenLabel ? ` del ${whenLabel}` : ""}.`,
         link,
       };
-    case "vale_emitido":
+    case "vale_emitido": {
+      const discountPercent = payload.discountPercent ?? 20;
+      const expiresLabel = payload.expiresAt
+        ? formatBusinessDate(payload.expiresAt)
+        : "";
       return {
         title: "Vale emitido",
-        message: "Recibiste un vale para tu próxima visita.",
-        link,
+        message: `Recibiste un vale del ${discountPercent}%. Se aplicará automáticamente en tu próxima reserva.${expiresLabel ? ` Válido hasta: ${expiresLabel}.` : ""}`,
+        link: voucherLink,
       };
+    }
     default:
       return {
         title: "Aviso",

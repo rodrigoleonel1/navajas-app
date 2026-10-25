@@ -23,9 +23,14 @@ import {
   createAppointmentNotifications,
   scheduleNotificationSend,
 } from "./notification.service.js";
+import {
+  attachVoucherToAppointment,
+  claimActiveVoucherForBooking,
+  issueAdminCancellationVoucher,
+} from "./voucher.service.js";
 
 const APPOINTMENT_FIELDS =
-  "barber_id client_id service_ids start_at end_at status cancel_type extra price_snapshot duration_snapshot";
+  "barber_id client_id service_ids start_at end_at status cancel_type extra price_snapshot voucher_id voucher_discount duration_snapshot";
 
 // Un turno ocupa la agenda si está pendiente, si el cliente no se presentó
 // o si canceló con menos de 4 h (cancel_type blocked).
@@ -338,6 +343,10 @@ function toAppointmentDTO(doc, { now = new Date() } = {}) {
         ? getCancellationPolicy(doc.start_at, now)?.kind ?? null
         : null;
 
+  const voucherId = doc.voucher_id
+    ? (doc.voucher_id._id ?? doc.voucher_id).toString()
+    : null;
+
   return {
     id: doc._id.toString(),
     barber,
@@ -349,6 +358,8 @@ function toAppointmentDTO(doc, { now = new Date() } = {}) {
     cancelType,
     extra: doc.extra ?? 0,
     priceSnapshot: doc.price_snapshot,
+    voucherId,
+    voucherDiscount: doc.voucher_discount ?? 0,
     durationSnapshot: doc.duration_snapshot,
   };
 }
@@ -376,6 +387,7 @@ async function enqueueAppointmentConfirmation({
         duration: appointment.duration_snapshot,
         price: appointment.price_snapshot,
         extra: appointment.extra ?? 0,
+        voucherDiscount: appointment.voucher_discount ?? 0,
       },
     });
 
@@ -392,7 +404,12 @@ async function enqueueAppointmentConfirmation({
 
 // Encola el email de cancelación o inasistencia. El turno debe venir
 // populado con client_id (name, email), barber_id (name) y service_ids (name).
-async function enqueueStatusNotification({ appointment, type, cancelType = null }) {
+async function enqueueStatusNotification({
+  appointment,
+  type,
+  cancelType = null,
+  cancelledByAdmin = false,
+}) {
   try {
     const client = appointment.client_id;
     const { email } = await createAppointmentNotifications({
@@ -409,7 +426,9 @@ async function enqueueStatusNotification({ appointment, type, cancelType = null 
         endAt: new Date(appointment.end_at).toISOString(),
         price: appointment.price_snapshot,
         extra: appointment.extra ?? 0,
+        voucherDiscount: appointment.voucher_discount ?? 0,
         cancelType,
+        cancelledByAdmin,
       },
     });
 
@@ -418,6 +437,39 @@ async function enqueueStatusNotification({ appointment, type, cancelType = null 
     // El cambio de estado ya quedó guardado; un fallo de email no lo revierte.
     console.error(
       "[appointment] no se pudo crear la notificación de estado",
+      err?.code || "",
+      err?.message || err,
+    );
+  }
+}
+
+// RN7: avisa al cliente que se le emitió un vale por la cancelación del admin.
+// El turno debe venir populado con client_id (name, email) y barber_id (name).
+async function enqueueVoucherNotification({ appointment, voucher }) {
+  if (!voucher) return;
+
+  try {
+    const client = appointment.client_id;
+    const { email } = await createAppointmentNotifications({
+      appointmentId: appointment._id,
+      targetUser: { id: client._id, email: client.email },
+      type: "vale_emitido",
+      payload: {
+        clientName: client.name,
+        barberName: appointment.barber_id?.name ?? "",
+        discountPercent: voucher.discount_percent,
+        issuedAt: new Date(voucher.issued_at).toISOString(),
+        expiresAt: new Date(voucher.expires_at).toISOString(),
+        startAt: new Date(appointment.start_at).toISOString(),
+        source: voucher.source,
+      },
+    });
+
+    if (email) scheduleNotificationSend(email._id, "appointment");
+  } catch (err) {
+    // La cancelación y el vale ya quedaron guardados; el email es best-effort.
+    console.error(
+      "[appointment] no se pudo crear la notificación del vale",
       err?.code || "",
       err?.message || err,
     );
@@ -553,12 +605,25 @@ export async function createAppointment({
 
         // RN5: si el cliente tiene 3 inasistencias recientes sin usar,
         // esta reserva lleva el recargo del 20%.
+        const now = new Date();
         const penalty = await applyPenaltyIfNeeded({
           clientOid,
           basePrice,
           session,
-          now: new Date(),
+          now,
         });
+
+        // RN7: si el cliente tiene un vale vigente, se aplica uno solo sobre
+        // el precio con recargo. El más próximo a vencer se usa primero.
+        const voucher = await claimActiveVoucherForBooking({
+          clientId: clientOid,
+          session,
+          now,
+        });
+        const voucherDiscount = voucher
+          ? Math.round((penalty.price * voucher.discount_percent) / 100)
+          : 0;
+        const finalPrice = Math.max(penalty.price - voucherDiscount, 0);
 
         const docs = await Appointment.create(
           [
@@ -570,13 +635,23 @@ export async function createAppointment({
               end_at: end,
               status: "pending",
               extra: penalty.extra,
-              price_snapshot: penalty.price,
+              price_snapshot: finalPrice,
+              voucher_id: voucher?._id ?? null,
+              voucher_discount: voucherDiscount,
               duration_snapshot: duration,
             },
           ],
           { session },
         );
         created = docs[0];
+
+        if (voucher) {
+          await attachVoucherToAppointment({
+            voucherId: voucher._id,
+            appointmentId: created._id,
+            session,
+          });
+        }
       });
 
     try {
@@ -702,35 +777,96 @@ export async function listAppointments({
 }
 
 // El admin pasa un turno pendiente a completado o cancelado.
-// La cancelación admin libera el horario y no cuenta inasistencia.
+// La cancelación admin libera el horario, no cuenta inasistencia y emite el
+// vale del 20% de RN7 dentro de la misma transacción.
 export async function updateAppointmentStatus({ id, status }) {
   if (!["completed", "cancelled"].includes(status)) {
     throw createAppError(400, "VALIDATION_ERROR", "Estado inválido");
   }
   const appointmentOid = toObjectIdOrThrow(id, "ID de turno inválido");
-  const appointment = await Appointment.findById(appointmentOid);
-  if (!appointment) {
+
+  const existing = await Appointment.findById(appointmentOid)
+    .select("status")
+    .lean();
+  if (!existing) {
     throw createAppError(404, "NOT_FOUND", "Turno no encontrado");
   }
-  if (appointment.status !== "pending") {
+  if (existing.status !== "pending") {
     throw createAppError(
       400,
       "VALIDATION_ERROR",
       "Solo se puede cambiar un turno pendiente",
     );
   }
-  appointment.status = status;
-  if (status === "cancelled") {
-    appointment.cancel_type = "free";
+
+  if (status === "completed") {
+    const updated = await Appointment.findOneAndUpdate(
+      { _id: appointmentOid, status: "pending" },
+      { $set: { status: "completed" } },
+      { returnDocument: "after" },
+    )
+      .select(APPOINTMENT_FIELDS)
+      .populate("barber_id", "name")
+      .populate("client_id", "name email")
+      .populate("service_ids", "name price duration")
+      .lean();
+
+    if (!updated) {
+      throw createAppError(
+        400,
+        "VALIDATION_ERROR",
+        "Solo se puede cambiar un turno pendiente",
+      );
+    }
+    return toAppointmentDTO(updated);
   }
-  await appointment.save();
+
+  let voucher = null;
+  const session = await mongoose.startSession();
+  try {
+    await session.withTransaction(async () => {
+      const cancelled = await Appointment.findOneAndUpdate(
+        { _id: appointmentOid, status: "pending" },
+        { $set: { status: "cancelled", cancel_type: "free" } },
+        { returnDocument: "after", session },
+      );
+
+      if (!cancelled) {
+        throw createAppError(
+          400,
+          "VALIDATION_ERROR",
+          "Solo se puede cambiar un turno pendiente",
+        );
+      }
+
+      voucher = await issueAdminCancellationVoucher({
+        appointment: cancelled,
+        session,
+      });
+    });
+  } finally {
+    await session.endSession();
+  }
 
   const populated = await Appointment.findById(appointmentOid)
     .select(APPOINTMENT_FIELDS)
     .populate("barber_id", "name")
-    .populate("client_id", "name")
+    .populate("client_id", "name email")
     .populate("service_ids", "name price duration")
     .lean();
+
+  if (!populated) {
+    throw createAppError(404, "NOT_FOUND", "Turno no encontrado");
+  }
+
+  await enqueueStatusNotification({
+    appointment: populated,
+    type: "cancelacion_turno",
+    cancelType: "free",
+    cancelledByAdmin: true,
+  });
+  await enqueueVoucherNotification({ appointment: populated, voucher });
+
   return toAppointmentDTO(populated);
 }
 

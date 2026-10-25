@@ -11,6 +11,8 @@ import cronRoutes from "./routes/cron.js";
 import holidayRoutes from "./routes/holidays.js";
 import notificationRoutes from "./routes/notifications.js";
 import serviceRoutes from "./routes/services.js";
+import voucherConfigRoutes from "./routes/voucherConfig.js";
+import voucherRoutes from "./routes/vouchers.js";
 
 const app = express();
 
@@ -38,6 +40,8 @@ app.use("/api/holidays", holidayRoutes);
 app.use("/api/services", serviceRoutes);
 app.use("/api/appointments", appointmentRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/vouchers", voucherRoutes);
+app.use("/api/voucher-config", voucherConfigRoutes);
 app.use("/api/cron", cronRoutes);
 
 app.use(notFound);
