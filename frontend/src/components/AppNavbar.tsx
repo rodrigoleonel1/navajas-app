@@ -23,6 +23,11 @@ export function AppNavbar() {
           { to: "/app/barbers", label: "Barberos", index: "02" },
           { to: "/app/services", label: "Servicios", index: "03" },
           { to: "/app/holidays", label: "Feriados", index: "04" },
+          {
+            to: "/app/daily-earnings",
+            label: "Liquidaciones",
+            index: "05",
+          },
         ]
       : role === "barber"
         ? [

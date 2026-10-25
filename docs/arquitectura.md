@@ -129,6 +129,14 @@ RN5 se evalúa al reservar: se cuentan los turnos del cliente con `no_show` o `c
 
 La API expone `cancelType` y `extra`. En un turno `pending`, `cancelType` es la ventana proyectada; en `cancelled`, el valor real; en otros estados, `null`. `priceSnapshot` es el total final.
 
+#### Ingresos y liquidación (RN6)
+
+La comisión del barbero se calcula por cada turno `completed` sobre el `price_snapshot` completo, incluyendo el recargo de RN5: `Math.round(price_snapshot * 0.6)`. La parte del local es `price_snapshot - comisión`. No se agrega un campo nuevo: se usa el precio histórico para que los cambios posteriores de servicios no alteren liquidaciones pasadas.
+
+El día de imputación es el día comercial de `start_at` en `America/Argentina/Buenos_Aires`, no la fecha en que se marcó el turno como completado. El barbero consulta `GET /api/barbers/me/earnings?from=YYYY-MM-DD&to=YYYY-MM-DD` (rango máximo 366 días); la UI usa la semana actual (lunes a hoy) o el mes actual (día 1 a hoy). El admin consulta `GET /api/barbers/daily-earnings?date=YYYY-MM-DD`, que devuelve todos los barberos activos —aunque tengan cero turnos— y los inactivos que tuvieron turnos completados ese día.
+
+La pantalla del barbero (`/app/barber/ingresos`) muestra la comisión con un gráfico Recharts. La pantalla del admin (`/app/daily-earnings`, label “Liquidaciones”) muestra comisión, parte local y total por barbero. No se registra el pago ni se marca la liquidación como pagada en esta versión.
+
 Los controllers únicamente deben recibir la petición, delegar al service y construir la respuesta HTTP.
 
 ### API REST
@@ -140,6 +148,8 @@ POST   /api/auth/signup
 POST   /api/auth/login
 GET    /api/services
 GET    /api/barbers
+GET    /api/barbers/me/earnings?from=...&to=...   # barbero
+GET    /api/barbers/daily-earnings?date=...      # admin
 GET    /api/holidays
 POST   /api/holidays
 PATCH  /api/holidays/:id
@@ -454,7 +464,8 @@ Los roles deben utilizarse para proteger operaciones sensibles, especialmente la
 | `PATCH /api/appointments/:id/cancel` | ✓ (propio) |  |  | RN3, verificar ownership |
 | `PATCH /api/appointments/:id/no-show` |  |  | ✓ | RN4, tolerancia 15 min |
 | `POST /api/barbers` |  |  | ✓ | CA-3, alta barbero |
-| `GET /api/barbers/me/earnings` |  | ✓ |  | `barber_id = req.user.id` |
+| `GET /api/barbers/me/earnings` |  | ✓ |  | `barber_id = req.user.id`; rango máximo 366 días |
+| `GET /api/barbers/daily-earnings` |  |  | ✓ | Liquidación diaria; activos con cero turnos incluidos |
 | `POST /api/offers` |  |  | ✓ | RN11 |
 | `GET /api/vouchers` | ✓ (propios) |  |  | `client_id = req.user.id` |
 
@@ -532,7 +543,7 @@ evitando duplicar contratos de datos. Si se comparte, considerar monorepo `packa
 - **Zod:** validación de datos y contratos de entrada.
 - **React Hook Form + `@hookform/resolvers`:** gestión y validación de formularios.
 - **`date-fns`:** manipulación y formateo de fechas.
-- **Recharts:** gráficos y visualizaciones del panel administrativo.
+- **Recharts:** gráficos de ingresos y liquidaciones del panel.
 - **Lucide React 0.511.0:** iconografía exclusiva (ver directiva abajo).
 - **Tailwind CSS 4 + `@tailwindcss/vite` + `tailwind-merge`:** estilos y responsive design.
 - **`clsx`:** composición condicional de clases.

@@ -4,6 +4,7 @@ import { RoleRedirect } from "./components/RoleRedirect";
 import { ConfirmProvider } from "./components/ui/ConfirmModal";
 import { ToastProvider } from "./components/ui/Toast";
 import { AppLayout } from "./layouts/AppLayout";
+import { AdminDailyEarningsPage } from "./pages/app/AdminDailyEarningsPage";
 import { AgendaPage } from "./pages/app/AgendaPage";
 import { BarberDetailPage } from "./pages/app/BarberDetailPage";
 import { BarberIngresosPage } from "./pages/app/BarberIngresosPage";
@@ -49,6 +50,14 @@ function App() {
             element={
               <ProtectedRoute roles={["barber"]}>
                 <BarberIngresosPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="daily-earnings"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <AdminDailyEarningsPage />
               </ProtectedRoute>
             }
           />
