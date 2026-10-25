@@ -63,7 +63,7 @@ Realizar una correcta gestión de turnos, evitando solapamientos y errores manua
 
 ## 2.3. Hipótesis
 
-En la asignación de turnos se priorizará la disponibilidad real del barbero (jornada laboral, días libres y feriados) y la duración total de los servicios solicitados, evitando solapamientos en la agenda. 
+En la asignación de turnos se priorizará la disponibilidad real del barbero (jornada laboral, francos por barbero y feriados globales del negocio) y la duración total de los servicios solicitados, evitando solapamientos en la agenda.
 
 ## 2.4. Restricciones
 
@@ -93,7 +93,7 @@ El alcance incluye desde la reserva del turno por parte del cliente hasta el env
 | Regla 7 | Si el administrador cancela un turno (ej.: emergencia del barbero), se notifica al cliente explicando el motivo y se emite automáticamente un vale de 20% de descuento, con fecha de caducidad según la configuración del administrador.  |
 | Regla 8 | Al completar su 10° turno (y cada 10 turnos sucesivos: 20°, 30°, etc.), el cliente recibe automáticamente un vale de fidelidad del 30% de descuento.  |
 | Regla 9 | Enviar un recordatorio automático (email \+ notificación in-app) 24 horas antes del horario del turno.  |
-| Regla 10 | No permitir reservar turnos en días feriados/no laborables, ni fuera de la jornada laboral configurada para cada barbero.  |
+| Regla 10 | No permitir reservar turnos en días feriados del negocio ni en francos/días libres del barbero, ni fuera de la jornada laboral configurada para cada barbero.  |
 | Regla 11 | El administrador puede activar o desactivar ofertas/combos de servicios con % de descuento, aplicados automáticamente al precio del turno.  |
 
 ## 3.2. Casos de estudio
@@ -149,8 +149,8 @@ El alcance incluye desde la reserva del turno por parte del cliente hasta el env
   * Descripción: Como administrador, quiero cancelar un turno en casos excepcionales, para avisar al cliente y compensarlo con un vale.  
   * Criterio de Aceptación: Al cancelar, se notifica al cliente el motivo y se emite automáticamente un vale de 20% de descuento (Regla 7).  
 * ID: NAV-10  
-  * Descripción: Como administrador, quiero configurar los horarios laborales, días libres y feriados de cada barbero, para que el sistema calcule correctamente la disponibilidad.  
-  * Criterio de Aceptación: Los turnos no pueden reservarse fuera de la jornada configurada ni en días feriados/no laborables (Regla 10).  
+  * Descripción: Como administrador, quiero configurar los horarios y francos de cada barbero, y los feriados globales del negocio, para que el sistema calcule correctamente la disponibilidad.
+  * Criterio de Aceptación: Los turnos no pueden reservarse fuera de la jornada configurada ni en feriados globales o francos/días libres del barbero (Regla 10).
 * ID: NAV-11  
   * Descripción: Como administrador, quiero configurar la duración de los vales de fidelidad y de cancelación, para definir cuánto tiempo son válidos.  
   * Criterio de Aceptación: Cada vez que se emite un vale, su fecha de caducidad se calcula según la duración configurada vigente al momento de la emisión.  
@@ -166,7 +166,7 @@ El alcance incluye desde la reserva del turno por parte del cliente hasta el env
 
 ## 4.2. Criterios de bondad
 
-* DISPONIBILIDAD DE BARBERO: franjas horarias libres de un barbero, calculadas en función de su jornada laboral configurada, sus días libres/feriados y los turnos ya asignados (Regla 1, Regla 10).  
+* DISPONIBILIDAD DE BARBERO: franjas horarias libres de un barbero, calculadas en función de su jornada laboral configurada, sus francos y los feriados globales del negocio, además de los turnos ya asignados (Regla 1, Regla 10).
 * HISTORIAL DE CLIENTE: turnos previos del cliente (servicios, barberos, estado), usado para calcular inasistencias recientes (Regla 5\) y turnos completados acumulados (Regla 8).  
 * PRECIO HISTÓRICO DEL TURNO: precio de él/los servicio(s) vigente al momento de la reserva, usado para calcular la comisión del barbero (Regla 6), sin verse afectado por cambios de precio posteriores.  
 * Generar Vale: calcular fecha de emisión y caducidad de un vale en base a la duración configurada por el administrador para su tipo (fidelidad o cancelación).

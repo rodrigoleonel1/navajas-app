@@ -100,7 +100,7 @@ Toda regla de negocio debe implementarse exclusivamente en `services/`.
 Reglas **RN0–RN11** definidas en `docs/FRD-Navajas.md:93-107`:
 
 - **RN0:** confirmación (email + in-app) al reservar turno.
-- **RN1 + RN10:** cálculo de disponibilidad (solapamiento + jornada laboral/feriados/días libres).
+- **RN1 + RN10:** cálculo de disponibilidad (solapamiento + jornada laboral, francos por barbero y feriados globales).
 - **RN2:** cálculo de duración total del turno según servicios.
 - **RN3:** cálculo de la ventana de cancelación (≥24h / 4–24h / <4h).
 - **RN4:** inasistencia manual por admin con tolerancia 15 min (no libera horario).
@@ -122,6 +122,10 @@ POST   /api/auth/signup
 POST   /api/auth/login
 GET    /api/services
 GET    /api/barbers
+GET    /api/holidays
+POST   /api/holidays
+PATCH  /api/holidays/:id
+DELETE /api/holidays/:id
 POST   /api/appointments
 GET    /api/appointments?barberId=...&date=...
 PATCH  /api/appointments/:id/cancel
@@ -140,6 +144,8 @@ POST /api/appointments
 GET /api/appointments?barberId=...&date=2026-09-11
 PATCH /api/appointments/:id/cancel
 ```
+
+Los endpoints `/api/holidays` son exclusivos del rol `admin`. La disponibilidad los refleja automáticamente en `nonWorkingDays` y bloquea la reserva con `HOLIDAY`.
 
 > Antes documentado como `/appointments/:id/cancel` sin prefijo → normalizado a `PATCH /api/appointments/:id/cancel` (RPC controlado; alternativa REST pura `PATCH /api/appointments/:id {status:'cancelled'}`).
 
@@ -168,6 +174,7 @@ Las colecciones deben utilizar nombres **snake_case y plural**:
 
 ```text
 appointments
+holidays
 services
 vouchers
 users
@@ -178,6 +185,7 @@ Los modelos deben utilizar nombres **PascalCase y singular**:
 
 ```text
 Appointment
+Holiday
 Service
 Voucher
 User
@@ -195,11 +203,21 @@ Notification
   name: String,
   barberProfile: { // solo si role === 'barber'
     workingHours: { start: String, end: String },
-    daysOff: [Date],
-    holidays: [Date]
+    daysOff: [Date],        // francos puntuales / vacaciones del barbero
+    weeklyDaysOff: [Number] // francos semanales: 0=domingo ... 6=sábado
   }
 }
 ```
+
+```js
+// holidays: configuración global del negocio
+{
+  date: Date, // fecha calendario UTC 00:00, unique
+  name: String
+}
+```
+
+Los feriados **no** se guardan por barbero: aplican a todos los barberos, incluidos los creados después. Los francos (`daysOff` / `weeklyDaysOff`) sí son propios de cada barbero.
 
 `appointments.barber_id` y `appointments.client_id` referencian `users._id` con validación `role === 'barber'|'client'`.
 
@@ -275,6 +293,15 @@ voucherSchema.index({ client_id: 1, expires_at: 1 });
 userSchema.index({ email: 1 }, { unique: true });
 userSchema.index({ role: 1 });
 ```
+
+#### `holidays`
+
+```js
+// Una sola definición por fecha; acelera la consulta de disponibilidad.
+holidaySchema.index({ date: 1 }, { unique: true });
+```
+
+La disponibilidad de un barbero se bloquea si el día es feriado global **o** franco semanal **o** franco puntual. Los feriados se consultan por rango y se pasan como `Set` de `YYYY-MM-DD` a la lógica de slots.
 
 ### Transacciones al crear un turno
 

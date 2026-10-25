@@ -73,7 +73,7 @@ Realizar una correcta gestión de turnos, evitando solapamientos y errores manua
 
 ## 2.3. Hipótesis
 
-En la asignación de turnos se priorizará la disponibilidad real del barbero (jornada laboral, días libres y feriados) y la duración total de los servicios solicitados, evitando solapamientos en la agenda. 
+En la asignación de turnos se priorizará la disponibilidad real del barbero (jornada laboral, francos por barbero y feriados globales del negocio) y la duración total de los servicios solicitados, evitando solapamientos en la agenda.
 
 ## 2.4. Restricciones
 
@@ -103,7 +103,7 @@ El alcance incluye desde la reserva del turno por parte del cliente hasta el env
 | Regla 7 | Cancelación por parte del administrador → notifica motivo al cliente y emite automáticamente un vale de 20% de descuento (fecha de caducidad según configuración). |
 | Regla 8 | Cada 10 turnos completados (10°, 20°, 30°...) → el cliente recibe automáticamente un vale de fidelidad del 30% de descuento. |
 | Regla 9 | Enviar un recordatorio automático (email \+ notificación in-app) 24 horas antes del horario del turno. |
-| Regla 10 | No permitir reservar turnos en días feriados/no laborables, ni fuera de la jornada laboral configurada para cada barbero. |
+| Regla 10 | No permitir reservar turnos en días feriados del negocio ni en francos/días libres del barbero, ni fuera de la jornada laboral configurada para cada barbero. |
 | Regla 11 | El administrador puede activar/desactivar ofertas/combos de servicios con % de descuento, aplicados automáticamente al precio del turno. |
 
 Tabla de decisión: define qué notificación o acción se dispara según la condición que se cumple, de acuerdo a las reglas de negocio anteriores.
@@ -156,8 +156,8 @@ Tabla de decisión: define qué notificación o acción se dispara según la con
 * Objetivo: un cliente puede reservar un turno real, y el admin puede operar el día a día. Sin reglas de penalización todavía.  
 * Auth: signup cliente (/signup), login único (/login) con roles, seed del admin, alta de barberos por el admin.  
 * Servicios: CRUD básico (nombre, duración, precio) — solo admin.  
-* Barberos: alta/baja \+ jornada laboral (horario de entrada/salida) y días libres — solo admin.  
-* Reserva de turno: cliente elige servicio(s) \+ barbero \+ horario disponible. Validar que no haya solapamiento (RN1) y que respete la jornada laboral (RN10, sin feriados todavía).  
+* Barberos: alta/baja \+ jornada laboral (horario de entrada/salida) y francos semanales/puntuales — solo admin.
+* Reserva de turno: cliente elige servicio(s) \+ barbero \+ horario disponible. Validar que no haya solapamiento (RN1) y que respete la jornada laboral y los francos (RN10). Los feriados globales se suman en V2.
 * Mis turnos: cliente ve próximos turnos e historial simple (sin vales ni penalizaciones aún).  
 * Agenda del barbero: sólo lectura, por día.  
 * Agenda del admin: ve todos los turnos, puede marcar completado (sin manejar inasistencia todavía).  
@@ -168,7 +168,7 @@ Tabla de decisión: define qué notificación o acción se dispara según la con
 ## 4.2. V2 \- Reglas de negocio \+ notificaciones completas
 
 * Objetivo: sumar la lógica que hace que el sistema sea "inteligente" y no un simple calendario.  
-* Feriados/días no laborables (completa RN10).  
+* Feriados globales del negocio y francos por barbero (completa RN10).
 * Cancelación con reglas (RN3): ≥ 24hs sin penalización, 4-24hs libera pero cuenta inasistencia, \< 4hs no libera y cuenta inasistencia.  
 * Inasistencia manual por admin con tolerancia de 15 min (RN4).  
 * Recargo del 20% a la 3ra inasistencia en 2 meses, con reseteo del contador (RN5).  
@@ -241,7 +241,7 @@ Historias de usuario
 
 Criterio de Aceptación 
 
-* CA-4: El sistema no permite reservar en horarios solapados, fuera de la jornada laboral, ni en feriados/días libres del barbero.  
+* CA-4: El sistema no permite reservar en horarios solapados, fuera de la jornada laboral, ni en feriados globales o francos/días libres del barbero.
 * CA-5: Al cancelar, el sistema aplica automáticamente la regla correspondiente según el tiempo de anticipación.  
 * CA-6: El cliente ve claramente separados sus turnos futuros de su historial.  
 * CA-7: Al marcar inasistencia, se actualiza el contador de inasistencias de los últimos 2 meses del cliente.  
@@ -338,19 +338,19 @@ EP-6: Administración, ofertas y reportes
 | Estado | Aprobado |
 | Creado | 07/09/2026 |
 | Actualizado | 07/09/2026 |
-| Descripción | Panel de control del negocio: configuración de barberos/horarios/feriados, ofertas/combos, y reportes de performance del local. |
+| Descripción | Panel de control del negocio: configuración de barberos/horarios/francos, feriados globales, ofertas/combos, y reportes de performance del local. |
 | Implementación | V1/V2/V3 |
 
 Historias de usuario
 
-* HU-17: Como administrador, quiero configurar horarios laborales, días libres y feriados de cada barbero (RN10).  
+* HU-17: Como administrador, quiero configurar horarios y francos de cada barbero, y feriados globales del negocio (RN10).
 * HU-18: Como administrador, quiero activar/desactivar ofertas/combos de servicios con % de descuento (RN11).  
 * HU-19: Como administrador, quiero ver reportes de inasistencias, ingresos, más solicitados y calificación promedio.  
 * HU-20: Como administrador, quiero ver cuánto le corresponde cobrar a cada barbero por día, para gestionar las liquidaciones.
 
 Criterio de Aceptación 
 
-* CA-17: Los cambios de horario/feriados impactan de inmediato en la disponibilidad de turnos futuros.  
+* CA-17: Los cambios de horario/francos/feriados impactan de inmediato en la disponibilidad de turnos futuros.
 * CA-18: Al reservar una combinación de servicios con oferta activa, el precio refleja el descuento correspondiente.  
 * CA-19: Los reportes son filtrables por rango de fechas.  
 * CA-20: La liquidación diaria muestra, por barbero, el monto total del 60% de sus turnos completados ese día.
@@ -384,7 +384,7 @@ Dependencias
 
 ## 5.2. Criterios de bondad
 
-* DISPONIBILIDAD DE BARBERO: franjas horarias libres de un barbero, calculadas en función de su jornada laboral configurada, sus días libres/feriados y los turnos ya asignados (RN1, RN10).  
+* DISPONIBILIDAD DE BARBERO: franjas horarias libres de un barbero, calculadas en función de su jornada laboral configurada, sus francos y los feriados globales del negocio, además de los turnos ya asignados (RN1, RN10).
 * HISTORIAL DE CLIENTE: turnos previos del cliente (servicios, barberos, estado), usado para calcular inasistencias recientes (RN5) y turnos completados acumulados (RN8).  
 * PRECIO HISTÓRICO DEL TURNO: precio de él/los servicio(s) vigente al momento de la reserva, usado para calcular la comisión del barbero (RN6), sin verse afectado por cambios de precio posteriores.  
 * Generar Vale: calcular fecha de emisión y caducidad de un vale en base a la duración configurada por el administrador para su tipo (fidelidad o cancelación).
