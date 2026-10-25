@@ -1,4 +1,5 @@
 import { Appointment } from "../models/Appointment.js";
+import { BookingLock } from "../models/BookingLock.js";
 import { User } from "../models/User.js";
 import { createAppError } from "../utils/appError.js";
 import { createHash } from "../utils/bcrypt.js";
@@ -31,6 +32,22 @@ export async function createBarber({ name, email, password }) {
     password_hash,
     role: "barber",
   });
+
+  // El lock se crea junto con el barbero. Si falla, la primera reserva lo
+  // puede crear con upsert; no conviene romper el alta por esto.
+  try {
+    await BookingLock.updateOne(
+      { barber_id: user._id },
+      { $setOnInsert: { version: 0 } },
+      { upsert: true },
+    );
+  } catch (err) {
+    console.error(
+      "[barber] no se pudo crear el booking lock",
+      err?.code || "",
+      err?.message || err,
+    );
+  }
 
   return {
     id: user._id.toString(),

@@ -1,6 +1,7 @@
 import { waitUntil } from "@vercel/functions";
 import mongoose from "mongoose";
 import { Appointment } from "../models/Appointment.js";
+import { BookingLock } from "../models/BookingLock.js";
 import { Service } from "../models/Service.js";
 import { User } from "../models/User.js";
 import { createAppError } from "../utils/appError.js";
@@ -331,6 +332,46 @@ async function enqueueAppointmentConfirmation({
   }
 }
 
+// Arma el 409 con la sugerencia de próximo horario libre. Se usa después de
+// que la transacción detecta el solapamiento, para no hacer queries extra
+// mientras la transacción está abierta.
+async function buildConflictError({ barberOid, start, duration, barberProfile }) {
+  let suggestedStartAt;
+  try {
+    const horizonEnd = new Date(start.getTime() + 14 * DAY_MS);
+    const upcoming = await Appointment.find({
+      barber_id: barberOid,
+      status: "pending",
+      start_at: { $lt: horizonEnd },
+      end_at: { $gt: start },
+    })
+      .select("start_at end_at")
+      .lean();
+    const bookings = upcoming.map((booking) => ({
+      start: new Date(booking.start_at),
+      end: new Date(booking.end_at),
+    }));
+    const next = findNextAvailable({
+      from: start,
+      duration,
+      barberProfile,
+      bookings,
+      step: 30,
+      horizonDays: 14,
+    });
+    suggestedStartAt = next?.startAt;
+  } catch {
+    suggestedStartAt = undefined;
+  }
+
+  return createAppError(
+    409,
+    "CONFLICT",
+    "Horario no disponible para ese barbero",
+    suggestedStartAt ? { suggestedStartAt } : undefined,
+  );
+}
+
 export async function createAppointment({
   clientId,
   barberId,
@@ -365,71 +406,77 @@ export async function createAppointment({
   // RN10: jornada + francos + feriados.
   assertWithinBarberAvailability(start, end, barber.barberProfile);
 
-  // RN1: sin solapamiento con otro turno pendiente del mismo barbero.
-  const overlap = await Appointment.exists({
-    barber_id: barberOid,
-    status: "pending",
-    start_at: { $lt: end },
-    end_at: { $gt: start },
-  });
-  if (overlap) {
-    // Sugerencia del próximo horario libre (no bloquea el 409 si falla).
-    let suggestedStartAt;
-    try {
-      const horizonEnd = new Date(start.getTime() + 14 * DAY_MS);
-      const upcoming = await Appointment.find({
-        barber_id: barberOid,
-        status: "pending",
-        start_at: { $lt: horizonEnd },
-        end_at: { $gt: start },
-      })
-        .select("start_at end_at")
-        .lean();
-      const bookings = upcoming.map((booking) => ({
-        start: new Date(booking.start_at),
-        end: new Date(booking.end_at),
-      }));
-      const next = findNextAvailable({
-        from: start,
-        duration,
-        barberProfile: barber.barberProfile,
-        bookings,
-        step: 30,
-        horizonDays: 14,
-      });
-      suggestedStartAt = next?.startAt;
-    } catch {
-      suggestedStartAt = undefined;
-    }
-    throw createAppError(
-      409,
-      "CONFLICT",
-      "Horario no disponible para ese barbero",
-      suggestedStartAt ? { suggestedStartAt } : undefined,
-    );
-  }
-
   const session = await mongoose.startSession();
   let created;
   try {
-    await session.withTransaction(async () => {
-      const docs = await Appointment.create(
-        [
-          {
-            barber_id: barberOid,
-            client_id: clientOid,
-            service_ids: serviceOids,
-            start_at: start,
-            end_at: end,
-            status: "pending",
-            price_snapshot: price,
-            duration_snapshot: duration,
-          },
-        ],
-        { session },
-      );
-      created = docs[0];
-    });
+    const runTransaction = () =>
+      session.withTransaction(async () => {
+        // Lock por barbero: dos transacciones del mismo barbero no pueden
+        // incrementar este documento a la vez. La que pierde se reintenta.
+        await BookingLock.findOneAndUpdate(
+          { barber_id: barberOid },
+          { $inc: { version: 1 } },
+          { upsert: true, session },
+        );
+
+        // RN1: la verificación definitiva va dentro de la transacción.
+        const overlap = await Appointment.exists({
+          barber_id: barberOid,
+          status: "pending",
+          start_at: { $lt: end },
+          end_at: { $gt: start },
+        }).session(session);
+
+        if (overlap) {
+          throw createAppError(
+            409,
+            "CONFLICT",
+            "Horario no disponible para ese barbero",
+          );
+        }
+
+        const docs = await Appointment.create(
+          [
+            {
+              barber_id: barberOid,
+              client_id: clientOid,
+              service_ids: serviceOids,
+              start_at: start,
+              end_at: end,
+              status: "pending",
+              price_snapshot: price,
+              duration_snapshot: duration,
+            },
+          ],
+          { session },
+        );
+        created = docs[0];
+      });
+
+    try {
+      await runTransaction();
+    } catch (err) {
+      // Dos primeras reservas del mismo barbero pueden chocar al crear el
+      // lock con upsert. Se reintenta una vez; el resto de errores sigue.
+      if (
+        err?.code === 11000 &&
+        (err?.keyPattern?.barber_id || err?.keyValue?.barber_id)
+      ) {
+        await runTransaction();
+      } else {
+        throw err;
+      }
+    }
+  } catch (err) {
+    if (err?.statusCode === 409 && err?.code === "CONFLICT") {
+      throw await buildConflictError({
+        barberOid,
+        start,
+        duration,
+        barberProfile: barber.barberProfile,
+      });
+    }
+    throw err;
   } finally {
     await session.endSession();
   }
