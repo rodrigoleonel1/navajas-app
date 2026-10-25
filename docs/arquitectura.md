@@ -121,17 +121,19 @@ Ventanas de cancelación del cliente:
 | `4–24 h` | `late` | Sí | Sí |
 | `< 4 h` | `blocked` | No | Sí |
 
-Un turno ya iniciado no se puede cancelar. El admin cancela con `PATCH /api/appointments/:id` y `status: "cancelled"`; se guarda `cancel_type: "free"` (libera el horario y no cuenta inasistencia). La inasistencia se marca con `PATCH /api/appointments/:id/no-show` recién 15 minutos después del inicio; pasa a `status: "no_show"` y no libera el horario. La UI del admin oculta la acción hasta que se cumple la tolerancia; el backend vuelve a validarla.
+Un turno ya iniciado no se puede cancelar. El admin cancela con `PATCH /api/appointments/:id` y `status: "cancelled"`; se guarda `cancel_type: "free"` (libera el horario y no cuenta inasistencia) y, dentro de la misma transacción, se emite un vale del 20% (RN7). La inasistencia se marca con `PATCH /api/appointments/:id/no-show` recién 15 minutos después del inicio; pasa a `status: "no_show"` y no libera el horario. La UI del admin oculta la acción hasta que se cumple la tolerancia; el backend vuelve a validarla.
 
 Un turno ocupa la agenda si está `pending`, `no_show` o `cancelled` con `cancel_type: "blocked"`. Los turnos `cancelled` `free`/`late` y los `completed` liberan el horario.
 
-RN5 se evalúa al reservar: se cuentan los turnos del cliente con `no_show` o `cancelled` `late`/`blocked` de los últimos 2 meses que tengan `penalty_used: false`. La ventana se calcula en meses calendario y, si el día no existe en el mes destino, se ajusta al último día de ese mes (por ejemplo, `31/08` → `30/06`). Con 3 o más, la reserva nueva suma un recargo del 20% en `extra` (redondeado con `Math.round`), `price_snapshot` guarda el total final y esas inasistencias pasan a `penalty_used: true` para reiniciar el contador. La evaluación y el reinicio ocurren dentro de la misma transacción de la reserva: si la reserva falla, las inasistencias no se consumen. No se guarda `base_price`: el precio base se deriva como `price_snapshot - extra`.
+RN5 se evalúa al reservar: se cuentan los turnos del cliente con `no_show` o `cancelled` `late`/`blocked` de los últimos 2 meses que tengan `penalty_used: false`. La ventana se calcula en meses calendario y, si el día no existe en el mes destino, se ajusta al último día de ese mes (por ejemplo, `31/08` → `30/06`). Con 3 o más, la reserva nueva suma un recargo del 20% en `extra` (redondeado con `Math.round`) y esas inasistencias pasan a `penalty_used: true` para reiniciar el contador. La evaluación y el reinicio ocurren dentro de la misma transacción de la reserva: si la reserva falla, las inasistencias no se consumen.
 
-La API expone `cancelType` y `extra`. En un turno `pending`, `cancelType` es la ventana proyectada; en `cancelled`, el valor real; en otros estados, `null`. `priceSnapshot` es el total final.
+Después de RN5, si el cliente tiene un vale vigente se aplica **uno solo** (el de vencimiento más próximo) sobre el precio con recargo. `voucher_discount` guarda el descuento en pesos y `price_snapshot` queda como `max(base + extra - voucher_discount, 0)`. No se guarda `base_price`: el precio base se deriva como `price_snapshot - extra + voucher_discount`.
+
+La API expone `cancelType`, `extra`, `voucherId` y `voucherDiscount`. En un turno `pending`, `cancelType` es la ventana proyectada; en `cancelled`, el valor real; en otros estados, `null`. `priceSnapshot` es el total final.
 
 #### Ingresos y liquidación (RN6)
 
-La comisión del barbero se calcula por cada turno `completed` sobre el `price_snapshot` completo, incluyendo el recargo de RN5: `Math.round(price_snapshot * 0.6)`. La parte del local es `price_snapshot - comisión`. No se agrega un campo nuevo: se usa el precio histórico para que los cambios posteriores de servicios no alteren liquidaciones pasadas.
+La comisión del barbero se calcula por cada turno `completed` sobre el `price_snapshot` completo, es decir, después del recargo de RN5 y del vale aplicado: `Math.round(price_snapshot * 0.6)`. La parte del local es `price_snapshot - comisión`. No se agrega un campo de comisión: se usa el precio histórico para que los cambios posteriores de servicios no alteren liquidaciones pasadas.
 
 El día de imputación es el día comercial de `start_at` en `America/Argentina/Buenos_Aires`, no la fecha en que se marcó el turno como completado. El barbero consulta `GET /api/barbers/me/earnings?from=YYYY-MM-DD&to=YYYY-MM-DD` (rango máximo 366 días); la UI usa la semana actual (lunes a hoy) o el mes actual (día 1 a hoy). El admin consulta `GET /api/barbers/daily-earnings?date=YYYY-MM-DD`, que devuelve todos los barberos activos —aunque tengan cero turnos— y los inactivos que tuvieron turnos completados ese día.
 
@@ -141,7 +143,7 @@ La pantalla del barbero (`/app/barber/ingresos`) muestra la comisión con un gr�
 
 Cada evento de turno crea dos registros en `notifications`: uno por `email` y otro por `in_app`. Los emails nacen `pending` y se envían de forma asíncrona con reintentos; los avisos in-app nacen `sent` y quedan pendientes de lectura hasta que el cliente los abre (`read_at`). La creación es idempotente por `appointment_id + type + channel`.
 
-Eventos notificados: confirmación (RN0), cancelación (RN3), inasistencia (RN4) y recordatorio (RN9). El cliente ve una campana en el navbar con el contador de no leídos. El frontend hace polling cada 30 segundos y lo pausa cuando la pestaña está oculta; al abrir el panel también refresca. La bandeja no tiene página dedicada en esta versión.
+Eventos notificados: confirmación (RN0), cancelación del cliente (RN3), cancelación del admin (RN7), inasistencia (RN4), recordatorio (RN9) y emisión de vale (RN7). La cancelación del admin informa que fue con anticipación y sin penalización, y el aviso de vale enlaza a `/app/client/vales`. El cliente ve una campana en el navbar con el contador de no leídos. El frontend hace polling cada 30 segundos y lo pausa cuando la pestaña está oculta; al abrir el panel también refresca. La bandeja no tiene página dedicada en esta versión.
 
 El recordatorio corre con **Vercel Cron** una vez por día. El plan Hobby solo permite una ejecución diaria, así que el schedule es `0 15 * * *` UTC: **12:00 de Argentina** (Vercel puede ejecutarlo dentro de la hora, entre 12:00 y 12:59). El endpoint busca turnos `pending` del **día comercial siguiente** y crea el email + aviso in-app. No es una ventana exacta de 24 h: según la hora del turno, el aviso llega aproximadamente entre 12 y 36 h antes. La idempotencia evita duplicados si Vercel reintenta la ejecución.
 
@@ -162,6 +164,16 @@ GET   /api/cron/reminders             # Authorization: Bearer <CRON_SECRET>
 ```
 
 `GET /api/notifications` devuelve `{ items, unread }`. El límite máximo es 50 y el default 20. Los avisos incluyen `title`, `message`, `link`, `createdAt` y `readAt`.
+
+#### Vales (RN7)
+
+La cancelación del admin es una operación atómica: en la misma transacción se marca el turno como `cancelled` con `cancel_type: "free"` y se crea el `Voucher` del 20%. La emisión es idempotente por `source_appointment_id + source` (`admin_cancellation`), así que un reintento no duplica el vale.
+
+La duración se configura con el singleton `voucher_configs` (`key: "default"`). El campo `admin_cancellation_days` acepta enteros de 1 a 365 y por defecto es 30. El admin lo consulta y actualiza con `GET/PATCH /api/voucher-config`; la pantalla es `/app/voucher-config`.
+
+Al reservar, el service busca el vale vigente del cliente (`used_at: null` y `expires_at > now`), ordena por vencimiento más próximo y reserva **uno solo** de forma atómica. Si la reserva falla, la transacción devuelve el vale a disponible. El turno guarda `voucher_id` y `voucher_discount`; el descuento se calcula después de RN5 y el total final queda en `price_snapshot`.
+
+El cliente ve sus vales en `/app/client/vales` (`GET /api/vouchers`, solo los propios). El estado se calcula al consultar: `active`, `used` o `expired`. Si un turno con vale aplicado se cancela después, el vale no se restaura automáticamente en esta versión.
 
 Los controllers únicamente deben recibir la petición, delegar al service y construir la respuesta HTTP.
 
@@ -186,6 +198,8 @@ PATCH  /api/appointments/:id            # admin: completed | cancelled
 PATCH  /api/appointments/:id/cancel     # cliente
 PATCH  /api/appointments/:id/no-show    # admin
 GET    /api/vouchers
+GET    /api/voucher-config               # admin
+PATCH  /api/voucher-config               # admin
 GET    /api/offers
 POST   /api/ratings
 GET    /api/notifications?limit=20              # cliente: bandeja in-app
@@ -203,7 +217,7 @@ PATCH /api/appointments/:id/cancel
 PATCH /api/appointments/:id/no-show
 ```
 
-Los endpoints `/api/holidays` son exclusivos del rol `admin`. La disponibilidad los refleja automáticamente en `nonWorkingDays` y bloquea la reserva con `HOLIDAY`.
+Los endpoints `/api/holidays` son exclusivos del rol `admin`. La disponibilidad los refleja automáticamente en `nonWorkingDays` y bloquea la reserva con `HOLIDAY`. Los endpoints `/api/voucher-config` también son exclusivos del rol `admin`; `/api/vouchers` es del cliente y solo devuelve sus propios vales.
 
 > `PATCH /api/appointments/:id/cancel` es del cliente y no acepta body. El admin usa `PATCH /api/appointments/:id` con `{status:'completed'|'cancelled'}`. La inasistencia tiene endpoint propio para validar la tolerancia de 15 minutos.
 
@@ -235,6 +249,7 @@ appointments
 holidays
 services
 vouchers
+voucher_configs
 users
 notifications
 ```
@@ -246,6 +261,7 @@ Appointment
 Holiday
 Service
 Voucher
+VoucherConfig
 User
 Notification
 ```
@@ -314,7 +330,7 @@ Ejemplo conceptual:
 
 ```js
 Appointment.find(query)
-  .select('barber_id client_id start_at end_at status cancel_type extra price_snapshot')
+  .select('barber_id client_id start_at end_at status cancel_type extra price_snapshot voucher_id voucher_discount')
   .lean();
 ```
 
@@ -345,6 +361,20 @@ appointmentSchema.index({ start_at: 1 });
 
 ```js
 voucherSchema.index({ client_id: 1, expires_at: 1 });
+// Idempotencia de emisión por turno de origen.
+voucherSchema.index(
+  { source_appointment_id: 1, source: 1 },
+  { unique: true },
+);
+// Próximo vale a aplicar: cliente + no usado + vigencia.
+voucherSchema.index({ client_id: 1, used_at: 1, expires_at: 1 });
+```
+
+#### `voucher_configs`
+
+```js
+// Singleton de configuración.
+voucherConfigSchema.index({ key: 1 }, { unique: true });
 ```
 
 #### `users`
@@ -407,7 +437,7 @@ Flujo atómico corregido (antes 11 pasos redundantes con solapamiento duplicado 
 await session.withTransaction(async () => {
   // 1. Calcular disponibilidad RN1+RN10 y duración RN2 (incluye validación de solapamiento)
   // 2. Obtener precio base de servicios
-  // 3. Aplicar RN11 (oferta) → RN5 (recargo 20% si corresponde) → vale (20%/30% si corresponde) en BE
+  // 3. Aplicar RN5 (recargo 20% si corresponde) → RN7 (vale vigente, uno solo) en BE
   //    Usar Math.round para evitar errores float en %
   // 4. Guardar price_snapshot y duration_snapshot FINALES (histórico real cobrado)
   // 5. Crear Appointment
@@ -463,15 +493,17 @@ La finalidad es permitir reproducibilidad de tests, especialmente para **RN5** y
 
 Nunca modificar el precio histórico almacenado en un turno.
 
-`Appointment` debe guardar snapshots finales (tras aplicar oferta/recargo/vale):
+`Appointment` debe guardar snapshots finales (tras aplicar recargo/vale):
 
 ```text
 price_snapshot
 duration_snapshot
 extra
+voucher_id
+voucher_discount
 ```
 
-`price_snapshot` es el total final cobrado y `extra` el recargo aplicado (0 si no hubo). El precio base se deriva como `price_snapshot - extra`. Esto permite que un cambio posterior en el servicio no altere la información histórica de turnos ya creados.
+`price_snapshot` es el total final cobrado, `extra` el recargo aplicado (0 si no hubo) y `voucher_discount` el descuento en pesos del vale (0 si no se aplicó). El precio base se deriva como `price_snapshot - extra + voucher_discount`. Esto permite que un cambio posterior en el servicio no altere la información histórica de turnos ya creados.
 
 ---
 
@@ -513,7 +545,7 @@ Los roles deben utilizarse para proteger operaciones sensibles, especialmente la
 | :--- | :---: | :---: | :---: | :--- |
 | `POST /api/appointments` | ✓ |  |  | `client_id = req.user.id` |
 | `GET /api/appointments` | ✓ (propios) | ✓ (propios) | ✓ (todos) | `if role !== 'admin' filter by req.user.id` — CA-15 |
-| `PATCH /api/appointments/:id` |  |  | ✓ | `completed` o `cancelled`; cancelación admin libre |
+| `PATCH /api/appointments/:id` |  |  | ✓ | `completed` o `cancelled`; cancelación admin libre y emite vale RN7 |
 | `PATCH /api/appointments/:id/cancel` | ✓ (propio) |  |  | RN3, verificar ownership |
 | `PATCH /api/appointments/:id/no-show` |  |  | ✓ | RN4, tolerancia 15 min |
 | `POST /api/barbers` |  |  | ✓ | CA-3, alta barbero |
@@ -525,6 +557,8 @@ Los roles deben utilizarse para proteger operaciones sensibles, especialmente la
 | `GET /api/cron/reminders` |  |  |  | Protegido por `CRON_SECRET`, no por JWT |
 | `POST /api/offers` |  |  | ✓ | RN11 |
 | `GET /api/vouchers` | ✓ (propios) |  |  | `client_id = req.user.id` |
+| `GET /api/voucher-config` |  |  | ✓ | Configuración de duración de vales RN7 |
+| `PATCH /api/voucher-config` |  |  | ✓ | `adminCancellationDays` entre 1 y 365 |
 
 ### Filtrado obligatorio por identidad
 
@@ -842,12 +876,12 @@ chore: instalar express-rate-limit y migrate-mongo
 - [ ] Centralizar errores mediante `errorHandler`.
 - [ ] Mantener formato `{ error: { code, message } }`.
 - [ ] Configurar Mongoose con timestamps snake_case.
-- [ ] Crear índices compuestos (`barber_id+start_at+end_at+status`, `client_id+start_at`, `client_id+expires_at`).
+- [ ] Crear índices compuestos (`barber_id+start_at+end_at+status`, `client_id+start_at`, `client_id+expires_at`, `client_id+used_at+expires_at`).
 - [ ] Utilizar `.select()`, `.lean()` y projections.
 - [ ] Usar transacciones con outbox para `Notification` al crear turnos.
 - [ ] Implementar migraciones versionadas idempotentes.
 - [ ] Crear seeds determinísticos (`pnpm seed`).
-- [ ] Guardar `price_snapshot` y `duration_snapshot` finales.
+- [ ] Guardar `price_snapshot`, `voucher_id`, `voucher_discount` y `duration_snapshot` finales.
 - [ ] Configurar bcryptjs con `saltRounds=10`.
 - [ ] Implementar JWT con roles `client|barber|admin`.
 - [ ] Aplicar autorización mediante `requireRole` + matriz por ruta.

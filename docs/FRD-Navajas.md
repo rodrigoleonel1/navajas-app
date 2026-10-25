@@ -100,7 +100,7 @@ El alcance incluye desde la reserva del turno por parte del cliente hasta el env
 | Regla 4 | Si el cliente no se presenta (tolerancia de 15 min) y no canceló previamente, el administrador marca manualmente el turno como "Inasistencia"; el horario no se libera. |
 | Regla 5 | 3 inasistencias en los últimos 2 meses → recargo del 20% en la próxima reserva. Al aplicarse, el contador de inasistencias se reinicia. |
 | Regla 6 | Cada barbero cobra el 60% del precio total de cada turno completado (40% para el local), calculado sobre el precio histórico vigente al momento de la reserva. |
-| Regla 7 | Cancelación por parte del administrador → notifica motivo al cliente y emite automáticamente un vale de 20% de descuento (fecha de caducidad según configuración). |
+| Regla 7 | Cancelación por parte del administrador → notifica al cliente que la cancelación fue con anticipación y sin penalización, y emite automáticamente un vale de 20% de descuento (fecha de caducidad según configuración). |
 | Regla 8 | Cada 10 turnos completados (10°, 20°, 30°...) → el cliente recibe automáticamente un vale de fidelidad del 30% de descuento. |
 | Regla 9 | Enviar un recordatorio automático (email \+ notificación in-app) 24 horas antes del horario del turno. |
 | Regla 10 | No permitir reservar turnos en días feriados del negocio ni en francos/días libres del barbero, ni fuera de la jornada laboral configurada para cada barbero. |
@@ -158,7 +158,7 @@ Tabla de decisión: define qué notificación o acción se dispara según la con
 * Servicios: CRUD básico (nombre, duración, precio) — solo admin.  
 * Barberos: alta/baja \+ jornada laboral (horario de entrada/salida) y francos semanales/puntuales — solo admin.
 * Reserva de turno: cliente elige servicio(s) \+ barbero \+ horario disponible. Validar que no haya solapamiento (RN1) y que respete la jornada laboral y los francos (RN10). Los feriados globales se suman en V2.
-* Mis turnos: cliente ve próximos turnos e historial simple (sin vales ni penalizaciones aún).  
+* Mis turnos: cliente ve próximos turnos e historial simple; los vales tienen página propia.
 * Agenda del barbero: sólo lectura, por día.  
 * Agenda del admin: ve todos los turnos, puede marcar completado (sin manejar inasistencia todavía).  
 * Notificación de confirmación por email (Nodemailer/Resend) — un solo canal, sin in-app todavía.  
@@ -174,14 +174,14 @@ Tabla de decisión: define qué notificación o acción se dispara según la con
 * Recargo del 20% a la 3ra inasistencia en 2 meses, con reseteo del contador (RN5).  
 * Comisión 60/40: vista de ingresos del barbero (gráfico semana/mes) y liquidación diaria para el admin (RN6).  
 * Notificaciones in-app (polling desde React) \+ recordatorio 24hs antes vía Vercel Cron (RN9).  
-* Vale por cancelación del admin (20% dto., RN7) — sección "Vales" básica del cliente.  
+* Vale por cancelación del admin (20% dto., RN7) — configuración simple de duración y sección "Vales" del cliente.
 * Validaciones con Zod en front y back ya integradas de forma consistente en los endpoints principales.  
 * Con esto el sistema ya refleja el modelo de negocio completo de Navajas, no solo el CRUD de turnos.
 
 ## 4.3. V3 — Fidelización, reportes y pulido final
 
 * Objetivo: funcionalidades que suman valor de producto y son ideales para lucir en la defensa, pero no bloquean el funcionamiento core.  
-* Vale de fidelidad cada 10 turnos (30% dto., RN8) \+ configuración de duración de vales por el admin.  
+* Vale de fidelidad cada 10 turnos (30% dto., RN8) \+ configuración de duración del vale de fidelidad por el admin.
 * Ofertas/combos activables/desactivables (RN11) con aplicación automática de descuento.  
 * Calificación a barberos (1-5 estrellas) \+ promedio visible.  
 * Reportes completos (admin): inasistencia por barbero, ingresos totales/por barbero, más solicitados (barbero/horario/servicio/combo), calificación promedio.  
@@ -272,7 +272,7 @@ Criterio de Aceptación
 
 * CA-9: Toda notificación se registra en la colección notifications de Mongo, con canal y estado.
 * CA-10: El recordatorio de 24hs se dispara mediante un job programado (Vercel Cron) que revisa turnos próximos.  
-* CA-11: Al cancelar un turno (por el cliente o por el admin) o al marcarlo como inasistencia, el sistema dispara automáticamente una notificación (email \+ in-app) informando al cliente el cambio de estado y el motivo, según corresponda. 
+* CA-11: Al cancelar un turno (por el cliente o por el admin) o al marcarlo como inasistencia, el sistema dispara automáticamente una notificación (email \+ in-app) informando al cliente el cambio de estado y, en cancelaciones del admin, que fue con anticipación y sin penalización.
 
 Dependencias
 

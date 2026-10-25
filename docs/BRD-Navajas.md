@@ -90,7 +90,7 @@ El alcance incluye desde la reserva del turno por parte del cliente hasta el env
 | Regla 4 | Si el cliente no se presenta al turno (pasados 15 minutos de tolerancia) y no canceló previamente, el administrador marca manualmente el turno como "Inasistencia"; el horario no se libera.  |
 | Regla 5 | Si un cliente acumula 3 inasistencias en los últimos 2 meses, se aplica un recargo del 20% en su próxima reserva. Al aplicarse, el contador de inasistencias se reinicia.  |
 | Regla 6 | Cada barbero cobra el 60% del precio total de cada turno completado (el 40% restante corresponde al local), calculado sobre el precio vigente al momento de la reserva.  |
-| Regla 7 | Si el administrador cancela un turno (ej.: emergencia del barbero), se notifica al cliente explicando el motivo y se emite automáticamente un vale de 20% de descuento, con fecha de caducidad según la configuración del administrador.  |
+| Regla 7 | Si el administrador cancela un turno (ej.: emergencia del barbero), se notifica al cliente que la cancelación fue con anticipación y sin penalización, y se emite automáticamente un vale de 20% de descuento, con fecha de caducidad según la configuración del administrador.  |
 | Regla 8 | Al completar su 10° turno (y cada 10 turnos sucesivos: 20°, 30°, etc.), el cliente recibe automáticamente un vale de fidelidad del 30% de descuento.  |
 | Regla 9 | Enviar un recordatorio automático (email \+ notificación in-app) 24 horas antes del horario del turno.  |
 | Regla 10 | No permitir reservar turnos en días feriados del negocio ni en francos/días libres del barbero, ni fuera de la jornada laboral configurada para cada barbero.  |
@@ -147,7 +147,7 @@ El alcance incluye desde la reserva del turno por parte del cliente hasta el env
   * Criterio de Aceptación: El estado del turno se actualiza; si es inasistencia, se contabiliza para la Regla 5\.  
 * ID: NAV-9  
   * Descripción: Como administrador, quiero cancelar un turno en casos excepcionales, para avisar al cliente y compensarlo con un vale.  
-  * Criterio de Aceptación: Al cancelar, se notifica al cliente el motivo y se emite automáticamente un vale de 20% de descuento (Regla 7).  
+  * Criterio de Aceptación: Al cancelar, se notifica al cliente que la cancelación fue con anticipación y sin penalización, y se emite automáticamente un vale de 20% de descuento (Regla 7).
 * ID: NAV-10  
   * Descripción: Como administrador, quiero configurar los horarios y francos de cada barbero, y los feriados globales del negocio, para que el sistema calcule correctamente la disponibilidad.
   * Criterio de Aceptación: Los turnos no pueden reservarse fuera de la jornada configurada ni en feriados globales o francos/días libres del barbero (Regla 10).
