@@ -121,7 +121,7 @@ Ventanas de cancelación del cliente:
 | `4–24 h` | `late` | Sí | Sí |
 | `< 4 h` | `blocked` | No | Sí |
 
-Un turno ya iniciado no se puede cancelar. El admin cancela con `PATCH /api/appointments/:id` y `status: "cancelled"`; se guarda `cancel_type: "free"` (libera el horario y no cuenta inasistencia). La inasistencia se marca con `PATCH /api/appointments/:id/no-show` recién 15 minutos después del inicio; pasa a `status: "no_show"` y no libera el horario.
+Un turno ya iniciado no se puede cancelar. El admin cancela con `PATCH /api/appointments/:id` y `status: "cancelled"`; se guarda `cancel_type: "free"` (libera el horario y no cuenta inasistencia). La inasistencia se marca con `PATCH /api/appointments/:id/no-show` recién 15 minutos después del inicio; pasa a `status: "no_show"` y no libera el horario. La UI del admin oculta la acción hasta que se cumple la tolerancia; el backend vuelve a validarla.
 
 Un turno ocupa la agenda si está `pending`, `no_show` o `cancelled` con `cancel_type: "blocked"`. Los turnos `cancelled` `free`/`late` y los `completed` liberan el horario.
 

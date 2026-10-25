@@ -33,6 +33,8 @@ const STATUS_OPTIONS = [
 ];
 
 const PAGE_SIZE = 12;
+const NO_SHOW_TOLERANCE_MS = 15 * 60 * 1000;
+const CLOCK_TICK_MS = 30 * 1000;
 
 // Sin "Todas las fechas" lista el día completo; con el switch, pagina todo el
 // registro (pasado y futuro) de más nuevo a más viejo.
@@ -83,6 +85,17 @@ export function AdminPage() {
   const [listError, setListError] = useState("");
   const [actingId, setActingId] = useState<string | null>(null);
   const [detail, setDetail] = useState<Appointment | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  // La acción de inasistencia se habilita recién a los 15 min del inicio.
+  // El backend valida lo mismo; este tick solo actualiza la UI.
+  useEffect(() => {
+    const interval = window.setInterval(
+      () => setNow(Date.now()),
+      CLOCK_TICK_MS,
+    );
+    return () => window.clearInterval(interval);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -131,6 +144,13 @@ export function AdminPage() {
     };
   }, [allDates, barberId, date, page, status]);
 
+  function canMarkNoShow(appointment: Appointment) {
+    return (
+      appointment.status === "pending" &&
+      now >= new Date(appointment.startAt).getTime() + NO_SHOW_TOLERANCE_MS
+    );
+  }
+
   async function reloadAppointments() {
     const { items, total: totalCount } = await fetchAppointments({
       allDates,
@@ -173,6 +193,8 @@ export function AdminPage() {
   }
 
   async function handleNoShow(appointment: Appointment) {
+    if (!canMarkNoShow(appointment)) return;
+
     const confirmed = await confirm({
       title: "Marcar inasistencia",
       message:
@@ -304,11 +326,15 @@ export function AdminPage() {
                             onSelect: () =>
                               handleStatusChange(appointment, "completed"),
                           },
-                          {
-                            label: "Marcar inasistencia",
-                            danger: true,
-                            onSelect: () => handleNoShow(appointment),
-                          },
+                          ...(canMarkNoShow(appointment)
+                            ? [
+                                {
+                                  label: "Marcar inasistencia",
+                                  danger: true,
+                                  onSelect: () => handleNoShow(appointment),
+                                },
+                              ]
+                            : []),
                           {
                             label: "Cancelar turno",
                             danger: true,
@@ -333,7 +359,7 @@ export function AdminPage() {
                       : undefined
                   }
                   onNoShow={
-                    appointment.status === "pending"
+                    canMarkNoShow(appointment)
                       ? () => handleNoShow(appointment)
                       : undefined
                   }
@@ -372,9 +398,7 @@ export function AdminPage() {
               : undefined
           }
           onNoShow={
-            detail.status === "pending"
-              ? () => handleNoShow(detail)
-              : undefined
+            canMarkNoShow(detail) ? () => handleNoShow(detail) : undefined
           }
           onCancel={
             detail.status === "pending"
