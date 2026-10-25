@@ -16,6 +16,7 @@ import {
 import {
   getCancellationPolicy,
   isNoShowEligible,
+  twoMonthsAgo,
 } from "../utils/cancellation.js";
 import { toObjectIdOrThrow } from "../utils/objectId.js";
 import { loadHolidayKeys } from "./holiday.service.js";
@@ -38,12 +39,6 @@ function blockingAppointmentFilter(extra = {}) {
       { status: "cancelled", cancel_type: "blocked" },
     ],
   };
-}
-
-function twoMonthsAgo(now = new Date()) {
-  const cutoff = new Date(now);
-  cutoff.setMonth(cutoff.getMonth() - 2);
-  return cutoff;
 }
 
 // RN5: al reservar se cuentan las inasistencias no usadas de los últimos

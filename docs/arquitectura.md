@@ -125,7 +125,7 @@ Un turno ya iniciado no se puede cancelar. El admin cancela con `PATCH /api/appo
 
 Un turno ocupa la agenda si está `pending`, `no_show` o `cancelled` con `cancel_type: "blocked"`. Los turnos `cancelled` `free`/`late` y los `completed` liberan el horario.
 
-RN5 se evalúa al reservar: se cuentan los turnos del cliente con `no_show` o `cancelled` `late`/`blocked` de los últimos 2 meses que tengan `penalty_used: false`. Con 3 o más, la reserva nueva suma un recargo del 20% en `extra` (redondeado con `Math.round`), `price_snapshot` guarda el total final y esas inasistencias pasan a `penalty_used: true` para reiniciar el contador. No se guarda `base_price`: el precio base se deriva como `price_snapshot - extra`.
+RN5 se evalúa al reservar: se cuentan los turnos del cliente con `no_show` o `cancelled` `late`/`blocked` de los últimos 2 meses que tengan `penalty_used: false`. La ventana se calcula en meses calendario y, si el día no existe en el mes destino, se ajusta al último día de ese mes (por ejemplo, `31/08` → `30/06`). Con 3 o más, la reserva nueva suma un recargo del 20% en `extra` (redondeado con `Math.round`), `price_snapshot` guarda el total final y esas inasistencias pasan a `penalty_used: true` para reiniciar el contador. La evaluación y el reinicio ocurren dentro de la misma transacción de la reserva: si la reserva falla, las inasistencias no se consumen. No se guarda `base_price`: el precio base se deriva como `price_snapshot - extra`.
 
 La API expone `cancelType` y `extra`. En un turno `pending`, `cancelType` es la ventana proyectada; en `cancelled`, el valor real; en otros estados, `null`. `priceSnapshot` es el total final.
 

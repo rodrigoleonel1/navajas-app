@@ -26,3 +26,19 @@ export function isNoShowEligible(startAt, now = new Date()) {
     new Date(startAt).getTime() + NO_SHOW_TOLERANCE_MS
   );
 }
+
+// RN5: ventana de 2 meses calendario. Si el día no existe en el mes destino
+// (ej. 31/08 -> junio), se ajusta al último día de ese mes.
+export function twoMonthsAgo(now = new Date()) {
+  const cutoff = new Date(now);
+  const day = cutoff.getDate();
+  cutoff.setDate(1);
+  cutoff.setMonth(cutoff.getMonth() - 2);
+  const lastDay = new Date(
+    cutoff.getFullYear(),
+    cutoff.getMonth() + 1,
+    0,
+  ).getDate();
+  cutoff.setDate(Math.min(day, lastDay));
+  return cutoff;
+}
