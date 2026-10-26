@@ -134,19 +134,19 @@ export function ServiceDetailPage() {
         <h3 className="font-barlow font-bold uppercase text-sm tracking-widest">
           Editar servicio
         </h3>
-        <Input
-          id="description"
-          label="Descripción"
-          maxLength={120}
-          error={errors.description?.message}
-          {...register("description")}
-        />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Input
             id="name"
             label="Nombre"
             error={errors.name?.message}
             {...register("name")}
+          />
+          <Input
+            id="description"
+            label="Descripción"
+            maxLength={120}
+            error={errors.description?.message}
+            {...register("description")}
           />
           <Input
             id="duration"
