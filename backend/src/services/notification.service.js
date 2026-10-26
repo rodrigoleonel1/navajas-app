@@ -237,9 +237,13 @@ function buildInAppContent(notification) {
         Number(payload.voucherDiscount) > 0
           ? " Se aplicó un vale de descuento."
           : "";
+      const offerNote =
+        Number(payload.offerDiscount) > 0
+          ? " Se aplicó una oferta de descuento."
+          : "";
       return {
         title: "Turno confirmado",
-        message: `Tu turno${barberLabel} quedó confirmado${whenLabel ? ` para el ${whenLabel}` : ""}.${voucherNote}`,
+        message: `Tu turno${barberLabel} quedó confirmado${whenLabel ? ` para el ${whenLabel}` : ""}.${offerNote}${voucherNote}`,
         link,
       };
     }

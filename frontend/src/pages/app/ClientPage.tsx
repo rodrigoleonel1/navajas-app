@@ -26,6 +26,7 @@ import {
   toBusinessDayKey,
 } from "../../lib/datetime";
 import { formatPrice } from "../../lib/format";
+import { listOffers, type Offer } from "../../lib/offers";
 import { listVouchers, type Voucher } from "../../lib/vouchers";
 
 function toLocalDateKey(date: Date): string {
@@ -38,6 +39,7 @@ export function ClientPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [activeVouchers, setActiveVouchers] = useState<Voucher[]>([]);
+  const [activeOffers, setActiveOffers] = useState<Offer[]>([]);
   const [loadingCatalog, setLoadingCatalog] = useState(true);
   const [catalogError, setCatalogError] = useState("");
 
@@ -82,6 +84,22 @@ export function ClientPage() {
       })
       .catch(() => {
         if (!cancelled) setActiveVouchers([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // RN11: el backend solo devuelve ofertas activas. La aplicación depende de
+  // la oferta activa, no de las fechas de la promo.
+  useEffect(() => {
+    let cancelled = false;
+    listOffers()
+      .then((list) => {
+        if (!cancelled) setActiveOffers(list);
+      })
+      .catch(() => {
+        if (!cancelled) setActiveOffers([]);
       });
     return () => {
       cancelled = true;
@@ -159,12 +177,30 @@ export function ClientPage() {
     };
   }, [barberId, date, serviceIdsKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const totals = useMemo(() => {    const chosen = services.filter((s) => serviceIds.includes(s.id));
+  const totals = useMemo(() => {
+    const chosen = services.filter((s) => serviceIds.includes(s.id));
     return {
       duration: chosen.reduce((acc, s) => acc + s.duration, 0),
       price: chosen.reduce((acc, s) => acc + s.price, 0),
     };
   }, [services, serviceIds]);
+
+  // RN11: la oferta aplica solo con coincidencia exacta del conjunto de
+  // servicios. Si hay varias, gana la de mayor descuento (no se acumulan).
+  const matchingOffer = useMemo(() => {
+    if (serviceIds.length === 0) return null;
+    const key = [...serviceIds].sort().join(",");
+    return activeOffers.reduce<Offer | null>((best, offer) => {
+      if ([...offer.serviceIds].sort().join(",") !== key) return best;
+      return !best || offer.discountPercent > best.discountPercent
+        ? offer
+        : best;
+    }, null);
+  }, [activeOffers, serviceIdsKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const offerDiscount = matchingOffer
+    ? Math.round((totals.price * matchingOffer.discountPercent) / 100)
+    : 0;
 
   const shownAvailability = readyToSearch ? availability : null;
 
@@ -187,8 +223,12 @@ export function ClientPage() {
         startAt,
       });
       const voucherDiscount = appointment.voucherDiscount ?? 0;
+      const offerDiscountApplied = appointment.offerDiscount ?? 0;
       const bookingNotes = [
         appointment.extra > 0 ? "recargo del 20%" : null,
+        offerDiscountApplied > 0
+          ? `oferta aplicada (-${formatPrice(offerDiscountApplied)})`
+          : null,
         voucherDiscount > 0
           ? `vale aplicado (-${formatPrice(voucherDiscount)})`
           : null,
@@ -273,9 +313,67 @@ export function ClientPage() {
               </ul>
             )}
             {totals.duration > 0 && (
-              <p className="mt-3 text-sm text-muted">
-                Total: {totals.duration} min — {formatPrice(totals.price)}
-              </p>
+              <div className="mt-3 flex flex-col gap-1 text-sm text-muted">
+                <p>
+                  Total: {totals.duration} min — {formatPrice(totals.price)}
+                </p>
+                {matchingOffer && (
+                  <p className="text-primary font-medium">
+                    Oferta “{matchingOffer.name}” (-{matchingOffer.discountPercent}
+                    %): -{formatPrice(offerDiscount)} →{" "}
+                    {formatPrice(Math.max(totals.price - offerDiscount, 0))}
+                  </p>
+                )}
+              </div>
+            )}
+            {activeOffers.length > 0 && (
+              <div className="mt-4 border-t border-border pt-3">
+                <p className="text-xs uppercase tracking-widest text-muted mb-2">
+                  Ofertas vigentes
+                </p>
+                <ul className="flex flex-col gap-2">
+                  {activeOffers.map((offer) => {
+                    const applies = matchingOffer?.id === offer.id;
+                    return (
+                      <li
+                        key={offer.id}
+                        className={
+                          applies
+                            ? "flex items-start justify-between gap-3 text-xs text-primary font-semibold"
+                            : "flex items-start justify-between gap-3 text-xs text-muted"
+                        }
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate">
+                            {offer.name} ·{" "}
+                            {offer.services
+                              .map((service) => service.name)
+                              .join(" + ")}
+                          </span>
+                          {(offer.validFrom || offer.validTo) && (
+                            <span className="block text-[11px] font-normal">
+                              {offer.validFrom
+                                ? `Desde ${formatDateKey(offer.validFrom)}`
+                                : ""}
+                              {offer.validFrom && offer.validTo ? " — " : ""}
+                              {offer.validTo
+                                ? `Hasta ${formatDateKey(offer.validTo)}`
+                                : ""}
+                            </span>
+                          )}
+                        </span>
+                        <span className="shrink-0">
+                          {offer.discountPercent}%
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <p className="mt-2 text-[11px] text-muted">
+                  Se aplica solo si elegís exactamente los servicios de la
+                  oferta.
+                </p>
+              </div>
             )}
           </div>
 

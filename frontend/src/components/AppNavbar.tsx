@@ -23,14 +23,15 @@ export function AppNavbar() {
           { to: "/app/agenda", label: "Agenda", index: "01" },
           { to: "/app/barbers", label: "Barberos", index: "02" },
           { to: "/app/services", label: "Servicios", index: "03" },
-          { to: "/app/holidays", label: "Feriados", index: "04" },
+          { to: "/app/offers", label: "Ofertas", index: "04" },
+          { to: "/app/holidays", label: "Feriados", index: "05" },
           {
             to: "/app/daily-earnings",
             label: "Liquidaciones",
-            index: "05",
+            index: "06",
           },
-          { to: "/app/reports", label: "Reportes", index: "06" },
-          { to: "/app/voucher-config", label: "Config. vales", index: "07" },
+          { to: "/app/reports", label: "Reportes", index: "07" },
+          { to: "/app/voucher-config", label: "Config. vales", index: "08" },
         ]
       : role === "barber"
         ? [

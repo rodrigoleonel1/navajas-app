@@ -177,6 +177,16 @@ Al reservar, el service busca el vale vigente del cliente (`used_at: null` y `ex
 
 El cliente ve sus vales en `/app/client/vales` (`GET /api/vouchers`, solo los propios). El estado se calcula al consultar: `active`, `used` o `expired`. Si un turno con vale aplicado se cancela después, el vale no se restaura automáticamente en esta versión.
 
+#### Ofertas y combos (RN11)
+
+El admin gestiona las ofertas desde `/app/offers` (`GET/POST/PATCH /api/offers`). Una oferta tiene `name`, `service_ids` (uno o más servicios), `discount_percent` (entero de 1 a 100), `valid_from`/`valid_to` opcionales y `active`. Los `service_ids` se guardan ordenados por `_id` para que la comparación sea determinista y solo se pueden ofertar servicios activos.
+
+La oferta se aplica al reservar **solo si el conjunto de servicios elegidos coincide exactamente** con el de la oferta (mismo conjunto, sin importar el orden). Por ejemplo, una oferta del 25% en corte no aplica a corte + barba. Si varias ofertas activas coinciden, gana la de mayor descuento y no se acumulan. La búsqueda (`findMatchingOffer`) corre dentro de la transacción de la reserva.
+
+Las fechas `valid_from`/`valid_to` son **informativas**: se muestran al cliente como vigencia de la promo, pero no condicionan la aplicación. La oferta aplica mientras `active` sea `true`; si la promo vence, el admin debe desactivarla. Se almacenan como fecha calendario UTC 00:00 (`YYYY-MM-DD`) y se muestran como `DD/MM/YYYY`.
+
+Orden de precios al reservar: precio base de los servicios → descuento de la oferta (RN11) → recargo de RN5 sobre el precio con descuento → vale (RN7/RN8). `offer_discount` y `voucher_discount` guardan los montos en pesos y `price_snapshot` el total final. El turno guarda `offer_id` y `offer_discount` (0 si no hubo oferta). El detalle del turno y el email de confirmación muestran el desglose.
+
 Los controllers únicamente deben recibir la petición, delegar al service y construir la respuesta HTTP.
 
 ### API REST
@@ -204,7 +214,10 @@ GET    /api/vouchers
 GET    /api/vouchers/fidelity                   # cliente: progreso RN8
 GET    /api/voucher-config               # admin
 PATCH  /api/voucher-config               # admin
-GET    /api/offers
+GET    /api/offers                       # activas (auth opcional)
+GET    /api/offers?all=1                 # admin: incluye inactivas
+POST   /api/offers                       # admin
+PATCH  /api/offers/:id                   # admin
 POST   /api/ratings
 GET    /api/notifications?limit=20              # cliente: bandeja in-app
 PATCH  /api/notifications/:id/read              # cliente
@@ -221,7 +234,7 @@ PATCH /api/appointments/:id/cancel
 PATCH /api/appointments/:id/no-show
 ```
 
-Los endpoints `/api/holidays` son exclusivos del rol `admin`. La disponibilidad los refleja automáticamente en `nonWorkingDays` y bloquea la reserva con `HOLIDAY`. Los endpoints `/api/voucher-config` también son exclusivos del rol `admin`; `/api/vouchers` es del cliente y solo devuelve sus propios vales.
+Los endpoints `/api/holidays` son exclusivos del rol `admin`. La disponibilidad los refleja automáticamente en `nonWorkingDays` y bloquea la reserva con `HOLIDAY`. Los endpoints `/api/voucher-config` también son exclusivos del rol `admin`; `/api/vouchers` es del cliente y solo devuelve sus propios vales. `GET /api/offers` devuelve solo las activas y `?all=1` requiere rol `admin`; `POST` y `PATCH` son exclusivos del `admin`.
 
 `GET /api/reports?from=...&to=...` es exclusivo del rol `admin` y devuelve, para el rango de días comerciales: ingresos totales y por barbero (RN6), ausencias de clientes por barbero (`no_show` + cancelaciones `late`/`blocked`) y el top 5 de servicios, barberos y horarios solicitados.
 
@@ -254,6 +267,7 @@ Las colecciones deben utilizar nombres **snake_case y plural**:
 appointments
 holidays
 services
+offers
 vouchers
 voucher_configs
 users
@@ -266,6 +280,7 @@ Los modelos deben utilizar nombres **PascalCase y singular**:
 Appointment
 Holiday
 Service
+Offer
 Voucher
 VoucherConfig
 User
@@ -336,7 +351,7 @@ Ejemplo conceptual:
 
 ```js
 Appointment.find(query)
-  .select('barber_id client_id start_at end_at status cancel_type extra price_snapshot voucher_id voucher_discount')
+  .select('barber_id client_id start_at end_at status cancel_type extra price_snapshot voucher_id voucher_discount offer_id offer_discount')
   .lean();
 ```
 
@@ -360,6 +375,15 @@ appointmentSchema.index({ start_at: 1 });
 ```
 
 > Antes: 4 índices separados `barber_id+start_at`, `client_id`, `status`, `start_at` → optimizado a compuestos para queries de rango `$lt/$gt` en solapamiento.
+
+#### `offers`
+
+```js
+// Listado de ofertas activas.
+offerSchema.index({ active: 1 });
+// Coincidencia exacta del conjunto de servicios al reservar.
+offerSchema.index({ service_ids: 1, active: 1 });
+```
 
 #### `vouchers`
 
@@ -442,7 +466,7 @@ Flujo atómico corregido (antes 11 pasos redundantes con solapamiento duplicado 
 ```js
 await session.withTransaction(async () => {
   // 1. Calcular disponibilidad RN1+RN10 y duración RN2 (incluye validación de solapamiento)
-  // 2. Obtener precio base de servicios
+  // 2. Obtener precio base de servicios y aplicar oferta RN11 (coincidencia exacta)
   // 3. Aplicar RN5 (recargo 20% si corresponde) → RN7 (vale vigente, uno solo) en BE
   //    Usar Math.round para evitar errores float en %
   // 4. Guardar price_snapshot y duration_snapshot FINALES (histórico real cobrado)
@@ -499,17 +523,19 @@ La finalidad es permitir reproducibilidad de tests, especialmente para **RN5** y
 
 Nunca modificar el precio histórico almacenado en un turno.
 
-`Appointment` debe guardar snapshots finales (tras aplicar recargo/vale):
+`Appointment` debe guardar snapshots finales (tras aplicar oferta, recargo y vale):
 
 ```text
 price_snapshot
 duration_snapshot
 extra
+offer_id
+offer_discount
 voucher_id
 voucher_discount
 ```
 
-`price_snapshot` es el total final cobrado, `extra` el recargo aplicado (0 si no hubo) y `voucher_discount` el descuento en pesos del vale (0 si no se aplicó). El precio base se deriva como `price_snapshot - extra + voucher_discount`. Esto permite que un cambio posterior en el servicio no altere la información histórica de turnos ya creados.
+`price_snapshot` es el total final cobrado, `extra` el recargo aplicado (0 si no hubo), `offer_discount` el descuento en pesos de la oferta RN11 (0 si no se aplicó) y `voucher_discount` el descuento en pesos del vale (0 si no se aplicó). El precio base se deriva como `price_snapshot - extra + voucher_discount + offer_discount`. Esto permite que un cambio posterior en el servicio no altere la información histórica de turnos ya creados.
 
 ---
 
@@ -561,7 +587,9 @@ Los roles deben utilizarse para proteger operaciones sensibles, especialmente la
 | `PATCH /api/notifications/:id/read` | ✓ (propio) |  |  | Verifica ownership del aviso |
 | `PATCH /api/notifications/read-all` | ✓ (propios) |  |  | Marca todos los no leídos |
 | `GET /api/cron/reminders` |  |  |  | Protegido por `CRON_SECRET`, no por JWT |
-| `POST /api/offers` |  |  | ✓ | RN11 |
+| `POST /api/offers` |  |  | ✓ | RN11: crear oferta/descuento |
+| `GET /api/offers` | ✓ | ✓ | ✓ | Solo activas; `?all=1` requiere admin |
+| `PATCH /api/offers/:id` |  |  | ✓ | RN11: editar, activar o desactivar |
 | `GET /api/vouchers` | ✓ (propios) |  |  | `client_id = req.user.id` |
 | `GET /api/vouchers/fidelity` | ✓ (propio) |  |  | Progreso RN8: completados, ciclo de 10 y faltantes |
 | `GET /api/voucher-config` |  |  | ✓ | Configuración de duración de vales RN7/RN8 |
@@ -872,7 +900,7 @@ chore: instalar express-rate-limit y migrate-mongo
 - [ ] Usar transacciones con outbox para `Notification` al crear turnos.
 - [ ] Implementar migraciones versionadas idempotentes.
 - [ ] Crear seeds determinísticos (`pnpm seed`).
-- [ ] Guardar `price_snapshot`, `voucher_id`, `voucher_discount` y `duration_snapshot` finales.
+- [ ] Guardar `price_snapshot`, `offer_id`, `offer_discount`, `voucher_id`, `voucher_discount` y `duration_snapshot` finales.
 - [ ] Configurar bcryptjs con `saltRounds=10`.
 - [ ] Implementar JWT con roles `client|barber|admin`.
 - [ ] Aplicar autorización mediante `requireRole` + matriz por ruta.

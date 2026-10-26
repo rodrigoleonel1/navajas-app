@@ -59,7 +59,7 @@ const appointmentSchema = new mongoose.Schema(
       min: 0,
     },
     // Precio histórico real cobrado (inmutable tras cambios Service).
-    // Incluye el recargo RN5 y descuenta el vale aplicado, si hubo.
+    // Incluye el recargo RN5 y descuenta la oferta RN11 y el vale, si hubo.
     price_snapshot: {
       type: Number,
       required: true,
@@ -72,6 +72,17 @@ const appointmentSchema = new mongoose.Schema(
       default: null,
     },
     voucher_discount: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
+    // RN11: oferta/combo aplicado a esta reserva y descuento en pesos.
+    offer_id: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Offer",
+      default: null,
+    },
+    offer_discount: {
       type: Number,
       default: 0,
       min: 0,

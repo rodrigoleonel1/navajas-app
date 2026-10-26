@@ -32,12 +32,13 @@ export function AppointmentDetailModal({
   ].filter(Boolean);
   const extra = appointment.extra ?? 0;
   const voucherDiscount = appointment.voucherDiscount ?? 0;
-  // price_snapshot = base + recargo - vale.
+  const offerDiscount = appointment.offerDiscount ?? 0;
+  // price_snapshot = base - oferta + recargo - vale.
   const basePrice = Math.max(
-    appointment.priceSnapshot - extra + voucherDiscount,
+    appointment.priceSnapshot - extra + voucherDiscount + offerDiscount,
     0,
   );
-  const hasBreakdown = extra > 0 || voucherDiscount > 0;
+  const hasBreakdown = extra > 0 || voucherDiscount > 0 || offerDiscount > 0;
   const statusNote =
     appointment.status === "cancelled" && appointment.cancelType
       ? CANCEL_TYPE_LABELS[appointment.cancelType]
@@ -76,6 +77,14 @@ export function AppointmentDetailModal({
         {hasBreakdown && (
           <p className="mt-1 text-xs text-muted">
             Precio base {formatPrice(basePrice)}
+            {offerDiscount > 0 && (
+              <>
+                {" "}
+                · Oferta
+                {appointment.offer ? ` “${appointment.offer.name}”` : ""} -
+                {formatPrice(offerDiscount)}
+              </>
+            )}
             {extra > 0 && <> · Recargo 20% {formatPrice(extra)}</>}
             {voucherDiscount > 0 && (
               <> · Vale aplicado -{formatPrice(voucherDiscount)}</>

@@ -51,6 +51,9 @@ export type Appointment = {
   priceSnapshot: number;
   voucherId: string | null;
   voucherDiscount: number;
+  offerId: string | null;
+  offer: { id: string; name: string; discountPercent: number } | null;
+  offerDiscount: number;
   durationSnapshot: number;
 };
 

@@ -23,6 +23,7 @@ import {
   createAppointmentNotifications,
   scheduleNotificationSend,
 } from "./notification.service.js";
+import { findMatchingOffer } from "./offer.service.js";
 import {
   attachVoucherToAppointment,
   claimActiveVoucherForBooking,
@@ -31,7 +32,7 @@ import {
 } from "./voucher.service.js";
 
 const APPOINTMENT_FIELDS =
-  "barber_id client_id service_ids start_at end_at status cancel_type extra price_snapshot voucher_id voucher_discount duration_snapshot";
+  "barber_id client_id service_ids start_at end_at status cancel_type extra price_snapshot voucher_id voucher_discount offer_id offer_discount duration_snapshot";
 
 // Un turno ocupa la agenda si está pendiente, si el cliente no se presentó
 // o si canceló con menos de 4 h (cancel_type blocked).
@@ -348,6 +349,18 @@ function toAppointmentDTO(doc, { now = new Date() } = {}) {
     ? (doc.voucher_id._id ?? doc.voucher_id).toString()
     : null;
 
+  const offerId = doc.offer_id
+    ? (doc.offer_id._id ?? doc.offer_id).toString()
+    : null;
+  const offer =
+    doc.offer_id && typeof doc.offer_id === "object" && doc.offer_id.name
+      ? {
+          id: doc.offer_id._id.toString(),
+          name: doc.offer_id.name,
+          discountPercent: doc.offer_id.discount_percent,
+        }
+      : null;
+
   return {
     id: doc._id.toString(),
     barber,
@@ -361,6 +374,9 @@ function toAppointmentDTO(doc, { now = new Date() } = {}) {
     priceSnapshot: doc.price_snapshot,
     voucherId,
     voucherDiscount: doc.voucher_discount ?? 0,
+    offerId,
+    offer,
+    offerDiscount: doc.offer_discount ?? 0,
     durationSnapshot: doc.duration_snapshot,
   };
 }
@@ -389,6 +405,7 @@ async function enqueueAppointmentConfirmation({
         price: appointment.price_snapshot,
         extra: appointment.extra ?? 0,
         voucherDiscount: appointment.voucher_discount ?? 0,
+        offerDiscount: appointment.offer_discount ?? 0,
       },
     });
 
@@ -608,9 +625,18 @@ export async function createAppointment({
         // RN5: si el cliente tiene 3 inasistencias recientes sin usar,
         // esta reserva lleva el recargo del 20%.
         const now = new Date();
+
+        // RN11: si los servicios elegidos coinciden exactamente con una oferta
+        // activa, el descuento se aplica sobre el precio base antes de RN5.
+        const offer = await findMatchingOffer({ serviceOids, session });
+        const offerDiscount = offer
+          ? Math.round((basePrice * offer.discount_percent) / 100)
+          : 0;
+        const discountedBase = Math.max(basePrice - offerDiscount, 0);
+
         const penalty = await applyPenaltyIfNeeded({
           clientOid,
-          basePrice,
+          basePrice: discountedBase,
           session,
           now,
         });
@@ -640,6 +666,8 @@ export async function createAppointment({
               price_snapshot: finalPrice,
               voucher_id: voucher?._id ?? null,
               voucher_discount: voucherDiscount,
+              offer_id: offer?._id ?? null,
+              offer_discount: offerDiscount,
               duration_snapshot: duration,
             },
           ],
@@ -766,6 +794,7 @@ export async function listAppointments({
     .populate("barber_id", "name")
     .populate("client_id", "name")
     .populate("service_ids", "name price duration")
+    .populate("offer_id", "name discount_percent")
     .lean();
 
   if (limit) {
@@ -835,6 +864,7 @@ export async function updateAppointmentStatus({ id, status }) {
       .populate("barber_id", "name")
       .populate("client_id", "name email")
       .populate("service_ids", "name price duration")
+      .populate("offer_id", "name discount_percent")
       .lean();
 
     if (!populated) {
@@ -877,6 +907,7 @@ export async function updateAppointmentStatus({ id, status }) {
     .populate("barber_id", "name")
     .populate("client_id", "name email")
     .populate("service_ids", "name price duration")
+    .populate("offer_id", "name discount_percent")
     .lean();
 
   if (!populated) {
@@ -903,6 +934,7 @@ export async function cancelAppointment({ id, requester }) {
     .populate("client_id", "name email")
     .populate("barber_id", "name")
     .populate("service_ids", "name")
+    .populate("offer_id", "name discount_percent")
     .lean();
 
   if (!appointment) {
@@ -942,6 +974,7 @@ export async function cancelAppointment({ id, requester }) {
     .populate("client_id", "name email")
     .populate("barber_id", "name")
     .populate("service_ids", "name")
+    .populate("offer_id", "name discount_percent")
     .lean();
 
   if (!updated) {
@@ -997,6 +1030,7 @@ export async function markNoShow({ id }) {
     .populate("client_id", "name email")
     .populate("barber_id", "name")
     .populate("service_ids", "name")
+    .populate("offer_id", "name discount_percent")
     .lean();
 
   if (!updated) {
