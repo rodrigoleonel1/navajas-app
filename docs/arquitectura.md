@@ -261,6 +261,17 @@ El formato de error es obligatorio y uniforme:
 }
 ```
 
+Los middlewares de autenticación (`authenticate`, `optionalAuthenticate`, `requireRole`, `requireCronSecret`) también delegan en `errorHandler` mediante `createAppError`, para no duplicar el formato de respuesta.
+
+Códigos de autenticación:
+
+| Código | HTTP | Cuándo |
+|---|---|---|
+| `UNAUTHORIZED` | 401 | Falta el token, está mal formado o expiró |
+| `INVALID_CREDENTIALS` | 401 | Email o contraseña incorrectos en el login |
+| `ACCOUNT_DISABLED` | 401 | La cuenta existe pero está desactivada |
+| `FORBIDDEN` | 403 | El rol autenticado no tiene permiso para la acción |
+
 ---
 
 ## 2. Base de Datos Mongoose (MongoDB Atlas)

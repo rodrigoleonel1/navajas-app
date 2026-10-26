@@ -14,7 +14,7 @@ export async function listServices(req, res, next) {
       throw createAppError(
         req.user ? 403 : 401,
         req.user ? "FORBIDDEN" : "UNAUTHORIZED",
-        req.user ? "Permisos insuficientes" : "Autenticación requerida",
+        req.user ? "Permisos insuficientes." : "Autenticación requerida.",
       );
     }
     const services = await listServicesFn({ includeInactive });

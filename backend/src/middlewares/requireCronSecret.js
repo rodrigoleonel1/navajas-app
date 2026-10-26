@@ -1,5 +1,6 @@
 import { timingSafeEqual } from "node:crypto";
 import { config } from "../config.js";
+import { createAppError } from "../utils/appError.js";
 
 function secretsMatch(provided, expected) {
   const providedBuffer = Buffer.from(provided);
@@ -12,23 +13,22 @@ function secretsMatch(provided, expected) {
 
 // Vercel Cron envía Authorization: Bearer <CRON_SECRET>. Si la variable no
 // está configurada, la ruta queda cerrada para no exponer el envío masivo.
-export function requireCronSecret(req, res, next) {
+export function requireCronSecret(req, _res, next) {
   if (!config.CRON_SECRET) {
-    res.status(503).json({
-      error: {
-        code: "CRON_NOT_CONFIGURED",
-        message: "CRON_SECRET no está configurado",
-      },
-    });
+    next(
+      createAppError(
+        503,
+        "CRON_NOT_CONFIGURED",
+        "CRON_SECRET no está configurado.",
+      ),
+    );
     return;
   }
 
   const header = req.headers.authorization;
   const token = header?.startsWith("Bearer ") ? header.slice(7) : "";
   if (!token || !secretsMatch(token, config.CRON_SECRET)) {
-    res.status(401).json({
-      error: { code: "UNAUTHORIZED", message: "Cron no autorizado" },
-    });
+    next(createAppError(401, "UNAUTHORIZED", "Cron no autorizado."));
     return;
   }
 

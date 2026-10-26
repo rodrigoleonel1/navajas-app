@@ -9,7 +9,7 @@ export async function signup({ name, email, password }) {
 
   const exists = await User.findOne({ email: normalizedEmail }).lean();
   if (exists) {
-    throw createAppError(409, "CONFLICT", "Email ya registrado");
+    throw createAppError(409, "CONFLICT", "Email ya registrado.");
   }
 
   const password_hash = await createHash(password);
@@ -44,17 +44,17 @@ export async function login({ email, password }) {
 
   const user = await User.findOne({ email: normalizedEmail });
   if (!user) {
-    throw createAppError(401, "UNAUTHORIZED", "Email o contraseña incorrectos");
+    throw createAppError(401, "INVALID_CREDENTIALS", "Email o contraseña incorrectos.");
   }
 
   const isValid = await isValidPassword(password, user.password_hash);
   if (!isValid) {
-    throw createAppError(401, "UNAUTHORIZED", "Email o contraseña incorrectos");
+    throw createAppError(401, "INVALID_CREDENTIALS", "Email o contraseña incorrectos.");
   }
 
   // Cuenta desactivada: no inicia sesión (vale para cualquier rol).
   if (!user.active) {
-    throw createAppError(401, "UNAUTHORIZED", "Cuenta desactivada");
+    throw createAppError(401, "ACCOUNT_DISABLED", "Cuenta desactivada.");
   }
 
   const token = generateToken({

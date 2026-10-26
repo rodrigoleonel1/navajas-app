@@ -1,13 +1,17 @@
 import jwt from "jsonwebtoken";
 import { config } from "../config.js";
+import { createAppError } from "../utils/appError.js";
+
+// Mensajes únicos para que todas las respuestas de auth sean consistentes.
+const MSG_AUTH_REQUIRED = "Autenticación requerida.";
+const MSG_INVALID_SESSION = "Sesión expirada o no válida.";
+const MSG_FORBIDDEN = "Permisos insuficientes.";
 
 // Verifica JWT con esquema Bearer y guarda payload en req.user
 export function authenticate(req, res, next) {
   const header = req.headers.authorization;
   if (!header?.startsWith("Bearer ")) {
-    res.status(401).json({
-      error: { code: "UNAUTHORIZED", message: "Autenticación requerida" },
-    });
+    next(createAppError(401, "UNAUTHORIZED", MSG_AUTH_REQUIRED));
     return;
   }
 
@@ -16,9 +20,7 @@ export function authenticate(req, res, next) {
     req.user = jwt.verify(token, config.JWT_SECRET);
     next();
   } catch {
-    res.status(401).json({
-      error: { code: "UNAUTHORIZED", message: "Sesión expirada o no válida." },
-    });
+    next(createAppError(401, "UNAUTHORIZED", MSG_INVALID_SESSION));
   }
 }
 
@@ -31,9 +33,7 @@ export function optionalAuthenticate(req, res, next) {
     return;
   }
   if (!header.startsWith("Bearer ")) {
-    res.status(401).json({
-      error: { code: "UNAUTHORIZED", message: "Autenticación requerida" },
-    });
+    next(createAppError(401, "UNAUTHORIZED", MSG_AUTH_REQUIRED));
     return;
   }
 
@@ -42,9 +42,7 @@ export function optionalAuthenticate(req, res, next) {
     req.user = jwt.verify(token, config.JWT_SECRET);
     next();
   } catch {
-    res.status(401).json({
-      error: { code: "UNAUTHORIZED", message: "Sesión expirada o no válida." },
-    });
+    next(createAppError(401, "UNAUTHORIZED", MSG_INVALID_SESSION));
   }
 }
 
@@ -52,15 +50,11 @@ export function optionalAuthenticate(req, res, next) {
 export function requireRole(...roles) {
   return (req, res, next) => {
     if (!req.user) {
-      res.status(401).json({
-        error: { code: "UNAUTHORIZED", message: "Autenticación requerida" },
-      });
+      next(createAppError(401, "UNAUTHORIZED", MSG_AUTH_REQUIRED));
       return;
     }
     if (!roles.includes(req.user.role)) {
-      res.status(403).json({
-        error: { code: "FORBIDDEN", message: "Permisos insuficientes" },
-      });
+      next(createAppError(403, "FORBIDDEN", MSG_FORBIDDEN));
       return;
     }
     next();

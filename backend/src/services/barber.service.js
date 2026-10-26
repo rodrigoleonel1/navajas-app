@@ -62,7 +62,7 @@ export async function createBarber({ name, email, password }) {
 
   const exists = await User.findOne({ email: normalizedEmail }).lean();
   if (exists) {
-    throw createAppError(409, "CONFLICT", "Email ya registrado");
+    throw createAppError(409, "CONFLICT", "Email ya registrado.");
   }
 
   const password_hash = await createHash(password);
