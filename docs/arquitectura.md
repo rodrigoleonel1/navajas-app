@@ -207,7 +207,7 @@ GET    /api/barbers
 GET    /api/barbers/me/earnings?from=...&to=...   # barbero
 GET    /api/barbers/daily-earnings?date=...      # admin
 GET    /api/reports?from=...&to=...              # admin: reportes del negocio
-GET    /api/holidays
+GET    /api/holidays?scope=upcoming|past&page=1&limit=10   # total en X-Total-Count
 POST   /api/holidays
 PATCH  /api/holidays/:id
 DELETE /api/holidays/:id

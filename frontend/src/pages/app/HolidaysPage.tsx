@@ -5,24 +5,33 @@ import { HolidayFormModal } from "../../components/HolidayFormModal";
 import { Button } from "../../components/ui/Button";
 import { ListCard } from "../../components/ui/ListCard";
 import { Loader } from "../../components/ui/Loader";
+import { Pager } from "../../components/ui/Pager";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useToast } from "../../hooks/useToast";
 import { getErrorMessage } from "../../lib/api";
-import { formatDateKey, toBusinessDayKey } from "../../lib/datetime";
+import { formatDateKey } from "../../lib/datetime";
 import { cn } from "../../lib/utils";
 import {
   deleteHoliday,
-  listHolidays,
+  listHolidaysPage,
   type CreateHolidayResult,
   type Holiday,
 } from "../../lib/holidays";
 
+const PAGE_SIZE = 10;
+
 export function HolidaysPage() {
   const toast = useToast();
   const confirm = useConfirm();
-  const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [upcoming, setUpcoming] = useState<Holiday[]>([]);
+  const [past, setPast] = useState<Holiday[]>([]);
+  const [upcomingTotal, setUpcomingTotal] = useState<number | null>(null);
+  const [pastTotal, setPastTotal] = useState<number | null>(null);
+  const [upcomingPage, setUpcomingPage] = useState(1);
+  const [pastPage, setPastPage] = useState(1);
+  const [refreshKey, setRefreshKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -36,11 +45,36 @@ export function HolidaysPage() {
       setLoading(true);
       setListError("");
       try {
-        const data = await listHolidays();
-        if (!cancelled) setHolidays(data);
+        const [upcomingRes, pastRes] = await Promise.all([
+          listHolidaysPage({
+            scope: "upcoming",
+            page: upcomingPage,
+            limit: PAGE_SIZE,
+          }),
+          listHolidaysPage({
+            scope: "past",
+            page: pastPage,
+            limit: PAGE_SIZE,
+          }),
+        ]);
+        if (cancelled) return;
+        setUpcoming(upcomingRes.items);
+        setUpcomingTotal(upcomingRes.total);
+        setPast(pastRes.items);
+        setPastTotal(pastRes.total);
+        // Si un borrado deja la página vacía, retrocede para no mostrarla.
+        if (upcomingRes.items.length === 0 && upcomingPage > 1) {
+          setUpcomingPage((current) => Math.max(1, current - 1));
+        }
+        if (pastRes.items.length === 0 && pastPage > 1) {
+          setPastPage((current) => Math.max(1, current - 1));
+        }
       } catch (err) {
         if (!cancelled) {
-          setHolidays([]);
+          setUpcoming([]);
+          setPast([]);
+          setUpcomingTotal(null);
+          setPastTotal(null);
           setListError(getErrorMessage(err, "Error al cargar feriados"));
         }
       } finally {
@@ -51,7 +85,7 @@ export function HolidaysPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [upcomingPage, pastPage, refreshKey]);
 
   function openCreate() {
     setWarning("");
@@ -63,10 +97,15 @@ export function HolidaysPage() {
     setModalHoliday(null);
   }
 
+  function reload() {
+    // La fecha puede mover el feriado de sección: volvemos a la primera página.
+    setUpcomingPage(1);
+    setPastPage(1);
+    setRefreshKey((key) => key + 1);
+  }
+
   function handleCreated(result: CreateHolidayResult) {
-    setHolidays((prev) =>
-      [...prev, result.holiday].sort((a, b) => a.date.localeCompare(b.date)),
-    );
+    reload();
     if (result.affectedAppointments > 0) {
       setWarning(
         `Hay ${result.affectedAppointments} turno(s) pendiente(s) ese día. No se cancelaron automáticamente.`,
@@ -74,12 +113,8 @@ export function HolidaysPage() {
     }
   }
 
-  function handleUpdated(updated: Holiday) {
-    setHolidays((prev) =>
-      prev
-        .map((item) => (item.id === updated.id ? updated : item))
-        .sort((a, b) => a.date.localeCompare(b.date)),
-    );
+  function handleUpdated() {
+    reload();
   }
 
   async function handleDelete(holiday: Holiday) {
@@ -93,8 +128,8 @@ export function HolidaysPage() {
     setDeletingId(holiday.id);
     try {
       await deleteHoliday(holiday.id);
-      setHolidays((prev) => prev.filter((item) => item.id !== holiday.id));
       if (modalHoliday?.id === holiday.id) setModalHoliday(null);
+      setRefreshKey((key) => key + 1);
       toast.success("Feriado eliminado");
     } catch (err) {
       toast.error(getErrorMessage(err, "Error al eliminar feriado"));
@@ -103,9 +138,15 @@ export function HolidaysPage() {
     }
   }
 
-  const todayKey = toBusinessDayKey(new Date().toISOString());
-  const upcoming = holidays.filter((holiday) => holiday.date >= todayKey);
-  const past = holidays.filter((holiday) => holiday.date < todayKey);
+  const upcomingTotalPages =
+    upcomingTotal === null
+      ? null
+      : Math.max(1, Math.ceil(upcomingTotal / PAGE_SIZE));
+  const upcomingHasNext =
+    upcomingTotalPages !== null && upcomingPage < upcomingTotalPages;
+  const pastTotalPages =
+    pastTotal === null ? null : Math.max(1, Math.ceil(pastTotal / PAGE_SIZE));
+  const pastHasNext = pastTotalPages !== null && pastPage < pastTotalPages;
 
   function holidayMenuItems(holiday: Holiday) {
     return [
@@ -225,7 +266,7 @@ export function HolidaysPage() {
         )}
         <div className="mb-4 flex flex-wrap items-center gap-4">
           <h3 className="font-barlow font-bold uppercase text-sm tracking-widest mr-auto">
-            Próximos ({upcoming.length})
+            Próximos ({upcomingTotal ?? 0})
           </h3>
           <div className="w-full sm:w-auto sm:flex sm:justify-end">
             <Button
@@ -247,12 +288,36 @@ export function HolidaysPage() {
         ) : (
           <>
             {renderTable(upcoming)}
-            {past.length > 0 && (
+            {upcomingTotal !== null && upcomingTotal > 0 && (
+              <Pager
+                page={upcomingPage}
+                totalPages={upcomingTotalPages}
+                hasNext={upcomingHasNext}
+                loading={loading}
+                onPage={setUpcomingPage}
+                label="feriados"
+                pageSize={PAGE_SIZE}
+                shown={upcoming.length}
+                total={upcomingTotal}
+              />
+            )}
+            {pastTotal !== null && pastTotal > 0 && (
               <div className="mt-6 border-t border-border pt-5">
                 <h4 className="mb-3 font-barlow font-bold uppercase text-xs tracking-widest text-muted">
-                  Pasados ({past.length})
+                  Pasados ({pastTotal})
                 </h4>
                 {renderTable(past, true)}
+                <Pager
+                  page={pastPage}
+                  totalPages={pastTotalPages}
+                  hasNext={pastHasNext}
+                  loading={loading}
+                  onPage={setPastPage}
+                  label="feriados pasados"
+                  pageSize={PAGE_SIZE}
+                  shown={past.length}
+                  total={pastTotal}
+                />
               </div>
             )}
           </>

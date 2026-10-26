@@ -5,6 +5,7 @@ import {
   businessDayStartUtc,
   DAY_MS,
   dayKeyUTC,
+  tzParts,
   utcDayStart,
 } from "../utils/businessTime.js";
 import { assertObjectId } from "../utils/objectId.js";
@@ -28,9 +29,30 @@ async function countPendingAppointments(dayKey) {
   });
 }
 
-export async function listHolidays() {
-  const holidays = await Holiday.find({}).sort({ date: 1 }).lean();
-  return holidays.map(toHolidayDTO);
+export async function listHolidays({ scope, limit, page } = {}) {
+  const filter = {};
+  if (scope) {
+    // Los feriados son fechas calendario: el corte usa el día comercial actual
+    // para que "hoy" siga contando como próximo.
+    const todayStart = utcDayStart(tzParts(new Date()).dayKey);
+    filter.date =
+      scope === "past" ? { $lt: todayStart } : { $gte: todayStart };
+  }
+
+  // Sin limit no hay tope: mantiene el contrato de listado completo.
+  const total = limit ? await Holiday.countDocuments(filter) : null;
+
+  const query = Holiday.find(filter)
+    .sort({ date: scope === "past" ? -1 : 1 })
+    .lean();
+
+  if (limit) {
+    query.limit(limit);
+    if (page && page > 1) query.skip((page - 1) * limit);
+  }
+
+  const holidays = await query;
+  return { holidays: holidays.map(toHolidayDTO), total };
 }
 
 export async function createHoliday({ date, name }) {

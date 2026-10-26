@@ -11,9 +11,22 @@ export type CreateHolidayResult = {
   affectedAppointments: number;
 };
 
-export async function listHolidays(): Promise<Holiday[]> {
-  const res = await api.get<Holiday[]>("/holidays");
-  return res.data;
+export type HolidayScope = "upcoming" | "past";
+
+export type HolidayPage = {
+  items: Holiday[];
+  total: number | null;
+};
+
+// Una página del listado: el total del scope llega en X-Total-Count.
+export async function listHolidaysPage(params: {
+  scope: HolidayScope;
+  page: number;
+  limit: number;
+}): Promise<HolidayPage> {
+  const res = await api.get<Holiday[]>("/holidays", { params });
+  const total = Number(res.headers["x-total-count"]);
+  return { items: res.data, total: Number.isFinite(total) ? total : null };
 }
 
 export async function createHoliday(input: {

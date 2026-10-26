@@ -5,9 +5,16 @@ import {
   updateHoliday as updateHolidayService,
 } from "../services/holiday.service.js";
 
-export async function listHolidays(_req, res, next) {
+export async function listHolidays(req, res, next) {
   try {
-    const holidays = await listHolidaysService();
+    const query = req.validatedQuery ?? req.query;
+    const { holidays, total } = await listHolidaysService({
+      scope: query.scope,
+      limit: query.limit,
+      page: query.page,
+    });
+    // Total del filtro, solo cuando hay paginación (el body sigue siendo el array).
+    if (total !== null) res.set("X-Total-Count", String(total));
     res.json(holidays);
   } catch (err) {
     next(err);
