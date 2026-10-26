@@ -126,7 +126,7 @@ export function NotificationBell() {
                   <button
                     type="button"
                     onClick={() => void refresh()}
-                    className="mt-3 text-[11px] font-medium text-primary underline-offset-4 hover:underline"
+                    className="mt-3 cursor-pointer text-[11px] font-medium text-primary underline-offset-4 hover:underline"
                   >
                     Reintentar
                   </button>
@@ -144,7 +144,7 @@ export function NotificationBell() {
                     type="button"
                     onClick={() => handleOpen(item)}
                     className={cn(
-                      "flex w-full gap-3 border-b border-border px-4 py-3 text-left transition-colors last:border-0 hover:bg-primary/5",
+                      "flex w-full cursor-pointer gap-3 border-b border-border px-4 py-3 text-left transition-colors last:border-0 hover:bg-primary/5",
                       !item.readAt && "bg-primary/5",
                     )}
                   >
