@@ -189,6 +189,12 @@ Orden de precios al reservar: precio base de los servicios → descuento de la o
 
 Los controllers únicamente deben recibir la petición, delegar al service y construir la respuesta HTTP.
 
+#### Calificación de barberos (EP-7 / CA-21)
+
+El cliente califica con 1 a 5 estrellas un turno **propio** en estado `completed`. La nota se guarda embebida en el turno (`rating` y `rated_at`): una sola calificación por turno e **inmutable** (no se edita ni se borra). `POST /api/ratings` recibe `{ appointmentId, score }`, valida ownership y estado, y responde `409 ALREADY_RATED` si el turno ya fue calificado.
+
+El promedio es **interno de la barbería**: se calcula al vuelo con una agregación sobre turnos `completed` con `rating != null`, agrupados por `barber_id`, redondeado a 1 decimal. `GET /api/barbers` incluye `ratingAverage` y `ratingCount` solo cuando el solicitante es admin; el cliente que reserva no los recibe. El detalle de barbero, el listado de barberos y el detalle de turno muestran la nota. El reporte de calificación promedio (HU-19) queda en los reportes del negocio.
+
 ### API REST
 
 Todas las rutas bajo prefijo `/api`. Usar nombres de recursos en plural:
@@ -316,6 +322,8 @@ Los feriados **no** se guardan por barbero: aplican a todos los barberos, inclui
 
 `appointments.barber_id` y `appointments.client_id` referencian `users._id` con validación `role === 'barber'|'client'`.
 
+EP-7: la calificación del cliente vive en el turno (`rating`: 1–5, `rated_at`: Date), no en una colección aparte. Así una calificación por turno queda garantizada por construcción y el promedio se agrega sobre `appointments`.
+
 ### Timestamps
 
 Todos los schemas deben utilizar timestamps.
@@ -372,6 +380,8 @@ appointmentSchema.index({ client_id: 1, start_at: 1 });
 appointmentSchema.index({ client_id: 1, penalty_used: 1, start_at: 1 });
 // rango temporal general
 appointmentSchema.index({ start_at: 1 });
+// EP-7: promedio por barbero sobre turnos completados y calificados
+appointmentSchema.index({ barber_id: 1, status: 1, rating: 1 });
 ```
 
 > Antes: 4 índices separados `barber_id+start_at`, `client_id`, `status`, `start_at` → optimizado a compuestos para queries de rango `$lt/$gt` en solapamiento.
@@ -580,6 +590,7 @@ Los roles deben utilizarse para proteger operaciones sensibles, especialmente la
 | `PATCH /api/appointments/:id` |  |  | ✓ | `completed` o `cancelled`; cancelación admin libre y emite vale RN7 |
 | `PATCH /api/appointments/:id/cancel` | ✓ (propio) |  |  | RN3, verificar ownership |
 | `PATCH /api/appointments/:id/no-show` |  |  | ✓ | RN4, tolerancia 15 min |
+| `POST /api/ratings` | ✓ (propio) |  |  | EP-7: turno completado, una sola nota inmutable |
 | `POST /api/barbers` |  |  | ✓ | CA-3, alta barbero |
 | `GET /api/barbers/me/earnings` |  | ✓ |  | `barber_id = req.user.id`; rango máximo 366 días |
 | `GET /api/barbers/daily-earnings` |  |  | ✓ | Liquidación diaria; activos con cero turnos incluidos |

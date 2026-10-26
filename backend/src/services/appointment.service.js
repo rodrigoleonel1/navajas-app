@@ -32,7 +32,7 @@ import {
 } from "./voucher.service.js";
 
 const APPOINTMENT_FIELDS =
-  "barber_id client_id service_ids start_at end_at status cancel_type extra price_snapshot voucher_id voucher_discount offer_id offer_discount duration_snapshot";
+  "barber_id client_id service_ids start_at end_at status cancel_type extra price_snapshot voucher_id voucher_discount offer_id offer_discount duration_snapshot rating rated_at";
 
 // Un turno ocupa la agenda si está pendiente, si el cliente no se presentó
 // o si canceló con menos de 4 h (cancel_type blocked).
@@ -378,6 +378,9 @@ function toAppointmentDTO(doc, { now = new Date() } = {}) {
     offer,
     offerDiscount: doc.offer_discount ?? 0,
     durationSnapshot: doc.duration_snapshot,
+    // EP-7 / CA-21: la nota viaja en el turno para que admin y barbero la vean.
+    rating: doc.rating ?? null,
+    ratedAt: doc.rated_at ? new Date(doc.rated_at).toISOString() : null,
   };
 }
 

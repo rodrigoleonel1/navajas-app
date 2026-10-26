@@ -5,8 +5,8 @@ import { createAppError } from "../utils/appError.js";
 import { createHash } from "../utils/bcrypt.js";
 import { assertObjectId } from "../utils/objectId.js";
 
-function toBarberDTO(barber) {
-  return {
+function toBarberDTO(barber, ratingStats = null) {
+  const dto = {
     id: barber._id.toString(),
     name: barber.name,
     email: barber.email,
@@ -14,6 +14,47 @@ function toBarberDTO(barber) {
     active: barber.active,
     barberProfile: barber.barberProfile,
   };
+  // EP-7 / CA-21: promedio interno, solo para el panel de la barbería.
+  if (ratingStats) {
+    dto.ratingAverage = ratingStats.average;
+    dto.ratingCount = ratingStats.count;
+  }
+  return dto;
+}
+
+// Promedio de calificaciones por barbero sobre turnos completados y
+// calificados. Se redondea a 1 decimal; sin notas el promedio es null.
+async function getRatingStatsByBarberIds(barberIds) {
+  if (barberIds.length === 0) return new Map();
+
+  const rows = await Appointment.aggregate([
+    {
+      $match: {
+        barber_id: { $in: barberIds },
+        status: "completed",
+        rating: { $ne: null },
+      },
+    },
+    {
+      $group: {
+        _id: "$barber_id",
+        average: { $avg: "$rating" },
+        count: { $sum: 1 },
+      },
+    },
+  ]);
+
+  // Todos los barberos consultados tienen entrada, con cero notas si no hay.
+  const stats = new Map(
+    barberIds.map((id) => [id.toString(), { average: null, count: 0 }]),
+  );
+  for (const row of rows) {
+    stats.set(row._id.toString(), {
+      average: Math.round(row.average * 10) / 10,
+      count: row.count,
+    });
+  }
+  return stats;
 }
 
 export async function createBarber({ name, email, password }) {
@@ -57,7 +98,10 @@ export async function createBarber({ name, email, password }) {
   };
 }
 
-export async function listBarbers({ includeInactive = false } = {}) {
+export async function listBarbers({
+  includeInactive = false,
+  includeRating = false,
+} = {}) {
   const filter = { role: "barber" };
   if (!includeInactive) {
     filter.active = true;
@@ -65,7 +109,14 @@ export async function listBarbers({ includeInactive = false } = {}) {
   const barbers = await User.find(filter)
     .select("name email role active barberProfile")
     .lean();
-  return barbers.map(toBarberDTO);
+  if (!includeRating) return barbers.map((barber) => toBarberDTO(barber));
+
+  const stats = await getRatingStatsByBarberIds(
+    barbers.map((barber) => barber._id),
+  );
+  return barbers.map((barber) =>
+    toBarberDTO(barber, stats.get(barber._id.toString())),
+  );
 }
 
 export async function getBarberById(id) {
@@ -78,7 +129,8 @@ export async function getBarberById(id) {
     throw createAppError(404, "NOT_FOUND", "Barbero no encontrado");
   }
 
-  return toBarberDTO(barber);
+  const stats = await getRatingStatsByBarberIds([barber._id]);
+  return toBarberDTO(barber, stats.get(barber._id.toString()));
 }
 
 export async function updateBarberProfile(id, patch) {
@@ -136,5 +188,6 @@ export async function updateBarberProfile(id, patch) {
     throw createAppError(404, "NOT_FOUND", "Barbero no encontrado");
   }
 
-  return toBarberDTO(barber);
+  const stats = await getRatingStatsByBarberIds([barber._id]);
+  return toBarberDTO(barber, stats.get(barber._id.toString()));
 }

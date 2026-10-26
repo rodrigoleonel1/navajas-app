@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { AppointmentCard } from "../../components/AppointmentCard";
+import { RatingModal } from "../../components/RatingModal";
 import { Loader } from "../../components/ui/Loader";
 import { Pager } from "../../components/ui/Pager";
 import { Section } from "../../components/ui/Section";
@@ -14,6 +15,7 @@ import {
   type Appointment,
   type CancelType,
 } from "../../lib/appointments";
+import type { RatingResult } from "../../lib/ratings";
 
 // El historial se pagina de a 12: puede tener cientos de turnos y 12 llena
 // justo las filas de 2 y de 3 columnas (1, 2 y 3 son divisores).
@@ -46,6 +48,7 @@ export function ClientTurnosPage() {
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
   const [actingId, setActingId] = useState<string | null>(null);
+  const [ratingTarget, setRatingTarget] = useState<Appointment | null>(null);
   const historyRef = useRef<HTMLDivElement | null>(null);
   const firstLoadRef = useRef(true);
 
@@ -115,6 +118,19 @@ export function ClientTurnosPage() {
   const hasNext =
     totalPages === null ? history.length === HISTORY_PAGE_SIZE : page < totalPages;
 
+  // La nota recién creada se refleja en las dos listas sin recargar.
+  function handleRated(result: RatingResult) {
+    const applyRating = (items: Appointment[]) =>
+      items.map((item) =>
+        item.id === result.appointmentId
+          ? { ...item, rating: result.score, ratedAt: result.ratedAt }
+          : item,
+      );
+    setUpcoming(applyRating);
+    setHistory(applyRating);
+    setRatingTarget(null);
+  }
+
   async function handleCancel(appointment: Appointment) {
     const cancelType = appointment.cancelType;
     if (appointment.status !== "pending" || !cancelType) return;
@@ -180,6 +196,12 @@ export function ClientTurnosPage() {
                         ? () => handleCancel(appointment)
                         : undefined
                     }
+                    onRate={
+                      appointment.status === "completed" &&
+                      appointment.rating == null
+                        ? () => setRatingTarget(appointment)
+                        : undefined
+                    }
                   />
                 ))}
               </ul>
@@ -203,6 +225,12 @@ export function ClientTurnosPage() {
                       key={appointment.id}
                       appointment={appointment}
                       hideClient
+                      onRate={
+                        appointment.status === "completed" &&
+                        appointment.rating == null
+                          ? () => setRatingTarget(appointment)
+                          : undefined
+                      }
                     />
                   ))}
                 </ul>
@@ -217,6 +245,14 @@ export function ClientTurnosPage() {
             )}
           </div>
         </div>
+      )}
+
+      {ratingTarget && (
+        <RatingModal
+          appointment={ratingTarget}
+          onClose={() => setRatingTarget(null)}
+          onRated={handleRated}
+        />
       )}
     </Section>
   );

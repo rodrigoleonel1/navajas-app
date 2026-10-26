@@ -19,6 +19,9 @@ export type Barber = {
     daysOff?: string[];
     weeklyDaysOff?: number[];
   };
+  // EP-7: promedio interno, solo lo devuelve el backend al admin.
+  ratingAverage?: number | null;
+  ratingCount?: number;
 };
 
 export type Slot = {
@@ -55,6 +58,9 @@ export type Appointment = {
   offer: { id: string; name: string; discountPercent: number } | null;
   offerDiscount: number;
   durationSnapshot: number;
+  // EP-7: nota del cliente (1–5) e instante en que la dejó.
+  rating: number | null;
+  ratedAt: string | null;
 };
 
 export async function listServices(

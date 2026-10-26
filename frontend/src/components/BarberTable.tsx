@@ -1,5 +1,6 @@
 import type { Barber } from "../lib/appointments";
 import { AppointmentMenu } from "./AppointmentMenu";
+import { RatingSummary } from "./RatingSummary";
 import { Badge } from "./ui/Badge";
 
 export function BarberTable({
@@ -21,6 +22,7 @@ export function BarberTable({
             <th className="px-4 py-3 font-semibold">Nombre</th>
             <th className="px-4 py-3 font-semibold">Email</th>
             <th className="px-4 py-3 font-semibold">Jornada</th>
+            <th className="px-4 py-3 font-semibold">Calificación</th>
             <th className="px-4 py-3 font-semibold">Estado</th>
             <th className="px-4 py-3 font-semibold">
               <span className="sr-only">Acciones</span>
@@ -38,6 +40,12 @@ export function BarberTable({
               <td className="px-4 py-3 text-muted whitespace-nowrap">
                 {barber.barberProfile?.workingHours?.start ?? "09:00"}–
                 {barber.barberProfile?.workingHours?.end ?? "18:00"}
+              </td>
+              <td className="px-4 py-3 text-muted whitespace-nowrap">
+                <RatingSummary
+                  average={barber.ratingAverage}
+                  count={barber.ratingCount}
+                />
               </td>
               <td className="px-4 py-3">
                 {barber.active ? (

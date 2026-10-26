@@ -26,7 +26,11 @@ export async function listBarbers(req, res, next) {
         req.user ? "Permisos insuficientes" : "Autenticación requerida",
       );
     }
-    const barbers = await listBarbersService({ includeInactive });
+    const barbers = await listBarbersService({
+      includeInactive,
+      // EP-7: el promedio es interno; el cliente no lo recibe en la reserva.
+      includeRating: req.user?.role === "admin",
+    });
     res.json(barbers);
   } catch (err) {
     next(err);

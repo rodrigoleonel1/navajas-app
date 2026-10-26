@@ -93,6 +93,18 @@ const appointmentSchema = new mongoose.Schema(
       required: true,
       min: 1,
     },
+    // EP-7 / CA-21: calificación del cliente (1 a 5 estrellas).
+    // Inmutable: se setea una sola vez y no se edita ni se borra.
+    rating: {
+      type: Number,
+      default: null,
+      min: 1,
+      max: 5,
+    },
+    rated_at: {
+      type: Date,
+      default: null,
+    },
   },
   {
     timestamps: {
@@ -110,5 +122,7 @@ appointmentSchema.index({ client_id: 1, start_at: 1 });
 appointmentSchema.index({ client_id: 1, penalty_used: 1, start_at: 1 });
 // Rango temporal general 
 appointmentSchema.index({ start_at: 1 });
+// EP-7: promedio de calificaciones por barbero (turnos completados y calificados)
+appointmentSchema.index({ barber_id: 1, status: 1, rating: 1 });
 
 export const Appointment = mongoose.model("Appointment", appointmentSchema);

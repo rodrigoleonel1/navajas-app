@@ -5,8 +5,13 @@ import {
   serviceNames,
 } from "../lib/appointmentDisplay";
 import type { Appointment } from "../lib/appointments";
-import { formatHour, formatWeekdayDate } from "../lib/datetime";
+import {
+  formatHour,
+  formatWeekdayDate,
+  formatWeekdayDateTime,
+} from "../lib/datetime";
 import { formatPrice } from "../lib/format";
+import { StarRating } from "./StarRating";
 import { Badge } from "./ui/Badge";
 import { Button } from "./ui/Button";
 import { Modal } from "./ui/Modal";
@@ -93,6 +98,24 @@ export function AppointmentDetailModal({
         )}
         {statusNote && (
           <p className="mt-2 text-xs text-muted">{statusNote}</p>
+        )}
+        {appointment.rating != null && (
+          <div className="mt-4 border-t border-dashed border-border pt-3">
+            <p className="text-[11px] uppercase tracking-widest text-muted">
+              Calificación
+            </p>
+            <div className="mt-1 flex items-center justify-center gap-2">
+              <StarRating value={appointment.rating} size={18} />
+              <span className="text-sm font-semibold">
+                {appointment.rating}/5
+              </span>
+            </div>
+            {appointment.ratedAt && (
+              <p className="mt-1 text-[11px] text-muted">
+                {formatWeekdayDateTime(appointment.ratedAt)}
+              </p>
+            )}
+          </div>
         )}
       </div>
       {(onComplete || onCancel || onNoShow) && (

@@ -1,6 +1,7 @@
 import { ArrowLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { RatingSummary } from "../../components/RatingSummary";
 import { Button } from "../../components/ui/Button";
 import { Input } from "../../components/ui/Input";
 import { Loader } from "../../components/ui/Loader";
@@ -178,6 +179,18 @@ export function BarberDetailPage() {
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
+          <div className="mt-4 border-t border-border pt-4">
+            <p className="text-[11px] uppercase tracking-widest text-muted">
+              Calificación
+            </p>
+            <div className="mt-1">
+              <RatingSummary
+                average={barber.ratingAverage}
+                count={barber.ratingCount}
+                size={16}
+              />
+            </div>
+          </div>
         </div>
 
         <div className="bg-card border border-border rounded-2xl p-6">

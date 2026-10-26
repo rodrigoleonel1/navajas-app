@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { AppointmentMenu } from "../../components/AppointmentMenu";
 import { BarberCreateModal } from "../../components/BarberCreateModal";
 import { BarberTable } from "../../components/BarberTable";
+import { RatingSummary } from "../../components/RatingSummary";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { ListCard } from "../../components/ui/ListCard";
@@ -150,9 +151,17 @@ export function BarbersPage() {
                   }
                   subtitle={barber.email}
                   detail={
-                    (barber.barberProfile?.daysOff?.length ?? 0) > 0
-                      ? `${barber.barberProfile?.daysOff?.length} días libres`
-                      : "Sin días libres"
+                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <span>
+                        {(barber.barberProfile?.daysOff?.length ?? 0) > 0
+                          ? `${barber.barberProfile?.daysOff?.length} días libres`
+                          : "Sin días libres"}
+                      </span>
+                      <RatingSummary
+                        average={barber.ratingAverage}
+                        count={barber.ratingCount}
+                      />
+                    </span>
                   }
                   footerLeft={`${barber.barberProfile?.workingHours?.start ?? "09:00"}–${barber.barberProfile?.workingHours?.end ?? "18:00"}`}
                   footerRight={

@@ -18,6 +18,7 @@ export function AppointmentCard({
   onComplete,
   onCancel,
   onNoShow,
+  onRate,
   onViewDetail,
   busy = false,
 }: {
@@ -27,6 +28,7 @@ export function AppointmentCard({
   onComplete?: () => void;
   onCancel?: () => void;
   onNoShow?: () => void;
+  onRate?: () => void;
   onViewDetail?: () => void;
   busy?: boolean;
 }) {
@@ -44,6 +46,9 @@ export function AppointmentCard({
       : []),
     ...(onComplete
       ? [{ label: "Completar turno", onSelect: onComplete }]
+      : []),
+    ...(onRate
+      ? [{ label: "Calificar turno", onSelect: onRate }]
       : []),
     ...(onNoShow
       ? [
@@ -67,6 +72,7 @@ export function AppointmentCard({
     (appointment.voucherDiscount ?? 0) > 0
       ? "Incluye vale de descuento"
       : null,
+    appointment.rating != null ? `Calificación: ${appointment.rating}/5` : null,
   ].filter(Boolean);
   const detail = [...people, ...notes].join(" · ");
   // Un turno cancelado se muestra atenuado salvo el badge de estado.
