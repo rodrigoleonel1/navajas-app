@@ -255,7 +255,7 @@ export function HolidaysPage() {
         eyebrow="Panel — Admin"
         title="Feriados"
         highlight="del negocio."
-        description="Fechas globales que aplican a todos los barberos."
+        description="Gestioná los días que la barbería permanece cerrada."
       />
 
       <div className="mt-8 flex flex-col gap-6">
