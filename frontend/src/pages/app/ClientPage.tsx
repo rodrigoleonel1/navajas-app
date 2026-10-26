@@ -319,9 +319,11 @@ export function ClientPage() {
                 </p>
                 {matchingOffer && (
                   <p className="text-primary font-medium">
-                    Oferta “{matchingOffer.name}” (-{matchingOffer.discountPercent}
-                    %): -{formatPrice(offerDiscount)} →{" "}
-                    {formatPrice(Math.max(totals.price - offerDiscount, 0))}
+                    Oferta “{matchingOffer.name}”:{" "}
+                    {matchingOffer.services
+                      .map((service) => service.name)
+                      .join(" + ")}{" "}
+                    → {formatPrice(Math.max(totals.price - offerDiscount, 0))}
                   </p>
                 )}
               </div>
