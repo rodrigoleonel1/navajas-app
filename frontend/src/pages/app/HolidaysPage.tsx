@@ -1,8 +1,8 @@
-import { Plus } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { AppointmentMenu } from "../../components/AppointmentMenu";
+import { HolidayFormModal } from "../../components/HolidayFormModal";
 import { Button } from "../../components/ui/Button";
-import { Input } from "../../components/ui/Input";
 import { ListCard } from "../../components/ui/ListCard";
 import { Loader } from "../../components/ui/Loader";
 import { Section } from "../../components/ui/Section";
@@ -13,10 +13,9 @@ import { getErrorMessage } from "../../lib/api";
 import { formatDateKey, toBusinessDayKey } from "../../lib/datetime";
 import { cn } from "../../lib/utils";
 import {
-  createHoliday,
   deleteHoliday,
   listHolidays,
-  updateHoliday,
+  type CreateHolidayResult,
   type Holiday,
 } from "../../lib/holidays";
 
@@ -26,15 +25,10 @@ export function HolidaysPage() {
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
-  const [date, setDate] = useState("");
-  const [name, setName] = useState("");
-  const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [warning, setWarning] = useState("");
-  const [editing, setEditing] = useState<Holiday | null>(null);
-  const [editDate, setEditDate] = useState("");
-  const [editName, setEditName] = useState("");
-  const [savingEdit, setSavingEdit] = useState(false);
+  const [showCreate, setShowCreate] = useState(false);
+  const [modalHoliday, setModalHoliday] = useState<Holiday | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -59,76 +53,33 @@ export function HolidaysPage() {
     };
   }, []);
 
-  async function handleCreate() {
-    if (!date) {
-      toast.error("Seleccioná una fecha");
-      return;
-    }
-    const trimmedName = name.trim();
-    if (trimmedName.length < 2) {
-      toast.error("Nombre mínimo 2 caracteres");
-      return;
-    }
-
-    setSaving(true);
+  function openCreate() {
     setWarning("");
-    try {
-      const result = await createHoliday({ date, name: trimmedName });
-      setHolidays((prev) =>
-        [...prev, result.holiday].sort((a, b) => a.date.localeCompare(b.date)),
+    setShowCreate(true);
+  }
+
+  function closeModal() {
+    setShowCreate(false);
+    setModalHoliday(null);
+  }
+
+  function handleCreated(result: CreateHolidayResult) {
+    setHolidays((prev) =>
+      [...prev, result.holiday].sort((a, b) => a.date.localeCompare(b.date)),
+    );
+    if (result.affectedAppointments > 0) {
+      setWarning(
+        `Hay ${result.affectedAppointments} turno(s) pendiente(s) ese día. No se cancelaron automáticamente.`,
       );
-      setDate("");
-      setName("");
-      toast.success("Feriado agregado");
-      if (result.affectedAppointments > 0) {
-        setWarning(
-          `Hay ${result.affectedAppointments} turno(s) pendiente(s) ese día. No se cancelaron automáticamente.`,
-        );
-      }
-    } catch (err) {
-      toast.error(getErrorMessage(err, "Error al crear feriado"));
-    } finally {
-      setSaving(false);
     }
   }
 
-  function startEdit(holiday: Holiday) {
-    setEditing(holiday);
-    setEditDate(holiday.date);
-    setEditName(holiday.name);
-    setWarning("");
-  }
-
-  async function handleSaveEdit() {
-    if (!editing) return;
-    if (!editDate) {
-      toast.error("Seleccioná una fecha");
-      return;
-    }
-    const trimmedName = editName.trim();
-    if (trimmedName.length < 2) {
-      toast.error("Nombre mínimo 2 caracteres");
-      return;
-    }
-
-    setSavingEdit(true);
-    try {
-      const updated = await updateHoliday(editing.id, {
-        date: editDate,
-        name: trimmedName,
-      });
-      setHolidays((prev) =>
-        prev
-          .map((item) => (item.id === updated.id ? updated : item))
-          .sort((a, b) => a.date.localeCompare(b.date)),
-      );
-      setEditing(null);
-      toast.success("Feriado actualizado");
-    } catch (err) {
-      toast.error(getErrorMessage(err, "Error al actualizar feriado"));
-    } finally {
-      setSavingEdit(false);
-    }
+  function handleUpdated(updated: Holiday) {
+    setHolidays((prev) =>
+      prev
+        .map((item) => (item.id === updated.id ? updated : item))
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    );
   }
 
   async function handleDelete(holiday: Holiday) {
@@ -143,7 +94,7 @@ export function HolidaysPage() {
     try {
       await deleteHoliday(holiday.id);
       setHolidays((prev) => prev.filter((item) => item.id !== holiday.id));
-      if (editing?.id === holiday.id) setEditing(null);
+      if (modalHoliday?.id === holiday.id) setModalHoliday(null);
       toast.success("Feriado eliminado");
     } catch (err) {
       toast.error(getErrorMessage(err, "Error al eliminar feriado"));
@@ -160,7 +111,7 @@ export function HolidaysPage() {
     return [
       {
         label: "Editar",
-        onSelect: () => startEdit(holiday),
+        onSelect: () => setModalHoliday(holiday),
       },
       {
         label: "Eliminar",
@@ -258,113 +209,64 @@ export function HolidaysPage() {
         description="Gestioná los días que la barbería permanece cerrada."
       />
 
-      <div className="mt-8 flex flex-col gap-6">
-        <div className="bg-card border border-border rounded-2xl p-6">
-          <h3 className="font-barlow font-bold uppercase text-sm tracking-widest mb-4">
-            Agregar feriado
+      <div className="mt-8 bg-card border border-border rounded-2xl p-6">
+        {warning && (
+          <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-primary">
+            <p className="flex-1">{warning}</p>
+            <button
+              type="button"
+              aria-label="Cerrar aviso"
+              onClick={() => setWarning("")}
+              className="flex h-5 w-5 shrink-0 items-center justify-center transition-opacity hover:opacity-70 cursor-pointer"
+            >
+              <X size={14} aria-hidden="true" />
+            </button>
+          </div>
+        )}
+        <div className="mb-4 flex flex-wrap items-center gap-4">
+          <h3 className="font-barlow font-bold uppercase text-sm tracking-widest mr-auto">
+            Próximos ({upcoming.length})
           </h3>
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Input
-              id="holiday-date"
-              label="Fecha"
-              type="date"
-              value={date}
-              onChange={(event) => setDate(event.target.value)}
-            />
-            <Input
-              id="holiday-name"
-              label="Nombre"
-              value={name}
-              placeholder="Ej: Navidad"
-              onChange={(event) => setName(event.target.value)}
-            />
+          <div className="w-full sm:w-auto sm:flex sm:justify-end">
+            <Button
+              variant="primaryBlock"
+              size="sm"
+              className="w-full sm:w-auto"
+              onClick={openCreate}
+            >
+              <Plus size={16} aria-hidden="true" />
+              Agregar feriado
+            </Button>
           </div>
-          <p className="mt-3 text-xs text-muted">
-            Si ya hay turnos ese día, no se cancelan automáticamente.
-          </p>
-          <Button
-            variant="primaryBlock"
-            className="mt-4 w-full"
-            disabled={saving}
-            onClick={handleCreate}
-          >
-            <Plus size={16} aria-hidden="true" />
-            {saving ? "Agregando..." : "Agregar feriado"}
-          </Button>
-          {warning && (
-            <p className="mt-4 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-primary">
-              {warning}
-            </p>
-          )}
         </div>
-
-        <div className="bg-card border border-border rounded-2xl p-6">
-          {editing && (
-            <div className="mb-5 rounded-xl border border-primary/30 bg-primary/5 p-4">
-              <h4 className="mb-3 font-barlow font-bold uppercase text-xs tracking-widest">
-                Editar feriado
-              </h4>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <Input
-                  id="holiday-edit-date"
-                  label="Fecha"
-                  type="date"
-                  value={editDate}
-                  onChange={(event) => setEditDate(event.target.value)}
-                />
-                <Input
-                  id="holiday-edit-name"
-                  label="Nombre"
-                  value={editName}
-                  onChange={(event) => setEditName(event.target.value)}
-                />
+        {listError && (
+          <p className="mb-4 text-sm text-destructive">{listError}</p>
+        )}
+        {loading ? (
+          <Loader label="Cargando feriados..." height="card" />
+        ) : (
+          <>
+            {renderTable(upcoming)}
+            {past.length > 0 && (
+              <div className="mt-6 border-t border-border pt-5">
+                <h4 className="mb-3 font-barlow font-bold uppercase text-xs tracking-widest text-muted">
+                  Pasados ({past.length})
+                </h4>
+                {renderTable(past, true)}
               </div>
-              <p className="mt-3 text-xs text-muted">
-                Si la nueva fecha tiene turnos, no se cancelan automáticamente.
-              </p>
-              <div className="mt-3 flex gap-2">
-                <Button
-                  variant="primaryBlock"
-                  className="flex-1"
-                  disabled={savingEdit}
-                  onClick={handleSaveEdit}
-                >
-                  {savingEdit ? "Guardando..." : "Guardar cambios"}
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={() => setEditing(null)}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </div>
-          )}
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <h3 className="font-barlow font-bold uppercase text-sm tracking-widest">
-              Próximos ({upcoming.length})
-            </h3>
-          </div>
-          {listError && (
-            <p className="mb-4 text-sm text-destructive">{listError}</p>
-          )}
-          {loading ? (
-            <Loader label="Cargando feriados..." height="card" />
-          ) : (
-            <>
-              {renderTable(upcoming)}
-              {past.length > 0 && (
-                <div className="mt-6 border-t border-border pt-5">
-                  <h4 className="mb-3 font-barlow font-bold uppercase text-xs tracking-widest text-muted">
-                    Pasados ({past.length})
-                  </h4>
-                  {renderTable(past, true)}
-                </div>
-              )}
-            </>
-          )}
-        </div>
+            )}
+          </>
+        )}
       </div>
+
+      {(showCreate || modalHoliday) && (
+        <HolidayFormModal
+          holiday={modalHoliday}
+          onClose={closeModal}
+          onCreated={handleCreated}
+          onUpdated={handleUpdated}
+        />
+      )}
     </Section>
   );
 }
