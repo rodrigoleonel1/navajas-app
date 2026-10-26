@@ -63,7 +63,15 @@ export function AppNavbar() {
   const actions = (
     <>
       {role === "client" && <NotificationBell />}
-      <span className="hidden md:inline text-xs text-muted">{user?.email}</span>
+      <span
+        className={
+          role === "admin"
+            ? "hidden xl:inline text-xs text-muted"
+            : "hidden md:inline text-xs text-muted"
+        }
+      >
+        {user?.email}
+      </span>
       <Button
         variant="outline"
         className="hidden md:inline-flex"
@@ -94,6 +102,7 @@ export function AppNavbar() {
 
   return (
     <NavShell
+      desktopFrom={role === "admin" ? "lg" : "md"}
       brand={<BrandLogo className="relative z-102" to={home} />}
       desktop={desktop}
       actions={actions}

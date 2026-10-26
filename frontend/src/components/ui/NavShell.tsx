@@ -11,7 +11,14 @@ type NavShellProps = {
   onToggle: () => void;
   onClose: () => void;
   mobileHeader?: ReactNode;
+  /** Breakpoint desde el que se muestra el menú desktop. */
+  desktopFrom?: "md" | "lg";
 };
+
+const DESKTOP_BREAKPOINT = {
+  md: { desktop: "md:flex", hidden: "md:hidden" },
+  lg: { desktop: "lg:flex", hidden: "lg:hidden" },
+} as const;
 
 export function NavShell({
   brand,
@@ -21,7 +28,10 @@ export function NavShell({
   open,
   onToggle,
   mobileHeader,
+  desktopFrom = "md",
 }: NavShellProps) {
+  const breakpoint = DESKTOP_BREAKPOINT[desktopFrom];
+
   return (
     <nav
       className="flex items-center justify-between w-full sticky top-0 z-100 bg-surface/80 backdrop-blur-lg border-b border-white/6 p-5 md:px-shell"
@@ -29,14 +39,22 @@ export function NavShell({
     >
       <div className="relative z-102">{brand}</div>
 
-      <div className="hidden md:flex gap-8 font-barlow tracking-widest uppercase">
+      <div
+        className={cn(
+          "hidden gap-4 text-xs xl:gap-6 xl:text-sm font-barlow tracking-widest uppercase",
+          breakpoint.desktop,
+        )}
+      >
         {desktop}
       </div>
 
       <div className="flex items-center gap-4">
         {actions}
         <button
-          className="flex items-center justify-center md:hidden w-7 h-7 cursor-pointer relative z-102"
+          className={cn(
+            "flex items-center justify-center w-7 h-7 cursor-pointer relative z-102",
+            breakpoint.hidden,
+          )}
           aria-label={open ? "Cerrar menú" : "Abrir menú"}
           aria-expanded={open}
           aria-controls="mobile-menu"
@@ -68,7 +86,8 @@ export function NavShell({
         role="menu"
         className={cn(
           open ? "flex" : "hidden",
-          "flex-col justify-start fixed inset-0 h-dvh bg-background pt-22 px-5 z-101 md:hidden",
+          "flex-col justify-start fixed inset-0 h-dvh bg-background pt-22 px-5 z-101",
+          breakpoint.hidden,
         )}
       >
         {mobileHeader}
