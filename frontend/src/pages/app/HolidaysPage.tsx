@@ -147,6 +147,10 @@ export function HolidaysPage() {
   const pastTotalPages =
     pastTotal === null ? null : Math.max(1, Math.ceil(pastTotal / PAGE_SIZE));
   const pastHasNext = pastTotalPages !== null && pastPage < pastTotalPages;
+  const hasPast = pastTotal !== null && pastTotal > 0;
+  // Solo el primer fetch tapa las tablas: al cambiar de página se mantienen
+  // visibles y las flechas quedan deshabilitadas por `loading`.
+  const initialLoading = loading && upcoming.length === 0 && past.length === 0;
 
   function holidayMenuItems(holiday: Holiday) {
     return [
@@ -250,62 +254,78 @@ export function HolidaysPage() {
         description="Gestioná los días que la barbería permanece cerrada."
       />
 
-      <div className="mt-8 bg-card border border-border rounded-2xl p-6">
-        {warning && (
-          <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-primary">
-            <p className="flex-1">{warning}</p>
-            <button
-              type="button"
-              aria-label="Cerrar aviso"
-              onClick={() => setWarning("")}
-              className="flex h-5 w-5 shrink-0 items-center justify-center transition-opacity hover:opacity-70 cursor-pointer"
-            >
-              <X size={14} aria-hidden="true" />
-            </button>
-          </div>
+      <div
+        className={cn(
+          "mt-8 grid gap-6 xl:items-start",
+          hasPast && "xl:grid-cols-2",
         )}
-        <div className="mb-4 flex flex-wrap items-center gap-4">
-          <h3 className="font-barlow font-bold uppercase text-sm tracking-widest mr-auto">
-            Próximos ({upcomingTotal ?? 0})
-          </h3>
-          <div className="w-full sm:w-auto sm:flex sm:justify-end">
-            <Button
-              variant="primaryBlock"
-              size="sm"
-              className="w-full sm:w-auto"
-              onClick={openCreate}
-            >
-              <Plus size={16} aria-hidden="true" />
-              Agregar feriado
-            </Button>
+      >
+        <div className="bg-card border border-border rounded-2xl p-6">
+          {warning && (
+            <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-primary">
+              <p className="flex-1">{warning}</p>
+              <button
+                type="button"
+                aria-label="Cerrar aviso"
+                onClick={() => setWarning("")}
+                className="flex h-5 w-5 shrink-0 items-center justify-center transition-opacity hover:opacity-70 cursor-pointer"
+              >
+                <X size={14} aria-hidden="true" />
+              </button>
+            </div>
+          )}
+          <div className="mb-4 flex flex-wrap items-center gap-4">
+            <h3 className="font-barlow font-bold uppercase text-sm tracking-widest mr-auto">
+              Próximos ({upcomingTotal ?? 0})
+            </h3>
+            <div className="w-full sm:w-auto sm:flex sm:justify-end">
+              <Button
+                variant="primaryBlock"
+                size="sm"
+                className="w-full sm:w-auto"
+                onClick={openCreate}
+              >
+                <Plus size={16} aria-hidden="true" />
+                Agregar feriado
+              </Button>
+            </div>
           </div>
+          {listError && (
+            <p className="mb-4 text-sm text-destructive">{listError}</p>
+          )}
+          {initialLoading ? (
+            <Loader label="Cargando feriados..." height="card" />
+          ) : (
+            <>
+              {renderTable(upcoming)}
+              {upcomingTotal !== null && upcomingTotal > 0 && (
+                <Pager
+                  page={upcomingPage}
+                  totalPages={upcomingTotalPages}
+                  hasNext={upcomingHasNext}
+                  loading={loading}
+                  onPage={setUpcomingPage}
+                  label="feriados"
+                  pageSize={PAGE_SIZE}
+                  shown={upcoming.length}
+                  total={upcomingTotal}
+                />
+              )}
+            </>
+          )}
         </div>
-        {listError && (
-          <p className="mb-4 text-sm text-destructive">{listError}</p>
-        )}
-        {loading ? (
-          <Loader label="Cargando feriados..." height="card" />
-        ) : (
-          <>
-            {renderTable(upcoming)}
-            {upcomingTotal !== null && upcomingTotal > 0 && (
-              <Pager
-                page={upcomingPage}
-                totalPages={upcomingTotalPages}
-                hasNext={upcomingHasNext}
-                loading={loading}
-                onPage={setUpcomingPage}
-                label="feriados"
-                pageSize={PAGE_SIZE}
-                shown={upcoming.length}
-                total={upcomingTotal}
-              />
-            )}
-            {pastTotal !== null && pastTotal > 0 && (
-              <div className="mt-6 border-t border-border pt-5">
-                <h4 className="mb-3 font-barlow font-bold uppercase text-xs tracking-widest text-muted">
-                  Pasados ({pastTotal})
-                </h4>
+
+        {hasPast && (
+          <div className="bg-card border border-border rounded-2xl p-6">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="font-barlow font-bold uppercase text-sm tracking-widest">
+                Pasados ({pastTotal})
+              </h3>
+            </div>
+            {initialLoading ? (
+              <Loader label="Cargando feriados..." height="card" />
+            ) : (
+              <>
                 {renderTable(past, true)}
                 <Pager
                   page={pastPage}
@@ -318,9 +338,9 @@ export function HolidaysPage() {
                   shown={past.length}
                   total={pastTotal}
                 />
-              </div>
+              </>
             )}
-          </>
+          </div>
         )}
       </div>
 
