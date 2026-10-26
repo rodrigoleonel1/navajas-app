@@ -12,6 +12,7 @@ import { BarbersPage } from "./pages/app/BarbersPage";
 import { ClientTurnosPage } from "./pages/app/ClientTurnosPage";
 import { ClientVouchersPage } from "./pages/app/ClientVouchersPage";
 import { HolidaysPage } from "./pages/app/HolidaysPage";
+import { OfferFormPage } from "./pages/app/OfferFormPage";
 import { OffersPage } from "./pages/app/OffersPage";
 import { ReportsPage } from "./pages/app/ReportsPage";
 import { ServiceDetailPage } from "./pages/app/ServiceDetailPage";
@@ -118,6 +119,22 @@ function App() {
             element={
               <ProtectedRoute roles={["admin"]}>
                 <OffersPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="offers/new"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <OfferFormPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="offers/:id/edit"
+            element={
+              <ProtectedRoute roles={["admin"]}>
+                <OfferFormPage />
               </ProtectedRoute>
             }
           />

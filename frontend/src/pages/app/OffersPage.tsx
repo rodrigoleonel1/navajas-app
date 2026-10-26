@@ -1,7 +1,7 @@
 import { Plus } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { AppointmentMenu } from "../../components/AppointmentMenu";
-import { OfferFormModal } from "../../components/OfferFormModal";
 import { Badge } from "../../components/ui/Badge";
 import { Button } from "../../components/ui/Button";
 import { ListCard } from "../../components/ui/ListCard";
@@ -11,7 +11,6 @@ import { SectionHeader } from "../../components/ui/SectionHeader";
 import { Switch } from "../../components/ui/Switch";
 import { useToast } from "../../hooks/useToast";
 import { getErrorMessage } from "../../lib/api";
-import { listServices, type Service } from "../../lib/appointments";
 import { formatDateKey } from "../../lib/datetime";
 import { listOffers, updateOffer, type Offer } from "../../lib/offers";
 
@@ -32,14 +31,12 @@ function servicesLabel(offer: Offer): string {
 
 export function OffersPage() {
   const toast = useToast();
+  const navigate = useNavigate();
   const [offers, setOffers] = useState<Offer[]>([]);
-  const [services, setServices] = useState<Service[]>([]);
   const [showInactive, setShowInactive] = useState(false);
   const [refreshKey, setRefreshKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
-  const [modalOffer, setModalOffer] = useState<Offer | null>(null);
-  const [showCreate, setShowCreate] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -48,13 +45,9 @@ export function OffersPage() {
       setLoading(true);
       setListError("");
       try {
-        const [offerData, serviceData] = await Promise.all([
-          listOffers(showInactive),
-          listServices(true),
-        ]);
+        const offerData = await listOffers(showInactive);
         if (!cancelled) {
           setOffers(offerData);
-          setServices(serviceData);
         }
       } catch (err) {
         if (!cancelled) {
@@ -89,7 +82,7 @@ export function OffersPage() {
     return [
       {
         label: "Editar oferta",
-        onSelect: () => setModalOffer(offer),
+        onSelect: () => navigate(`/app/offers/${offer.id}/edit`),
       },
       offer.active
         ? {
@@ -102,11 +95,6 @@ export function OffersPage() {
             onSelect: () => handleToggle(offer),
           },
     ];
-  }
-
-  function closeModal() {
-    setModalOffer(null);
-    setShowCreate(false);
   }
 
   return (
@@ -134,7 +122,7 @@ export function OffersPage() {
               variant="primaryBlock"
               size="sm"
               className="w-full sm:w-auto"
-              onClick={() => setShowCreate(true)}
+              onClick={() => navigate("/app/offers/new")}
             >
               <Plus size={16} aria-hidden="true" />
               Agregar oferta
@@ -228,15 +216,6 @@ export function OffersPage() {
           </>
         )}
       </div>
-
-      {(showCreate || modalOffer) && (
-        <OfferFormModal
-          offer={modalOffer}
-          services={services}
-          onClose={closeModal}
-          onSaved={() => setRefreshKey((key) => key + 1)}
-        />
-      )}
     </Section>
   );
 }
