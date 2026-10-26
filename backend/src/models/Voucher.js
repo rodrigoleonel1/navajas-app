@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-// Origen del vale. RN7 emite por cancelación del admin; RN8 usará fidelidad.
+// Origen del vale. RN7 emite por cancelación del admin; RN8 por fidelidad.
 export const VOUCHER_SOURCES = ["admin_cancellation", "fidelity"];
 
 const voucherSchema = new mongoose.Schema(

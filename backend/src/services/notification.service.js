@@ -276,9 +276,10 @@ function buildInAppContent(notification) {
       const expiresLabel = payload.expiresAt
         ? formatBusinessDate(payload.expiresAt)
         : "";
+      const isFidelity = payload.source === "fidelity";
       return {
-        title: "Vale emitido",
-        message: `Recibiste un vale del ${discountPercent}%. Se aplicará automáticamente en tu próxima reserva.${expiresLabel ? ` Válido hasta: ${expiresLabel}.` : ""}`,
+        title: isFidelity ? "Vale de fidelidad" : "Vale emitido",
+        message: `Recibiste un vale del ${discountPercent}% ${isFidelity ? "por tu fidelidad" : "por la cancelación del local"}. Se aplicará automáticamente en tu próxima reserva.${expiresLabel ? ` Válido hasta: ${expiresLabel}.` : ""}`,
         link: voucherLink,
       };
     }

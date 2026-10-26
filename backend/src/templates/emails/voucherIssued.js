@@ -20,7 +20,8 @@ function detailRow(label, value) {
   </tr>`;
 }
 
-// Template del vale emitido por cancelación del admin (RN7).
+// Template del vale emitido por cancelación del admin (RN7) o por
+// fidelidad cada 10 turnos completados (RN8).
 export function buildVoucherIssued(payload = {}) {
   const {
     clientName = "cliente",
@@ -29,6 +30,7 @@ export function buildVoucherIssued(payload = {}) {
     issuedAt,
     expiresAt,
     startAt,
+    source = "admin_cancellation",
   } = payload;
 
   const discountLabel = `${discountPercent}%`;
@@ -36,13 +38,17 @@ export function buildVoucherIssued(payload = {}) {
   const issuedLabel = issuedAt ? formatBusinessDate(issuedAt) : "";
   const appointmentLabel = startAt ? formatBusinessDate(startAt) : "";
   const appUrl = `${config.APP_URL.replace(/\/+$/, "")}/app/client/vales`;
+  const reason =
+    source === "fidelity"
+      ? "por tu fidelidad cada 10 turnos completados"
+      : `por la cancelación de tu turno${appointmentLabel ? ` del ${appointmentLabel}` : ""}`;
 
   const subject = `Vale del ${discountLabel} — Navajas Barber`;
 
   const text = [
     `Hola ${clientName},`,
     "",
-    `Recibiste un vale del ${discountLabel} de descuento por la cancelación de tu turno${appointmentLabel ? ` del ${appointmentLabel}` : ""}.`,
+    `Recibiste un vale del ${discountLabel} de descuento ${reason}.`,
     "Se aplicará automáticamente en tu próxima reserva.",
     "",
     `Descuento: ${discountLabel}`,
@@ -80,7 +86,7 @@ export function buildVoucherIssued(payload = {}) {
               <td style="padding:24px;">
                 <p style="margin:0 0 12px;font-size:16px;">Hola ${escapeHtml(clientName)},</p>
                 <p style="margin:0 0 20px;font-size:14px;color:#555555;">
-                  Recibiste un vale del ${escapeHtml(discountLabel)} de descuento por la cancelación de tu turno${appointmentLabel ? ` del ${escapeHtml(appointmentLabel)}` : ""}. Se aplicará automáticamente en tu próxima reserva.
+                  Recibiste un vale del ${escapeHtml(discountLabel)} de descuento ${escapeHtml(reason)}. Se aplicará automáticamente en tu próxima reserva.
                 </p>
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                   ${rows}

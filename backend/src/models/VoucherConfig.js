@@ -17,6 +17,14 @@ const voucherConfigSchema = new mongoose.Schema(
       min: 1,
       max: 365,
     },
+    // Días de vigencia del vale de fidelidad cada 10 turnos (RN8).
+    fidelity_days: {
+      type: Number,
+      required: true,
+      default: 30,
+      min: 1,
+      max: 365,
+    },
   },
   {
     collection: "voucher_configs",

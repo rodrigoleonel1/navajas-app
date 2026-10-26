@@ -17,6 +17,15 @@ export type Voucher = {
 
 export type VoucherConfig = {
   adminCancellationDays: number;
+  fidelityDays: number;
+};
+
+export type FidelityProgress = {
+  completed: number;
+  target: number;
+  inCycle: number;
+  remaining: number;
+  discountPercent: number;
 };
 
 export const VOUCHER_STATUS_LABELS: Record<VoucherStatus, string> = {
@@ -44,6 +53,11 @@ export async function listVouchers(): Promise<Voucher[]> {
   return res.data;
 }
 
+export async function getFidelityProgress(): Promise<FidelityProgress> {
+  const res = await api.get<FidelityProgress>("/vouchers/fidelity");
+  return res.data;
+}
+
 export async function getVoucherConfig(): Promise<VoucherConfig> {
   const res = await api.get<VoucherConfig>("/voucher-config");
   return res.data;
@@ -51,6 +65,7 @@ export async function getVoucherConfig(): Promise<VoucherConfig> {
 
 export async function updateVoucherConfig(input: {
   adminCancellationDays: number;
+  fidelityDays: number;
 }): Promise<VoucherConfig> {
   const res = await api.patch<VoucherConfig>("/voucher-config", input);
   return res.data;

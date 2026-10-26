@@ -163,11 +163,15 @@ GET   /api/cron/reminders             # Authorization: Bearer <CRON_SECRET>
 
 `GET /api/notifications` devuelve `{ items, unread }`. El límite máximo es 50 y el default 20. Los avisos incluyen `title`, `message`, `link`, `createdAt` y `readAt`.
 
-#### Vales (RN7)
+#### Vales (RN7/RN8)
 
 La cancelación del admin es una operación atómica: en la misma transacción se marca el turno como `cancelled` con `cancel_type: "free"` y se crea el `Voucher` del 20%. La emisión es idempotente por `source_appointment_id + source` (`admin_cancellation`), así que un reintento no duplica el vale.
 
-La duración se configura con el singleton `voucher_configs` (`key: "default"`). El campo `admin_cancellation_days` acepta enteros de 1 a 365 y por defecto es 30. El admin lo consulta y actualiza con `GET/PATCH /api/voucher-config`; la pantalla es `/app/voucher-config`.
+Al completar un turno, la misma transacción cuenta los turnos `completed` del cliente y, si el total es múltiplo de 10, emite un vale `fidelity` del 30% (RN8). La caducidad se fija al emitir según la configuración vigente en ese momento.
+
+La duración se configura con el singleton `voucher_configs` (`key: "default"`). Los campos `admin_cancellation_days` y `fidelity_days` aceptan enteros de 1 a 365 y por defecto son 30. El admin los consulta y actualiza con `GET/PATCH /api/voucher-config`; la pantalla es `/app/voucher-config`.
+
+El progreso de fidelidad del cliente se consulta con `GET /api/vouchers/fidelity`, que devuelve los turnos completados, el ciclo actual de 10 y cuántos faltan para el próximo vale.
 
 Al reservar, el service busca el vale vigente del cliente (`used_at: null` y `expires_at > now`), ordena por vencimiento más próximo y reserva **uno solo** de forma atómica. Si la reserva falla, la transacción devuelve el vale a disponible. El turno guarda `voucher_id` y `voucher_discount`; el descuento se calcula después de RN5 y el total final queda en `price_snapshot`.
 
@@ -197,6 +201,7 @@ PATCH  /api/appointments/:id            # admin: completed | cancelled
 PATCH  /api/appointments/:id/cancel     # cliente
 PATCH  /api/appointments/:id/no-show    # admin
 GET    /api/vouchers
+GET    /api/vouchers/fidelity                   # cliente: progreso RN8
 GET    /api/voucher-config               # admin
 PATCH  /api/voucher-config               # admin
 GET    /api/offers
@@ -558,8 +563,9 @@ Los roles deben utilizarse para proteger operaciones sensibles, especialmente la
 | `GET /api/cron/reminders` |  |  |  | Protegido por `CRON_SECRET`, no por JWT |
 | `POST /api/offers` |  |  | ✓ | RN11 |
 | `GET /api/vouchers` | ✓ (propios) |  |  | `client_id = req.user.id` |
-| `GET /api/voucher-config` |  |  | ✓ | Configuración de duración de vales RN7 |
-| `PATCH /api/voucher-config` |  |  | ✓ | `adminCancellationDays` entre 1 y 365 |
+| `GET /api/vouchers/fidelity` | ✓ (propio) |  |  | Progreso RN8: completados, ciclo de 10 y faltantes |
+| `GET /api/voucher-config` |  |  | ✓ | Configuración de duración de vales RN7/RN8 |
+| `PATCH /api/voucher-config` |  |  | ✓ | `adminCancellationDays` y `fidelityDays` entre 1 y 365 |
 
 ### Filtrado obligatorio por identidad
 

@@ -8,10 +8,12 @@ import { getErrorMessage } from "../../lib/api";
 import { formatDateKey, toBusinessDayKey } from "../../lib/datetime";
 import { cn } from "../../lib/utils";
 import {
+  getFidelityProgress,
   listVouchers,
   VOUCHER_SOURCE_LABELS,
   VOUCHER_STATUS_LABELS,
   VOUCHER_STATUS_TONES,
+  type FidelityProgress,
   type Voucher,
 } from "../../lib/vouchers";
 
@@ -63,14 +65,17 @@ function VoucherCard({ voucher }: { voucher: Voucher }) {
 
 export function ClientVouchersPage() {
   const [vouchers, setVouchers] = useState<Voucher[]>([]);
+  const [progress, setProgress] = useState<FidelityProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
-    listVouchers()
-      .then((data) => {
-        if (!cancelled) setVouchers(data);
+    Promise.all([listVouchers(), getFidelityProgress()])
+      .then(([data, fidelity]) => {
+        if (cancelled) return;
+        setVouchers(data);
+        setProgress(fidelity);
       })
       .catch((err) => {
         if (!cancelled) {
@@ -103,6 +108,32 @@ export function ClientVouchersPage() {
         <p className="mt-6 text-sm text-destructive">{error}</p>
       ) : (
         <div className="mt-8 flex flex-col gap-8">
+          {progress && (
+            <div className="bg-card border border-border rounded-2xl p-6">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="font-barlow font-bold uppercase text-sm tracking-widest">
+                  Fidelidad
+                </h3>
+                <span className="font-jetbrains text-xs text-muted">
+                  {progress.inCycle}/{progress.target} turnos
+                </span>
+              </div>
+              <p className="mt-2 text-sm text-muted">
+                Cada {progress.target} turnos completados ganás un vale del{" "}
+                {progress.discountPercent}%. Te faltan {progress.remaining}{" "}
+                turno{progress.remaining === 1 ? "" : "s"} para el próximo.
+              </p>
+              <div className="mt-4 h-2 overflow-hidden rounded-full border border-border bg-background">
+                <div
+                  className="h-full bg-primary transition-all"
+                  style={{
+                    width: `${(progress.inCycle / progress.target) * 100}%`,
+                  }}
+                />
+              </div>
+            </div>
+          )}
+
           <div className="bg-card border border-border rounded-2xl p-6">
             <div className="flex items-center justify-between gap-3">
               <h3 className="font-barlow font-bold uppercase text-sm tracking-widest">

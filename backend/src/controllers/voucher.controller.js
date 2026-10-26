@@ -1,4 +1,5 @@
 import {
+  getFidelityProgress as getFidelityProgressService,
   getVoucherConfig as getVoucherConfigService,
   listVouchers as listVouchersService,
   updateVoucherConfig as updateVoucherConfigService,
@@ -8,6 +9,15 @@ export async function listVouchers(req, res, next) {
   try {
     const vouchers = await listVouchersService({ userId: req.user.id });
     res.json(vouchers);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function getFidelityProgress(req, res, next) {
+  try {
+    const progress = await getFidelityProgressService({ userId: req.user.id });
+    res.json(progress);
   } catch (err) {
     next(err);
   }

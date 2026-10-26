@@ -27,6 +27,7 @@ import {
   attachVoucherToAppointment,
   claimActiveVoucherForBooking,
   issueAdminCancellationVoucher,
+  issueFidelityVoucherIfNeeded,
 } from "./voucher.service.js";
 
 const APPOINTMENT_FIELDS =
@@ -443,8 +444,9 @@ async function enqueueStatusNotification({
   }
 }
 
-// RN7: avisa al cliente que se le emitió un vale por la cancelación del admin.
-// El turno debe venir populado con client_id (name, email) y barber_id (name).
+// RN7/RN8: avisa al cliente que se le emitió un vale (cancelación del admin o
+// fidelidad). El turno debe venir populado con client_id (name, email) y
+// barber_id (name).
 async function enqueueVoucherNotification({ appointment, voucher }) {
   if (!voucher) return;
 
@@ -800,25 +802,47 @@ export async function updateAppointmentStatus({ id, status }) {
   }
 
   if (status === "completed") {
-    const updated = await Appointment.findOneAndUpdate(
-      { _id: appointmentOid, status: "pending" },
-      { $set: { status: "completed" } },
-      { returnDocument: "after" },
-    )
+    let voucher = null;
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        const updated = await Appointment.findOneAndUpdate(
+          { _id: appointmentOid, status: "pending" },
+          { $set: { status: "completed" } },
+          { returnDocument: "after", session },
+        );
+
+        if (!updated) {
+          throw createAppError(
+            400,
+            "VALIDATION_ERROR",
+            "Solo se puede cambiar un turno pendiente",
+          );
+        }
+
+        // RN8: al completar el 10°, 20°... turno se emite el vale de fidelidad.
+        voucher = await issueFidelityVoucherIfNeeded({
+          appointment: updated,
+          session,
+        });
+      });
+    } finally {
+      await session.endSession();
+    }
+
+    const populated = await Appointment.findById(appointmentOid)
       .select(APPOINTMENT_FIELDS)
       .populate("barber_id", "name")
       .populate("client_id", "name email")
       .populate("service_ids", "name price duration")
       .lean();
 
-    if (!updated) {
-      throw createAppError(
-        400,
-        "VALIDATION_ERROR",
-        "Solo se puede cambiar un turno pendiente",
-      );
+    if (!populated) {
+      throw createAppError(404, "NOT_FOUND", "Turno no encontrado");
     }
-    return toAppointmentDTO(updated);
+
+    await enqueueVoucherNotification({ appointment: populated, voucher });
+    return toAppointmentDTO(populated);
   }
 
   let voucher = null;
