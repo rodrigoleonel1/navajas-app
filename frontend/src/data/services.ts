@@ -20,7 +20,7 @@ export const services: Service[] = [
   },
   {
     index: "03",
-    title: "Barba premium",
+    title: "Barba",
     description: "Perfilado y toalla caliente",
     price: "$8.000",
   },

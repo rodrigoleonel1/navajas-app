@@ -49,6 +49,14 @@ export function ServiceCreateModal({
           {...register("name")}
         />
         <Input
+          id="description"
+          label="Descripción"
+          placeholder="Fade, taper o tijera"
+          maxLength={120}
+          error={errors.description?.message}
+          {...register("description")}
+        />
+        <Input
           id="duration"
           label="Duración (minutos)"
           type="number"

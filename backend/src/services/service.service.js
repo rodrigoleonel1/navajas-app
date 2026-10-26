@@ -11,6 +11,7 @@ function toServiceDTO(doc) {
   return {
     id: doc._id.toString(),
     name: doc.name,
+    description: doc.description ?? "",
     duration: doc.duration,
     price: doc.price,
     active: doc.active,
@@ -19,7 +20,7 @@ function toServiceDTO(doc) {
 
 export async function listServices({ includeInactive = false } = {}) {
   const services = await Service.find(includeInactive ? {} : { active: true })
-    .select("name duration price active")
+    .select("name description duration price active")
     .sort({ name: 1 })
     .lean();
   return services.map(toServiceDTO);
@@ -38,7 +39,7 @@ export async function listPopularServices({ limit = 3 } = {}) {
   );
 
   const services = await Service.find({ active: true })
-    .select("name duration price active")
+    .select("name description duration price active")
     .lean();
 
   return services
@@ -59,7 +60,7 @@ export async function getServiceById(id) {
   assertObjectId(id, "ID de servicio inválido");
 
   const service = await Service.findById(id)
-    .select("name duration price active")
+    .select("name description duration price active")
     .lean();
   if (!service) {
     throw createAppError(404, "NOT_FOUND", "Servicio no encontrado");
@@ -68,14 +69,19 @@ export async function getServiceById(id) {
   return toServiceDTO(service);
 }
 
-export async function createService({ name, duration, price }) {
+export async function createService({ name, description, duration, price }) {
   const normalizedName = name.trim();
   if (!normalizedName) {
     throw createAppError(400, "VALIDATION_ERROR", "Nombre requerido");
   }
+  const normalizedDescription = description?.trim();
+  if (!normalizedDescription) {
+    throw createAppError(400, "VALIDATION_ERROR", "Descripción requerida");
+  }
 
   const service = await Service.create({
     name: normalizedName,
+    description: normalizedDescription,
     duration,
     price,
     active: true,
@@ -95,6 +101,13 @@ export async function updateService(id, patch) {
     }
     update.name = normalizedName;
   }
+  if (patch.description !== undefined) {
+    const normalizedDescription = patch.description.trim();
+    if (!normalizedDescription) {
+      throw createAppError(400, "VALIDATION_ERROR", "Descripción requerida");
+    }
+    update.description = normalizedDescription;
+  }
   if (patch.duration !== undefined) update.duration = patch.duration;
   if (patch.price !== undefined) update.price = patch.price;
   if (patch.active !== undefined) update.active = patch.active;
@@ -103,7 +116,7 @@ export async function updateService(id, patch) {
     returnDocument: "after",
     runValidators: true,
   })
-    .select("name duration price active")
+    .select("name description duration price active")
     .lean();
 
   if (!service) {

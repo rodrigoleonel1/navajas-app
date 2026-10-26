@@ -25,6 +25,11 @@ export const createBarberSchema = z.object({
 
 export const serviceSchema = z.object({
   name: z.string().trim().min(2, "Nombre mínimo 2 caracteres").max(50, "Nombre máximo 50 caracteres"),
+  description: z
+    .string()
+    .trim()
+    .min(2, "Descripción mínimo 2 caracteres")
+    .max(120, "Descripción máximo 120 caracteres"),
   duration: z
     .number({ error: "Duración inválida" })
     .int("Duración debe ser entera")

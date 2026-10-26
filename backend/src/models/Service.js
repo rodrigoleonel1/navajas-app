@@ -9,6 +9,14 @@ const serviceSchema = new mongoose.Schema(
       minlength: 2,
       maxlength: 50,
     },
+    // Texto corto que la landing muestra debajo del nombre.
+    description: {
+      type: String,
+      required: true,
+      trim: true,
+      minlength: 2,
+      maxlength: 120,
+    },
     duration: {
       type: Number,
       required: true,

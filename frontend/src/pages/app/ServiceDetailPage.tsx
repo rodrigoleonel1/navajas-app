@@ -44,6 +44,7 @@ export function ServiceDetailPage() {
         setService(data);
         reset({
           name: data.name,
+          description: data.description ?? "",
           duration: data.duration,
           price: data.price,
         });
@@ -133,6 +134,13 @@ export function ServiceDetailPage() {
         <h3 className="font-barlow font-bold uppercase text-sm tracking-widest">
           Editar servicio
         </h3>
+        <Input
+          id="description"
+          label="Descripción"
+          maxLength={120}
+          error={errors.description?.message}
+          {...register("description")}
+        />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Input
             id="name"

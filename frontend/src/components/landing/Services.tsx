@@ -10,22 +10,11 @@ import { SectionEyebrow } from "../ui/SectionEyebrow";
 import { SectionTitle } from "../ui/SectionTitle";
 import { ServiceRow } from "./ServiceRow";
 
-// Copy de marketing por nombre de servicio de la base. El precio y la
-// duración siempre salen de Mongo; si un servicio no está acá se muestra su
-// nombre real y la duración.
-const COPY: Record<string, { title?: string; description: string }> = {
-  "Corte clásico": { description: "Fade, taper o tijera" },
-  "Corte + Barba": { description: "Ritual completo" },
-  Barba: { title: "Barba premium", description: "Perfilado y toalla caliente" },
-  "Afeitado a navaja": { description: "Navaja y toalla caliente" },
-  "Color / Decoloración": { description: "Color y decoloración" },
-};
-
 function toLandingServices(apiServices: ApiService[]): Service[] {
   return apiServices.map((service, index) => ({
     index: String(index + 1).padStart(2, "0"),
-    title: COPY[service.name]?.title ?? service.name,
-    description: COPY[service.name]?.description ?? `${service.duration} min`,
+    title: service.name,
+    description: service.description || `${service.duration} min`,
     price: formatPrice(service.price),
   }));
 }
