@@ -39,7 +39,7 @@ export function BarberTable({
               <td className="px-4 py-3 text-muted">{barber.email}</td>
               <td className="px-4 py-3 text-muted whitespace-nowrap">
                 {barber.barberProfile?.workingHours?.start ?? "09:00"}–
-                {barber.barberProfile?.workingHours?.end ?? "18:00"}
+                {barber.barberProfile?.workingHours?.end ?? "18:00"} hs
               </td>
               <td className="px-4 py-3 text-muted whitespace-nowrap">
                 <RatingSummary

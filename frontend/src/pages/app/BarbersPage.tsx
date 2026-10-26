@@ -163,7 +163,7 @@ export function BarbersPage() {
                       />
                     </span>
                   }
-                  footerLeft={`${barber.barberProfile?.workingHours?.start ?? "09:00"}–${barber.barberProfile?.workingHours?.end ?? "18:00"}`}
+                  footerLeft={`${barber.barberProfile?.workingHours?.start ?? "09:00"}–${barber.barberProfile?.workingHours?.end ?? "18:00"} hs`}
                   footerRight={
                     <Badge tone={barber.active ? "success" : "danger"}>
                       {barber.active ? "Activo" : "Inactivo"}
