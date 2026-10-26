@@ -11,6 +11,7 @@ import { useConfirm } from "../../hooks/useConfirm";
 import { useToast } from "../../hooks/useToast";
 import { getErrorMessage } from "../../lib/api";
 import { formatDateKey, toBusinessDayKey } from "../../lib/datetime";
+import { cn } from "../../lib/utils";
 import {
   createHoliday,
   deleteHoliday,
@@ -155,44 +156,96 @@ export function HolidaysPage() {
   const upcoming = holidays.filter((holiday) => holiday.date >= todayKey);
   const past = holidays.filter((holiday) => holiday.date < todayKey);
 
-  function renderList(items: Holiday[], faded = false) {
+  function holidayMenuItems(holiday: Holiday) {
+    return [
+      {
+        label: "Editar",
+        onSelect: () => startEdit(holiday),
+      },
+      {
+        label: "Eliminar",
+        danger: true,
+        onSelect: () => handleDelete(holiday),
+      },
+    ];
+  }
+
+  function renderTable(items: Holiday[], faded = false) {
     if (items.length === 0) {
       return (
         <p className="text-sm text-muted">
-          {faded ? "Sin feriados pasados." : "No hay feriados configurados."}
+          {faded ? "Sin feriados pasados." : "No hay feriados próximos."}
         </p>
       );
     }
 
     return (
-      <ul className="grid items-start gap-3 sm:grid-cols-2">
-        {items.map((holiday) => (
-          <ListCard
-            key={holiday.id}
-            title={holiday.name}
-            subtitle="Feriado del negocio"
-            footerLeft={formatDateKey(holiday.date)}
-            faded={faded}
-            footerRight={
-              <AppointmentMenu
-                ariaLabel={`Acciones de ${holiday.name}`}
-                busy={deletingId === holiday.id}
-                items={[
-                  {
-                    label: "Editar",
-                    onSelect: () => startEdit(holiday),
-                  },
-                  {
-                    label: "Eliminar",
-                    danger: true,
-                    onSelect: () => handleDelete(holiday),
-                  },
-                ]}
-              />
-            }
-          />
-        ))}
-      </ul>
+      <>
+        <div className="hidden lg:block overflow-hidden rounded-xl border border-border bg-background">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border text-left text-[11px] uppercase tracking-widest text-muted">
+                <th className="px-4 py-3 font-semibold">Fecha</th>
+                <th className="px-4 py-3 font-semibold">Nombre</th>
+                <th className="px-4 py-3 font-semibold">
+                  <span className="sr-only">Acciones</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {items.map((holiday) => (
+                <tr
+                  key={holiday.id}
+                  className="border-b border-border last:border-0 transition-colors hover:bg-primary/5"
+                >
+                  <td
+                    className={cn(
+                      "px-4 py-3 font-jetbrains whitespace-nowrap",
+                      faded ? "text-muted" : "font-medium",
+                    )}
+                  >
+                    {formatDateKey(holiday.date)}
+                  </td>
+                  <td
+                    className={cn(
+                      "px-4 py-3",
+                      faded ? "text-muted" : "font-medium",
+                    )}
+                  >
+                    {holiday.name}
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <AppointmentMenu
+                      ariaLabel={`Acciones de ${holiday.name}`}
+                      busy={deletingId === holiday.id}
+                      items={holidayMenuItems(holiday)}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <ul className="grid items-start gap-3 sm:grid-cols-2 lg:hidden">
+          {items.map((holiday) => (
+            <ListCard
+              key={holiday.id}
+              title={holiday.name}
+              subtitle="Feriado del negocio"
+              footerLeft={formatDateKey(holiday.date)}
+              faded={faded}
+              footerRight={
+                <AppointmentMenu
+                  ariaLabel={`Acciones de ${holiday.name}`}
+                  busy={deletingId === holiday.id}
+                  items={holidayMenuItems(holiday)}
+                />
+              }
+            />
+          ))}
+        </ul>
+      </>
     );
   }
 
@@ -205,7 +258,7 @@ export function HolidaysPage() {
         description="Fechas globales que aplican a todos los barberos."
       />
 
-      <div className="mt-8 grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
+      <div className="mt-8 flex flex-col gap-6">
         <div className="bg-card border border-border rounded-2xl p-6">
           <h3 className="font-barlow font-bold uppercase text-sm tracking-widest mb-4">
             Agregar feriado
@@ -299,13 +352,13 @@ export function HolidaysPage() {
             <Loader label="Cargando feriados..." height="card" />
           ) : (
             <>
-              {renderList(upcoming)}
+              {renderTable(upcoming)}
               {past.length > 0 && (
                 <div className="mt-6 border-t border-border pt-5">
                   <h4 className="mb-3 font-barlow font-bold uppercase text-xs tracking-widest text-muted">
                     Pasados ({past.length})
                   </h4>
-                  {renderList(past, true)}
+                  {renderTable(past, true)}
                 </div>
               )}
             </>
