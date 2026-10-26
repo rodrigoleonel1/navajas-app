@@ -16,7 +16,7 @@ export const services: Service[] = [
     index: "02",
     title: "Corte + barba",
     description: "Ritual completo",
-    price: "$23.000",
+    price: "$25.000",
   },
   {
     index: "03",

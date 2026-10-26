@@ -18,3 +18,9 @@ export const createServiceSchema = z.object({
 export const updateServiceSchema = createServiceSchema
   .partial()
   .extend({ active: z.boolean().optional() });
+
+// Landing pública: cantidad de servicios más pedidos a devolver.
+export const listPopularServicesQuerySchema = z.object({
+  limit: z.coerce.number().int().min(1).max(10).default(3),
+});
+

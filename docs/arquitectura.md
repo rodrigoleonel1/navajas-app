@@ -203,6 +203,7 @@ Todas las rutas bajo prefijo `/api`. Usar nombres de recursos en plural:
 POST   /api/auth/signup
 POST   /api/auth/login
 GET    /api/services
+GET    /api/services/popular?limit=3             # landing: más pedidos
 GET    /api/barbers
 GET    /api/barbers/me/earnings?from=...&to=...   # barbero
 GET    /api/barbers/daily-earnings?date=...      # admin

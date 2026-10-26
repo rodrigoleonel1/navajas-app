@@ -72,6 +72,14 @@ export async function listServices(
   return res.data;
 }
 
+// Landing pública: servicios activos ordenados por cantidad de turnos.
+export async function listPopularServices(limit = 3): Promise<Service[]> {
+  const res = await api.get<Service[]>("/services/popular", {
+    params: { limit },
+  });
+  return res.data;
+}
+
 export async function getServiceById(id: string): Promise<Service> {
   const res = await api.get<Service>(`/services/${id}`);
   return res.data;

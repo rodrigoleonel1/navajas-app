@@ -1,6 +1,7 @@
 import {
   createService as createServiceFn,
   getServiceById as getServiceByIdFn,
+  listPopularServices as listPopularServicesFn,
   listServices as listServicesFn,
   updateService as updateServiceFn,
 } from "../services/service.service.js";
@@ -18,6 +19,17 @@ export async function listServices(req, res, next) {
       );
     }
     const services = await listServicesFn({ includeInactive });
+    res.json(services);
+  } catch (err) {
+    next(err);
+  }
+}
+
+export async function listPopularServices(req, res, next) {
+  try {
+    const services = await listPopularServicesFn({
+      limit: req.validatedQuery?.limit ?? 3,
+    });
     res.json(services);
   } catch (err) {
     next(err);
