@@ -186,6 +186,7 @@ GET    /api/services
 GET    /api/barbers
 GET    /api/barbers/me/earnings?from=...&to=...   # barbero
 GET    /api/barbers/daily-earnings?date=...      # admin
+GET    /api/reports?from=...&to=...              # admin: reportes del negocio
 GET    /api/holidays
 POST   /api/holidays
 PATCH  /api/holidays/:id
@@ -216,6 +217,8 @@ PATCH /api/appointments/:id/no-show
 ```
 
 Los endpoints `/api/holidays` son exclusivos del rol `admin`. La disponibilidad los refleja automáticamente en `nonWorkingDays` y bloquea la reserva con `HOLIDAY`. Los endpoints `/api/voucher-config` también son exclusivos del rol `admin`; `/api/vouchers` es del cliente y solo devuelve sus propios vales.
+
+`GET /api/reports?from=...&to=...` es exclusivo del rol `admin` y devuelve, para el rango de días comerciales: ingresos totales y por barbero (RN6), ausencias de clientes por barbero (`no_show` + cancelaciones `late`/`blocked`) y el top 5 de servicios, barberos y horarios solicitados.
 
 > `PATCH /api/appointments/:id/cancel` es del cliente y no acepta body. El admin usa `PATCH /api/appointments/:id` con `{status:'completed'|'cancelled'}`. La inasistencia tiene endpoint propio para validar la tolerancia de 15 minutos.
 

@@ -29,7 +29,8 @@ export function AppNavbar() {
             label: "Liquidaciones",
             index: "05",
           },
-          { to: "/app/voucher-config", label: "Config. vales", index: "06" },
+          { to: "/app/reports", label: "Reportes", index: "06" },
+          { to: "/app/voucher-config", label: "Config. vales", index: "07" },
         ]
       : role === "barber"
         ? [
