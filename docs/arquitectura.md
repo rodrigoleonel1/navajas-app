@@ -135,7 +135,7 @@ La comisión del barbero se calcula por cada turno `completed` sobre el `price_s
 
 El día de imputación es el día comercial de `start_at` en `America/Argentina/Buenos_Aires`, no la fecha en que se marcó el turno como completado. El barbero consulta `GET /api/barbers/me/earnings?from=YYYY-MM-DD&to=YYYY-MM-DD` (rango máximo 366 días); la UI usa la semana actual (lunes a hoy) o el mes actual (día 1 a hoy). El admin consulta `GET /api/barbers/daily-earnings?date=YYYY-MM-DD`, que devuelve todos los barberos activos —aunque tengan cero turnos— y los inactivos que tuvieron turnos completados ese día.
 
-La pantalla del barbero (`/app/barber/ingresos`) muestra la comisión con un gráfico Recharts. La pantalla del admin (`/app/daily-earnings`, label “Liquidaciones”) muestra comisión, parte local y total por barbero. No se registra el pago ni se marca la liquidación como pagada en esta versión.
+La pantalla del barbero (`/app/barber/ingresos`) muestra la comisión con un gráfico Recharts. La pantalla del admin (`/app/daily-earnings`, label “Ingresos”) muestra comisión, parte local y total por barbero. No se registra el pago ni se marca la liquidación como pagada en esta versión.
 
 #### Notificaciones in-app y recordatorios (RN0/RN9)
 

@@ -51,7 +51,7 @@ export function AdminDailyEarningsPage() {
       } catch (err) {
         if (!cancelled) {
           setData(null);
-          setError(getErrorMessage(err, "Error al cargar la liquidación"));
+          setError(getErrorMessage(err, "Error al cargar los ingresos"));
         }
       } finally {
         if (!cancelled) setLoading(false);
@@ -68,8 +68,8 @@ export function AdminDailyEarningsPage() {
     <Section>
       <SectionHeader
         eyebrow="Panel — Admin"
-        title="Liquidaciones"
-        highlight="diarias."
+        title="Ingresos"
+        highlight="del día."
         description="Comisión de barberos y parte del local por turnos completados."
       />
 
@@ -90,7 +90,7 @@ export function AdminDailyEarningsPage() {
       )}
 
       {loading ? (
-        <Loader label="Cargando liquidación..." height="card" />
+        <Loader label="Cargando ingresos..." height="card" />
       ) : data ? (
         <div className="mt-6 flex flex-col gap-6">
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -129,7 +129,7 @@ export function AdminDailyEarningsPage() {
 
             {data.barbers.length === 0 ? (
               <p className="text-sm text-muted">
-                No hay barberos para liquidar.
+                No hay barberos para mostrar.
               </p>
             ) : (
               <>
