@@ -193,7 +193,7 @@ Los controllers únicamente deben recibir la petición, delegar al service y con
 
 El cliente califica con 1 a 5 estrellas un turno **propio** en estado `completed`. La nota se guarda embebida en el turno (`rating` y `rated_at`): una sola calificación por turno e **inmutable** (no se edita ni se borra). `POST /api/ratings` recibe `{ appointmentId, score }`, valida ownership y estado, y responde `409 ALREADY_RATED` si el turno ya fue calificado.
 
-El promedio es **interno de la barbería**: se calcula al vuelo con una agregación sobre turnos `completed` con `rating != null`, agrupados por `barber_id`, redondeado a 1 decimal. `GET /api/barbers` incluye `ratingAverage` y `ratingCount` solo cuando el solicitante es admin; el cliente que reserva no los recibe. El detalle de barbero, el listado de barberos y el detalle de turno muestran la nota. El reporte de calificación promedio (HU-19) queda en los reportes del negocio.
+El promedio es **interno de la barbería**: se calcula al vuelo con una agregación sobre turnos `completed` con `rating != null`, agrupados por `barber_id`, redondeado a 1 decimal. `GET /api/barbers` incluye `ratingAverage` y `ratingCount` solo cuando el solicitante es admin; el cliente que reserva no los recibe. El detalle de barbero, el listado de barberos y el detalle de turno muestran la nota. El reporte de calificación promedio (HU-19) se calcula en `GET /api/reports`, con promedio general y por barbero para el rango de fechas.
 
 ### API REST
 
@@ -242,7 +242,7 @@ PATCH /api/appointments/:id/no-show
 
 Los endpoints `/api/holidays` son exclusivos del rol `admin`. La disponibilidad los refleja automáticamente en `nonWorkingDays` y bloquea la reserva con `HOLIDAY`. Los endpoints `/api/voucher-config` también son exclusivos del rol `admin`; `/api/vouchers` es del cliente y solo devuelve sus propios vales. `GET /api/offers` devuelve solo las activas y `?all=1` requiere rol `admin`; `POST` y `PATCH` son exclusivos del `admin`.
 
-`GET /api/reports?from=...&to=...` es exclusivo del rol `admin` y devuelve, para el rango de días comerciales: ingresos totales y por barbero (RN6), ausencias de clientes por barbero (`no_show` + cancelaciones `late`/`blocked`) y el top 5 de servicios, barberos y horarios solicitados.
+`GET /api/reports?from=...&to=...` es exclusivo del rol `admin` y devuelve, para el rango de días comerciales: ingresos totales y por barbero (RN6), ausencias de clientes por barbero (`no_show` + cancelaciones `late`/`blocked`), calificación promedio general y por barbero (EP-7) y el top 5 de servicios, barberos y horarios solicitados. El promedio de calificaciones considera solo turnos `completed` con `rating != null`, imputados por el día comercial de `start_at`; se redondea a 1 decimal y es `null` cuando no hay notas en el período.
 
 > `PATCH /api/appointments/:id/cancel` es del cliente y no acepta body. El admin usa `PATCH /api/appointments/:id` con `{status:'completed'|'cancelled'}`. La inasistencia tiene endpoint propio para validar la tolerancia de 15 minutos.
 

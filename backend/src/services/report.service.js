@@ -59,6 +59,11 @@ function topRows(counts, limit = TOP_LIMIT) {
     .slice(0, limit);
 }
 
+// Promedio de calificaciones con 1 decimal; null si no hay notas.
+function averageRating(sum, count) {
+  return count === 0 ? null : Math.round((sum / count) * 10) / 10;
+}
+
 // Reporte del negocio para un rango de días comerciales: ingresos, ausencias
 // de clientes por barbero y lo más solicitado (servicio / barbero / horario).
 export async function getBusinessReport({ from, to }) {
@@ -70,7 +75,7 @@ export async function getBusinessReport({ from, to }) {
       },
     })
       .select(
-        "barber_id service_ids start_at status cancel_type price_snapshot",
+        "barber_id service_ids start_at status cancel_type price_snapshot rating",
       )
       .lean(),
     User.find({ role: "barber" }).select("name active").lean(),
@@ -106,12 +111,25 @@ export async function getBusinessReport({ from, to }) {
     });
   }
 
+  // EP-7: promedio de notas por barbero sobre turnos completados del período.
+  const ratingRows = new Map();
+  for (const barber of barbers) {
+    if (!barber.active) continue;
+    ratingRows.set(barber._id.toString(), {
+      barberId: barber._id.toString(),
+      barberName: barber.name,
+      sum: 0,
+      count: 0,
+    });
+  }
+
   const serviceCounts = new Map();
   const barberCounts = new Map();
   const hourCounts = new Map();
 
   const incomeTotals = emptyIncomeTotals();
   const absenceTotals = { noShow: 0, lateCancellations: 0, total: 0 };
+  const ratingTotals = { sum: 0, count: 0 };
 
   for (const appointment of appointments) {
     const barberId = appointment.barber_id.toString();
@@ -125,6 +143,18 @@ export async function getBusinessReport({ from, to }) {
       }
       addCompletedAppointment(row, appointment.price_snapshot);
       addCompletedAppointment(incomeTotals, appointment.price_snapshot);
+
+      if (appointment.rating != null) {
+        let ratingRow = ratingRows.get(barberId);
+        if (!ratingRow) {
+          ratingRow = { barberId, barberName: name, sum: 0, count: 0 };
+          ratingRows.set(barberId, ratingRow);
+        }
+        ratingRow.sum += appointment.rating;
+        ratingRow.count += 1;
+        ratingTotals.sum += appointment.rating;
+        ratingTotals.count += 1;
+      }
     }
 
     const absence = isAbsence(appointment);
@@ -171,6 +201,12 @@ export async function getBusinessReport({ from, to }) {
   const absenceBarbers = [...absenceRows.values()].sort(
     (a, b) => b.total - a.total || a.barberName.localeCompare(b.barberName, "es"),
   );
+  const ratingBarbers = [...ratingRows.values()]
+    .sort((a, b) => a.barberName.localeCompare(b.barberName, "es"))
+    .map(({ sum, ...row }) => ({
+      ...row,
+      average: averageRating(sum, row.count),
+    }));
 
   return {
     from,
@@ -182,6 +218,11 @@ export async function getBusinessReport({ from, to }) {
     absences: {
       totals: absenceTotals,
       barbers: absenceBarbers,
+    },
+    ratings: {
+      average: averageRating(ratingTotals.sum, ratingTotals.count),
+      count: ratingTotals.count,
+      barbers: ratingBarbers,
     },
     popular: {
       services: topRows(serviceCounts),

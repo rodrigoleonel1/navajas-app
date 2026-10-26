@@ -4,6 +4,7 @@ import { ListCard } from "../../components/ui/ListCard";
 import { Loader } from "../../components/ui/Loader";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
+import { StarRating } from "../../components/StarRating";
 import { getErrorMessage } from "../../lib/api";
 import {
   formatDateKey,
@@ -89,14 +90,14 @@ export function ReportsPage() {
   const [error, setError] = useState("");
 
   const rangeValid = useMemo(() => range.from <= range.to, [range]);
+  // El rango inválido se resuelve en el render, sin setState dentro del effect.
+  const rangeError = rangeValid
+    ? ""
+    : "El rango de fechas es inválido: desde no puede ser posterior a hasta.";
+  const visibleError = rangeError || error;
 
   useEffect(() => {
-    if (!rangeValid) {
-      setData(null);
-      setLoading(false);
-      setError("El rango de fechas es inválido: desde no puede ser posterior a hasta.");
-      return;
-    }
+    if (!rangeValid) return;
 
     let cancelled = false;
 
@@ -128,7 +129,7 @@ export function ReportsPage() {
         eyebrow="Panel — Admin"
         title="Reportes"
         highlight="del negocio."
-        description="Ingresos, ausencias de clientes por barbero y lo más solicitado en el período."
+        description="Ingresos, ausencias de clientes por barbero, calificación promedio y lo más solicitado en el período."
       />
 
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -151,13 +152,15 @@ export function ReportsPage() {
         </p>
       </div>
 
-      {error && <p className="mt-6 text-sm text-destructive">{error}</p>}
+      {visibleError && (
+        <p className="mt-6 text-sm text-destructive">{visibleError}</p>
+      )}
 
-      {loading ? (
+      {!rangeValid ? null : loading ? (
         <Loader label="Cargando reportes..." height="card" />
       ) : data ? (
         <div className="mt-6 flex flex-col gap-6">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <SummaryCard
               label="Facturado"
               value={formatPrice(data.income.totals.gross)}
@@ -177,6 +180,19 @@ export function ReportsPage() {
               label="Ausencias de clientes"
               value={String(data.absences.totals.total)}
               hint="Inasistencias + cancelaciones tardías"
+            />
+            <SummaryCard
+              label="Calificación promedio"
+              value={
+                data.ratings.average == null
+                  ? "—"
+                  : `${data.ratings.average.toFixed(1)} / 5`
+              }
+              hint={
+                data.ratings.count === 0
+                  ? "Sin calificaciones en el período"
+                  : `${data.ratings.count} calificación${data.ratings.count === 1 ? "" : "es"}`
+              }
             />
           </div>
 
@@ -347,6 +363,101 @@ export function ReportsPage() {
             {data.income.totals.completed === 0 && (
               <p className="mt-4 text-sm text-muted">
                 No hay turnos completados en el período.
+              </p>
+            )}
+          </div>
+
+          <div className="rounded-2xl border border-border bg-card p-6">
+            <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+              <h3 className="font-barlow text-sm font-bold uppercase tracking-widest">
+                Calificaciones por barbero
+              </h3>
+              <p className="text-xs text-muted">
+                Promedio de notas de turnos completados
+              </p>
+            </div>
+
+            <div className="hidden overflow-hidden rounded-xl border border-border bg-background lg:block">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border text-left text-[11px] uppercase tracking-widest text-muted">
+                    <th className="px-4 py-3 font-semibold">Barbero</th>
+                    <th className="px-4 py-3 text-right font-semibold">
+                      Promedio
+                    </th>
+                    <th className="px-4 py-3 text-right font-semibold">
+                      Calificaciones
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.ratings.barbers.map((barber) => (
+                    <tr
+                      key={barber.barberId}
+                      className="border-b border-border transition-colors last:border-0 hover:bg-primary/5"
+                    >
+                      <td className="px-4 py-3 font-medium">
+                        {barber.barberName}
+                      </td>
+                      <td className="px-4 py-3">
+                        {barber.average == null ? (
+                          <p className="text-right text-muted">—</p>
+                        ) : (
+                          <span className="flex items-center justify-end gap-2">
+                            <StarRating
+                              value={Math.round(barber.average)}
+                              size={14}
+                            />
+                            <span className="font-medium text-primary">
+                              {barber.average.toFixed(1)}
+                            </span>
+                          </span>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right text-muted">
+                        {barber.count}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <ul className="grid items-start gap-3 sm:grid-cols-2 lg:hidden">
+              {data.ratings.barbers.map((barber) => (
+                <ListCard
+                  key={barber.barberId}
+                  title={barber.barberName}
+                  subtitle={
+                    barber.count === 0
+                      ? "Sin calificaciones"
+                      : `${barber.count} calificación${barber.count === 1 ? "" : "es"}`
+                  }
+                  detail={
+                    barber.average == null ? undefined : (
+                      <StarRating
+                        value={Math.round(barber.average)}
+                        size={14}
+                      />
+                    )
+                  }
+                  footerLeft={
+                    barber.average == null
+                      ? "—"
+                      : `${barber.average.toFixed(1)} / 5`
+                  }
+                  footerRight={
+                    <span className="text-[10px] uppercase tracking-widest text-primary">
+                      Promedio
+                    </span>
+                  }
+                />
+              ))}
+            </ul>
+
+            {data.ratings.count === 0 && (
+              <p className="mt-4 text-sm text-muted">
+                No hay calificaciones en el período.
               </p>
             )}
           </div>

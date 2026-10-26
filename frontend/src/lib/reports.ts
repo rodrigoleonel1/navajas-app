@@ -20,6 +20,18 @@ export type ReportAbsenceTotals = {
   total: number;
 };
 
+export type ReportRatingBarber = {
+  barberId: string;
+  barberName: string;
+  average: number | null;
+  count: number;
+};
+
+export type ReportRatingTotals = {
+  average: number | null;
+  count: number;
+};
+
 export type ReportPopularRow = {
   label: string;
   count: number;
@@ -35,6 +47,9 @@ export type BusinessReport = {
   absences: {
     totals: ReportAbsenceTotals;
     barbers: ReportAbsenceBarber[];
+  };
+  ratings: ReportRatingTotals & {
+    barbers: ReportRatingBarber[];
   };
   popular: {
     services: ReportPopularRow[];
