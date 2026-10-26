@@ -255,12 +255,9 @@ export function HolidaysPage() {
       />
 
       <div
-        className={cn(
-          "mt-8 grid gap-6 xl:items-start",
-          hasPast && "xl:grid-cols-2",
-        )}
+        className={cn("mt-8 grid gap-6", hasPast && "xl:grid-cols-2")}
       >
-        <div className="bg-card border border-border rounded-2xl p-6">
+        <div className="bg-card border border-border rounded-2xl p-6 flex flex-col">
           {warning && (
             <div className="mb-4 flex items-start justify-between gap-3 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-xs text-primary">
               <p className="flex-1">{warning}</p>
@@ -274,7 +271,7 @@ export function HolidaysPage() {
               </button>
             </div>
           )}
-          <div className="mb-4 flex flex-wrap items-center gap-4">
+          <div className="mb-4 flex flex-wrap items-center gap-4 min-h-8">
             <h3 className="font-barlow font-bold uppercase text-sm tracking-widest mr-auto">
               Próximos ({upcomingTotal ?? 0})
             </h3>
@@ -299,25 +296,27 @@ export function HolidaysPage() {
             <>
               {renderTable(upcoming)}
               {upcomingTotal !== null && upcomingTotal > 0 && (
-                <Pager
-                  page={upcomingPage}
-                  totalPages={upcomingTotalPages}
-                  hasNext={upcomingHasNext}
-                  loading={loading}
-                  onPage={setUpcomingPage}
-                  label="feriados"
-                  pageSize={PAGE_SIZE}
-                  shown={upcoming.length}
-                  total={upcomingTotal}
-                />
+                <div className="mt-auto">
+                  <Pager
+                    page={upcomingPage}
+                    totalPages={upcomingTotalPages}
+                    hasNext={upcomingHasNext}
+                    loading={loading}
+                    onPage={setUpcomingPage}
+                    label="feriados"
+                    pageSize={PAGE_SIZE}
+                    shown={upcoming.length}
+                    total={upcomingTotal}
+                  />
+                </div>
               )}
             </>
           )}
         </div>
 
         {hasPast && (
-          <div className="bg-card border border-border rounded-2xl p-6">
-            <div className="mb-4 flex items-center justify-between gap-3">
+          <div className="bg-card border border-border rounded-2xl p-6 flex flex-col">
+            <div className="mb-4 flex items-center justify-between gap-3 min-h-8">
               <h3 className="font-barlow font-bold uppercase text-sm tracking-widest">
                 Pasados ({pastTotal})
               </h3>
@@ -327,17 +326,19 @@ export function HolidaysPage() {
             ) : (
               <>
                 {renderTable(past, true)}
-                <Pager
-                  page={pastPage}
-                  totalPages={pastTotalPages}
-                  hasNext={pastHasNext}
-                  loading={loading}
-                  onPage={setPastPage}
-                  label="feriados pasados"
-                  pageSize={PAGE_SIZE}
-                  shown={past.length}
-                  total={pastTotal}
-                />
+                <div className="mt-auto">
+                  <Pager
+                    page={pastPage}
+                    totalPages={pastTotalPages}
+                    hasNext={pastHasNext}
+                    loading={loading}
+                    onPage={setPastPage}
+                    label="feriados pasados"
+                    pageSize={PAGE_SIZE}
+                    shown={past.length}
+                    total={pastTotal}
+                  />
+                </div>
               </>
             )}
           </div>
