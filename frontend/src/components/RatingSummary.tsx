@@ -20,7 +20,7 @@ export function RatingSummary({
   return (
     <span className={className}>
       <span className="inline-flex items-center gap-1.5">
-        <StarRating value={Math.round(average)} size={size} />
+        <StarRating value={average} fractional size={size} />
         <span className="font-semibold">{formatRatingAverage(average)}</span>
         <span className="text-muted">({count})</span>
       </span>

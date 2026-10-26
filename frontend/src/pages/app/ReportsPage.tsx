@@ -405,7 +405,8 @@ export function ReportsPage() {
                         ) : (
                           <span className="flex items-center justify-end gap-2">
                             <StarRating
-                              value={Math.round(barber.average)}
+                              value={barber.average}
+                              fractional
                               size={14}
                             />
                             <span className="font-medium text-primary">
@@ -436,7 +437,8 @@ export function ReportsPage() {
                   detail={
                     barber.average == null ? undefined : (
                       <StarRating
-                        value={Math.round(barber.average)}
+                        value={barber.average}
+                        fractional
                         size={14}
                       />
                     )
