@@ -38,7 +38,6 @@ dotenv
 nodemailer (alternativa: Resend según FRD)
 date-fns
 express-mongo-sanitize
-express-rate-limit
 swagger-jsdoc
 swagger-ui-express
 ts-node-dev (dev)
@@ -60,7 +59,6 @@ ts-node-dev (dev)
 - **Nodemailer / Resend:** envío de emails y notificaciones por correo (ver FRD 4.1/4.2: Nodemailer en V1, Resend como alternativa).
 - **`date-fns`:** cálculos y manipulación de fechas.
 - **express-mongo-sanitize:** sanitización de entradas para reducir riesgos de inyección en consultas MongoDB.
-- **express-rate-limit:** limitación de solicitudes en endpoints sensibles.
 - **ts-node-dev:** desarrollo del backend TypeScript con reinicio automático.
 - **swagger-jsdoc + swagger-ui-express:** documentación OpenAPI.
 
@@ -716,22 +714,6 @@ isPending
 
 Esto evita dobles envíos y reduce el riesgo de reservas duplicadas que puedan romper la regla **RN1**.
 
-### Rate limiting
-
-Implementar `express-rate-limit` en endpoints sensibles:
-
-```text
-POST /api/auth/login
-POST /api/auth/signup
-POST /api/appointments
-```
-
-Objetivos:
-
-- prevenir brute-force en autenticación;
-- limitar spam de registros;
-- limitar spam de reservas.
-
 ---
 
 ## 5. Formato de Datos y Documentación
@@ -887,7 +869,6 @@ chore: instalar express-rate-limit y migrate-mongo
 - [ ] Aplicar autorización mediante `requireRole` + matriz por ruta.
 - [ ] Filtrar turnos por `req.user.id` (excepción admin).
 - [ ] Validar body/query mediante Zod.
-- [ ] Configurar rate limiting en `/api/auth/*` y `POST /api/appointments`.
 - [ ] Publicar Swagger en `/api-docs` con anotaciones en `routes/`.
 
 ### Frontend

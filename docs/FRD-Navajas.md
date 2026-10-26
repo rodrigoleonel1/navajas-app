@@ -187,7 +187,7 @@ Tabla de decisión: define qué notificación o acción se dispara según la con
 * Reportes completos (admin): inasistencia por barbero, ingresos totales/por barbero, más solicitados (barbero/horario/servicio/combo), calificación promedio.  
 * Sección "Vales y Penalizaciones" completa del lado del cliente (vigente/usado/vencido calculado al vuelo).  
 * Landing page pulida \+ diseño mobile-first terminado en todas las pantallas.  
-* Sanitización de inputs más estricta (mongo-sanitize, rate limiting básico en login).
+* Sanitización de inputs más estricta (mongo-sanitize).
 
 # 5\. Requerimientos funcionales
 
