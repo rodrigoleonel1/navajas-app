@@ -41,7 +41,7 @@ export function NavShell({
 
       <div
         className={cn(
-          "hidden gap-4 text-xs xl:gap-6 xl:text-sm font-barlow tracking-widest uppercase",
+          "hidden gap-4 xl:gap-6 font-barlow tracking-widest uppercase",
           breakpoint.desktop,
         )}
       >
