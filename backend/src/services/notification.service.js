@@ -17,7 +17,7 @@ import { sendEmail } from "./email/email.service.js";
 const MAX_ATTEMPTS = 5;
 
 // Si una notificación quedó en "sending" más de este tiempo, se considera
-// abandonada por un proceso que murió y se puede reintentar.
+// abandonada por un proceso que murió.
 const STALE_SENDING_MS = 5 * 60 * 1000;
 
 const CANCEL_MESSAGES = {
@@ -497,56 +497,4 @@ export async function sendNotification(notificationId) {
 
     return markAsFailed(notification._id, code, message);
   }
-}
-
-// Reintenta las notificaciones de email pendientes/fallidas y las que quedaron
-// colgadas en "sending". Los avisos in-app no se reintentan porque no se envían.
-// `appointmentId` es opcional y permite limitar el reintento a un turno.
-export async function retryPendingNotifications({
-  limit = 50,
-  appointmentId,
-} = {}) {
-  const safeLimit = Number.isInteger(limit) && limit > 0 ? limit : 50;
-  const staleBefore = new Date(Date.now() - STALE_SENDING_MS);
-
-  const filter = {
-    channel: "email",
-    $or: [
-      {
-        status: { $in: ["pending", "failed"] },
-        attempts: { $lt: MAX_ATTEMPTS },
-      },
-      {
-        status: "sending",
-        attempts: { $lt: MAX_ATTEMPTS },
-        updated_at: { $lt: staleBefore },
-      },
-    ],
-  };
-
-  if (appointmentId) {
-    filter.appointment_id = toObjectIdOrThrow(
-      appointmentId,
-      "ID de turno inválido",
-    );
-  }
-
-  const candidates = await Notification.find(filter)
-    .sort({ created_at: 1 })
-    .limit(safeLimit)
-    .select("_id")
-    .lean();
-
-  const result = { processed: 0, sent: 0, failed: 0, skipped: 0 };
-
-  for (const candidate of candidates) {
-    const outcome = await sendNotification(candidate._id);
-    result.processed += 1;
-
-    if (outcome.status === "sent") result.sent += 1;
-    else if (outcome.status === "failed") result.failed += 1;
-    else result.skipped += 1;
-  }
-
-  return result;
 }

@@ -139,7 +139,7 @@ La pantalla del barbero (`/app/barber/ingresos`) muestra la comisión con un gr�
 
 #### Notificaciones in-app y recordatorios (RN0/RN9)
 
-Cada evento de turno crea dos registros en `notifications`: uno por `email` y otro por `in_app`. Los emails nacen `pending` y se envían de forma asíncrona con reintentos; los avisos in-app nacen `sent` y quedan pendientes de lectura hasta que el cliente los abre (`read_at`). La creación es idempotente por `appointment_id + type + channel`.
+Cada evento de turno crea dos registros en `notifications`: uno por `email` y otro por `in_app`. Los emails nacen `pending` y se envían de forma asíncrona; si el envío falla quedan en `failed` con el error en `last_error`. Los avisos in-app nacen `sent` y quedan pendientes de lectura hasta que el cliente los abre (`read_at`). La creación es idempotente por `appointment_id + type + channel`.
 
 Eventos notificados: confirmación (RN0), cancelación del cliente (RN3), cancelación del admin (RN7), inasistencia (RN4), recordatorio (RN9) y emisión de vale (RN7). La cancelación del admin informa que fue con anticipación y sin penalización, y el aviso de vale enlaza a `/app/client/vales`. El cliente ve una campana en el navbar con el contador de no leídos. El frontend hace polling cada 30 segundos y lo pausa cuando la pestaña está oculta; al abrir el panel también refresca. La bandeja no tiene página dedicada en esta versión.
 
