@@ -1,13 +1,14 @@
+import { lazy, Suspense } from "react";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RoleRedirect } from "./components/RoleRedirect";
 import { ConfirmProvider } from "./components/ui/ConfirmModal";
+import { Loader } from "./components/ui/Loader";
 import { ToastProvider } from "./components/ui/Toast";
 import { AppLayout } from "./layouts/AppLayout";
 import { AdminDailyEarningsPage } from "./pages/app/AdminDailyEarningsPage";
 import { AgendaPage } from "./pages/app/AgendaPage";
 import { BarberDetailPage } from "./pages/app/BarberDetailPage";
-import { BarberIngresosPage } from "./pages/app/BarberIngresosPage";
 import { BarbersPage } from "./pages/app/BarbersPage";
 import { ClientTurnosPage } from "./pages/app/ClientTurnosPage";
 import { ClientVouchersPage } from "./pages/app/ClientVouchersPage";
@@ -21,6 +22,14 @@ import { VoucherConfigPage } from "./pages/app/VoucherConfigPage";
 import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
+
+// Única página que importa recharts: se carga aparte para que el gráfico no
+// viaje en el bundle de la landing ni del panel.
+const BarberIngresosPage = lazy(() =>
+  import("./pages/app/BarberIngresosPage").then((module) => ({
+    default: module.BarberIngresosPage,
+  })),
+);
 
 function App() {
   return (
@@ -51,7 +60,15 @@ function App() {
               <Route element={<ProtectedRoute roles={["barber"]} />}>
                 <Route
                   path="barber/ingresos"
-                  element={<BarberIngresosPage />}
+                  element={
+                    <Suspense
+                      fallback={
+                        <Loader label="Cargando ingresos..." height="page" />
+                      }
+                    >
+                      <BarberIngresosPage />
+                    </Suspense>
+                  }
                 />
               </Route>
 
