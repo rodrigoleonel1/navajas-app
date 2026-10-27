@@ -84,10 +84,11 @@ export function NotificationBell() {
 
       {open && (
         <>
+          {/* El navbar tiene backdrop-blur: fixed se mide contra él, no contra el viewport. */}
           <button
             type="button"
             aria-label="Cerrar avisos"
-            className="fixed inset-0 z-10 cursor-default bg-transparent"
+            className="fixed inset-x-0 top-0 z-10 h-dvh cursor-default bg-transparent"
             onClick={() => setOpen(false)}
           />
           <div
