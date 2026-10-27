@@ -81,10 +81,6 @@ notificationSchema.index(
   { appointment_id: 1, type: 1, channel: 1 },
   { unique: true },
 );
-// Reintentos: pendientes/fallidas ordenadas por antigüedad.
-notificationSchema.index({ status: 1, attempts: 1, created_at: 1 });
-// Recuperar notificaciones que quedaron en "sending".
-notificationSchema.index({ status: 1, updated_at: 1 });
 // Bandeja in-app: últimos avisos del cliente.
 notificationSchema.index({
   target_user_id: 1,

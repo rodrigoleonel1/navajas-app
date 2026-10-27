@@ -13,7 +13,8 @@ import { createAppError } from "../utils/appError.js";
 import { toObjectIdOrThrow } from "../utils/objectId.js";
 import { sendEmail } from "./email/email.service.js";
 
-// Después de N intentos la notificación queda "failed" y no se reintenta más.
+// Tope defensivo por si el mismo evento se vuelve a programar: después de N
+// intentos la notificación queda "failed" y no se vuelve a enviar.
 const MAX_ATTEMPTS = 5;
 
 // Si una notificación quedó en "sending" más de este tiempo, se considera
@@ -27,8 +28,8 @@ const CANCEL_MESSAGES = {
     "Tu turno fue cancelado. Se registró una inasistencia y el horario no se liberó.",
 };
 
-// Crea el registro de la notificación. Los emails quedan "pending" para que
-// el envío se pueda reintentar; los avisos in-app se consideran "sent" desde
+// Crea el registro de la notificación. Los emails quedan "pending" para
+// enviarse de forma asíncrona; los avisos in-app se consideran "sent" desde
 // que se crean y quedan pendientes de lectura.
 // Es idempotente: el mismo turno + tipo + canal devuelve el registro
 // existente en lugar de duplicarlo.
@@ -83,8 +84,6 @@ export async function createNotification({
           type,
           status: isInApp ? "sent" : "pending",
           payload,
-          attempts: 0,
-          ...(isInApp ? { read_at: null } : {}),
         },
       },
       {
