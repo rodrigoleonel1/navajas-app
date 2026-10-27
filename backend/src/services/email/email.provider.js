@@ -46,9 +46,6 @@ const smtpProvider = {
       html,
     });
   },
-  async verify() {
-    await getSmtpTransport().verify();
-  },
 };
 
 const providers = {
@@ -65,12 +62,4 @@ export function getEmailProvider(providerName = config.EMAIL_PROVIDER) {
     );
   }
   return provider;
-}
-
-// Cierra el transporte SMTP. Útil en tests o scripts que terminan el proceso.
-export function resetEmailProvider() {
-  if (smtpTransport) {
-    smtpTransport.close();
-    smtpTransport = undefined;
-  }
 }

@@ -60,20 +60,3 @@ export async function sendEmail({ to, subject, html, text }) {
     throw toEmailError(err);
   }
 }
-
-// Verifica credenciales/conexión sin enviar. Solo SMTP lo implementa.
-export async function verifyEmailProvider() {
-  assertEmailConfig();
-
-  const provider = getEmailProvider();
-  if (typeof provider.verify !== "function") {
-    return { provider: provider.name, verified: true };
-  }
-
-  try {
-    await provider.verify();
-    return { provider: provider.name, verified: true };
-  } catch (err) {
-    throw toEmailError(err);
-  }
-}
