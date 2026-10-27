@@ -1,4 +1,4 @@
-import { CalendarCheck, Clock } from "lucide-react";
+import { CalendarCheck, Clock, Mail } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/Button";
@@ -17,6 +17,7 @@ import {
   type Barber,
   type Service,
 } from "../../lib/appointments";
+import { getUser } from "../../lib/auth";
 import {
   businessDayKeysFromToday,
   formatDateKey,
@@ -36,6 +37,7 @@ function toLocalDateKey(date: Date): string {
 export function ClientPage() {
   const navigate = useNavigate();
   const toast = useToast();
+  const userEmail = getUser()?.email;
   const [services, setServices] = useState<Service[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [activeVouchers, setActiveVouchers] = useState<Voucher[]>([]);
@@ -540,13 +542,30 @@ export function ClientPage() {
               </div>
             )}
 
-            <Button
-              variant="primaryBlock"
-              disabled={!selectedSlot || isBooking}
-              onClick={() => handleConfirm()}
-            >
-              {isBooking ? "Reservando..." : "Confirmar turno"}
-            </Button>
+            <div className="flex flex-col gap-3">
+              <div className="flex items-start gap-2 rounded-lg border border-border bg-background/40 px-3 py-2.5">
+                <Mail
+                  size={14}
+                  className="mt-0.5 shrink-0 text-primary"
+                  aria-hidden="true"
+                />
+                <p className="text-xs leading-relaxed text-muted-light">
+                  Te enviaremos la confirmación a{" "}
+                  <span className="text-foreground">
+                    {userEmail ?? "tu email"}
+                  </span>
+                  {". Si no la ves, revisá la carpeta de spam."}
+                </p>
+              </div>
+
+              <Button
+                variant="primaryBlock"
+                disabled={!selectedSlot || isBooking}
+                onClick={() => handleConfirm()}
+              >
+                {isBooking ? "Reservando..." : "Confirmar turno"}
+              </Button>
+            </div>
           </div>
         </div>
       )}

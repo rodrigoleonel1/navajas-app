@@ -1,7 +1,9 @@
+import { Info } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { AppointmentCard } from "../../components/AppointmentCard";
 import { RatingModal } from "../../components/RatingModal";
 import { Loader } from "../../components/ui/Loader";
+import { Modal } from "../../components/ui/Modal";
 import { Pager } from "../../components/ui/Pager";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
@@ -49,6 +51,7 @@ export function ClientTurnosPage() {
   const [listError, setListError] = useState("");
   const [actingId, setActingId] = useState<string | null>(null);
   const [ratingTarget, setRatingTarget] = useState<Appointment | null>(null);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const historyRef = useRef<HTMLDivElement | null>(null);
   const firstLoadRef = useRef(true);
 
@@ -175,9 +178,20 @@ export function ClientTurnosPage() {
       ) : (
         <div className="mt-8 flex flex-col gap-8">
           <div className="bg-card border border-border rounded-2xl p-6">
-            <h3 className="font-barlow font-bold uppercase text-sm tracking-widest mb-4">
-              Próximos ({upcoming.length})
-            </h3>
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <h3 className="font-barlow font-bold uppercase text-sm tracking-widest">
+                Próximos ({upcoming.length})
+              </h3>
+              <button
+                type="button"
+                onClick={() => setRulesOpen(true)}
+                aria-label="Ver reglas de cancelación"
+                className="flex h-8 w-8 cursor-pointer items-center justify-center gap-1.5 rounded-full border border-muted/40 bg-background/50 text-[11px] font-medium text-muted-light transition-colors hover:border-primary hover:text-primary sm:w-auto sm:px-3"
+              >
+                <Info size={14} aria-hidden="true" />
+                <span className="hidden sm:inline">Reglas</span>
+              </button>
+            </div>
             {upcoming.length === 0 ? (
               <p className="text-sm text-muted">
                 No tenés turnos próximos reservados.
@@ -245,6 +259,34 @@ export function ClientTurnosPage() {
             )}
           </div>
         </div>
+      )}
+
+      {rulesOpen && (
+        <Modal
+          title="Reglas de cancelación"
+          onClose={() => setRulesOpen(false)}
+        >
+          <p className="text-sm text-foreground">
+            Podés cancelar desde Mis turnos mientras el turno no haya
+            comenzado.
+          </p>
+          <ul className="mt-4 space-y-3">
+            {(["free", "late", "blocked"] as const).map((kind) => (
+              <li key={kind} className="flex gap-2 text-sm text-muted-light">
+                <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-primary" />
+                <span>{CANCEL_MESSAGES[kind]}</span>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-4 text-xs text-muted-light">
+            Las inasistencias se acumulan: con 3 en los últimos 2 meses, la
+            próxima reserva tiene un recargo del{" "}
+            <span className="font-semibold text-foreground">20%</span>.
+          </p>
+          <p className="mt-2 text-xs text-muted">
+            Al cancelar te mostramos qué corresponde según la hora de tu turno.
+          </p>
+        </Modal>
       )}
 
       {ratingTarget && (
