@@ -27,6 +27,7 @@ import {
   toBusinessDayKey,
 } from "../../lib/datetime";
 import { formatPrice } from "../../lib/format";
+import { notifyNotificationsChanged } from "../../lib/notifications";
 import { listOffers, type Offer } from "../../lib/offers";
 import { listVouchers, type Voucher } from "../../lib/vouchers";
 
@@ -224,6 +225,7 @@ export function ClientPage() {
         serviceIds,
         startAt,
       });
+      notifyNotificationsChanged();
       const voucherDiscount = appointment.voucherDiscount ?? 0;
       const offerDiscountApplied = appointment.offerDiscount ?? 0;
       const bookingNotes = [

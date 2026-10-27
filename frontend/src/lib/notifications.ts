@@ -46,3 +46,18 @@ export async function markAllNotificationsRead(): Promise<MarkAllReadResponse> {
   const res = await api.patch<MarkAllReadResponse>("/notifications/read-all");
   return res.data;
 }
+
+// Avisa al panel que hubo una acción propia (reservar, cancelar) para que
+// vuelva a pedir la bandeja sin esperar al polling.
+const listeners = new Set<() => void>();
+
+export function onNotificationsChanged(listener: () => void) {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
+export function notifyNotificationsChanged() {
+  for (const listener of listeners) listener();
+}

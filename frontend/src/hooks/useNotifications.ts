@@ -4,10 +4,11 @@ import {
   listNotifications,
   markAllNotificationsRead as markAllNotificationsReadApi,
   markNotificationRead as markNotificationReadApi,
+  onNotificationsChanged,
   type InAppNotification,
 } from "../lib/notifications";
 
-const POLL_MS = 30_000;
+const POLL_MS = 10_000;
 
 export function useNotifications(enabled = true) {
   const [notifications, setNotifications] = useState<InAppNotification[]>([]);
@@ -41,6 +42,10 @@ export function useNotifications(enabled = true) {
     refreshRef.current = () => load(false);
     void load(true);
 
+    const unsubscribe = onNotificationsChanged(() => {
+      void load(false);
+    });
+
     const interval = window.setInterval(() => {
       if (document.visibilityState === "visible") void load(false);
     }, POLL_MS);
@@ -52,6 +57,7 @@ export function useNotifications(enabled = true) {
 
     return () => {
       cancelled = true;
+      unsubscribe();
       refreshRef.current = async () => {};
       window.clearInterval(interval);
       document.removeEventListener("visibilitychange", onVisibilityChange);

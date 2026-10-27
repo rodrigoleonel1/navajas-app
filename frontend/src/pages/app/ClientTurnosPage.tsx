@@ -10,6 +10,7 @@ import { SectionHeader } from "../../components/ui/SectionHeader";
 import { useConfirm } from "../../hooks/useConfirm";
 import { useToast } from "../../hooks/useToast";
 import { getErrorMessage } from "../../lib/api";
+import { notifyNotificationsChanged } from "../../lib/notifications";
 import {
   cancelAppointment,
   listAppointmentHistory,
@@ -149,6 +150,7 @@ export function ClientTurnosPage() {
     setActingId(appointment.id);
     try {
       const updated = await cancelAppointment(appointment.id);
+      notifyNotificationsChanged();
       setUpcoming((current) =>
         current.map((item) => (item.id === updated.id ? updated : item)),
       );
