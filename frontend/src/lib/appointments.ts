@@ -88,7 +88,13 @@ export async function getServiceById(id: string): Promise<Service> {
 
 export async function updateService(
   id: string,
-  patch: { name?: string; duration?: number; price?: number; active?: boolean },
+  patch: {
+    name?: string;
+    description?: string;
+    duration?: number;
+    price?: number;
+    active?: boolean;
+  },
 ): Promise<Service> {
   const res = await api.patch<Service>(`/services/${id}`, patch);
   return res.data;
@@ -159,17 +165,7 @@ export type AppointmentListParams = {
 };
 
 function getAppointments(params: AppointmentListParams) {
-  return api.get<Appointment[]>("/appointments", {
-    params: {
-      ...(params.barberId ? { barberId: params.barberId } : {}),
-      ...(params.date ? { date: params.date } : {}),
-      ...(params.status ? { status: params.status } : {}),
-      ...(params.limit ? { limit: params.limit } : {}),
-      ...(params.cursor ? { cursor: params.cursor } : {}),
-      ...(params.order ? { order: params.order } : {}),
-      ...(params.page ? { page: params.page } : {}),
-    },
-  });
+  return api.get<Appointment[]>("/appointments", { params });
 }
 
 // Sin limit devuelve todo el filtro (admin y barbero listan el día completo).
