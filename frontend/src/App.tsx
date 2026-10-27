@@ -27,135 +27,58 @@ function App() {
     <ToastProvider>
       <ConfirmProvider>
         <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<LandingPage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/signup" element={<SignupPage />} />
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
 
-        <Route
-          path="/app"
-          element={
-            <ProtectedRoute>
-              <AppLayout />
-            </ProtectedRoute>
-          }
-        >
-          <Route index element={<RoleRedirect />} />
-          <Route path="agenda" element={<AgendaPage />} />
-          <Route
-            path="client/turnos"
-            element={
-              <ProtectedRoute roles={["client"]}>
-                <ClientTurnosPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="client/vales"
-            element={
-              <ProtectedRoute roles={["client"]}>
-                <ClientVouchersPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="voucher-config"
-            element={
-              <ProtectedRoute roles={["admin"]}>
-                <VoucherConfigPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="barber/ingresos"
-            element={
-              <ProtectedRoute roles={["barber"]}>
-                <BarberIngresosPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="daily-earnings"
-            element={
-              <ProtectedRoute roles={["admin"]}>
-                <AdminDailyEarningsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="reports"
-            element={
-              <ProtectedRoute roles={["admin"]}>
-                <ReportsPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="barbers"
-            element={
-              <ProtectedRoute roles={["admin"]}>
-                <BarbersPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="barbers/:id"
-            element={
-              <ProtectedRoute roles={["admin"]}>
-                <BarberDetailPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="services"
-            element={
-              <ProtectedRoute roles={["admin"]}>
-                <ServicesPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="offers"
-            element={
-              <ProtectedRoute roles={["admin"]}>
-                <OffersPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="offers/new"
-            element={
-              <ProtectedRoute roles={["admin"]}>
-                <OfferFormPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="offers/:id/edit"
-            element={
-              <ProtectedRoute roles={["admin"]}>
-                <OfferFormPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="holidays"
-            element={
-              <ProtectedRoute roles={["admin"]}>
-                <HolidaysPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="services/:id"
-            element={
-              <ProtectedRoute roles={["admin"]}>
-                <ServiceDetailPage />
-              </ProtectedRoute>
-            }
-          />
-        </Route>
-      </Routes>
+            <Route
+              path="/app"
+              element={
+                <ProtectedRoute>
+                  <AppLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<RoleRedirect />} />
+              <Route path="agenda" element={<AgendaPage />} />
+
+              <Route element={<ProtectedRoute roles={["client"]} />}>
+                <Route path="client/turnos" element={<ClientTurnosPage />} />
+                <Route path="client/vales" element={<ClientVouchersPage />} />
+              </Route>
+
+              <Route element={<ProtectedRoute roles={["barber"]} />}>
+                <Route
+                  path="barber/ingresos"
+                  element={<BarberIngresosPage />}
+                />
+              </Route>
+
+              <Route element={<ProtectedRoute roles={["admin"]} />}>
+                <Route
+                  path="voucher-config"
+                  element={<VoucherConfigPage />}
+                />
+                <Route
+                  path="daily-earnings"
+                  element={<AdminDailyEarningsPage />}
+                />
+                <Route path="reports" element={<ReportsPage />} />
+                <Route path="barbers" element={<BarbersPage />} />
+                <Route path="barbers/:id" element={<BarberDetailPage />} />
+                <Route path="services" element={<ServicesPage />} />
+                <Route
+                  path="services/:id"
+                  element={<ServiceDetailPage />}
+                />
+                <Route path="offers" element={<OffersPage />} />
+                <Route path="offers/new" element={<OfferFormPage />} />
+                <Route path="offers/:id/edit" element={<OfferFormPage />} />
+                <Route path="holidays" element={<HolidaysPage />} />
+              </Route>
+            </Route>
+          </Routes>
         </BrowserRouter>
       </ConfirmProvider>
     </ToastProvider>

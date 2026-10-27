@@ -1,4 +1,4 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, Outlet } from "react-router-dom";
 import { clearAuth, getUser } from "../lib/auth";
 
 function isTokenExpired(token: string): boolean {
@@ -14,7 +14,7 @@ export function ProtectedRoute({
   children,
   roles,
 }: {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   roles?: string[];
 }) {
   const token = localStorage.getItem("token");
@@ -25,5 +25,5 @@ export function ProtectedRoute({
   if (roles && !roles.includes(getUser()?.role ?? "")) {
     return <Navigate to="/app" replace />;
   }
-  return children;
+  return children ?? <Outlet />;
 }
