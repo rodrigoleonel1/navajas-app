@@ -62,7 +62,7 @@ export function AppNavbar() {
 
   const actions = (
     <>
-      {role === "client" && <NotificationBell />}
+      <NotificationBell />
       <span
         className={
           role === "admin"

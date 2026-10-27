@@ -41,7 +41,7 @@ export function NotificationBell() {
 
   const handleOpen = (item: InAppNotification) => {
     setOpen(false);
-    navigate(item.link || "/app/client/turnos");
+    navigate(item.link || "/app/agenda");
     if (!item.readAt) {
       void markRead(item.id).catch(() => {
         toast.error("No se pudo marcar el aviso como leído");

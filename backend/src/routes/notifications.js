@@ -4,33 +4,24 @@ import {
   markAllNotificationsRead,
   markNotificationRead,
 } from "../controllers/notification.controller.js";
-import { authenticate, requireRole } from "../middlewares/auth.js";
+import { authenticate } from "../middlewares/auth.js";
 import { validateQuery } from "../middlewares/validateQuery.js";
 import { listNotificationsQuerySchema } from "../schemas/notification.schema.js";
 
 const router = Router();
 
+// La bandeja es por usuario (target_user_id = req.user.id), así que sirve para
+// cualquier rol autenticado: cliente, barbero o admin.
 router.get(
   "/",
   authenticate,
-  requireRole("client"),
   validateQuery(listNotificationsQuerySchema),
   listNotifications,
 );
 
 // Antes de /:id/read para que "read-all" no se interprete como un ID.
-router.patch(
-  "/read-all",
-  authenticate,
-  requireRole("client"),
-  markAllNotificationsRead,
-);
+router.patch("/read-all", authenticate, markAllNotificationsRead);
 
-router.patch(
-  "/:id/read",
-  authenticate,
-  requireRole("client"),
-  markNotificationRead,
-);
+router.patch("/:id/read", authenticate, markNotificationRead);
 
 export default router;

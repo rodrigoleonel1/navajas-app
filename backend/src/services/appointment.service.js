@@ -21,6 +21,7 @@ import { toObjectIdOrThrow } from "../utils/objectId.js";
 import { loadHolidayKeys } from "./holiday.service.js";
 import {
   createAppointmentNotifications,
+  createStaffInAppNotifications,
   scheduleNotificationSend,
 } from "./notification.service.js";
 import { findMatchingOffer } from "./offer.service.js";
@@ -33,6 +34,13 @@ import {
 
 const APPOINTMENT_FIELDS =
   "barber_id client_id service_ids start_at end_at status cancel_type extra price_snapshot voucher_id voucher_discount offer_id offer_discount duration_snapshot rating rated_at";
+
+// Aviso interno que acompaña a cada evento del turno. La reserva se maneja
+// aparte, en enqueueAppointmentConfirmation.
+const STAFF_TYPES = {
+  cancelacion_turno: "cancelacion_turno_staff",
+  inasistencia_turno: "inasistencia_turno_staff",
+};
 
 // Un turno ocupa la agenda si está pendiente, si el cliente no se presentó
 // o si canceló con menos de 4 h (cancel_type blocked).
@@ -194,7 +202,7 @@ async function resolveDurationAndPrice(serviceIds) {
 async function getBarberOrThrow(barberId) {
   const barberOid = toObjectIdOrThrow(barberId, "ID de barbero inválido");
   const barber = await User.findById(barberOid)
-    .select("role name active barberProfile")
+    .select("role name email active barberProfile")
     .lean();
   if (!barber || barber.role !== "barber" || !barber.active) {
     throw createAppError(404, "NOT_FOUND", "Barbero no encontrado");
@@ -384,6 +392,21 @@ function toAppointmentDTO(doc, { now = new Date() } = {}) {
   };
 }
 
+// Destinatarios internos de un turno: el barbero asignado y todos los admins
+// activos. Se excluye a quien hizo la acción para no auto-notificarse.
+async function getStaffTargets({ barber, actorId }) {
+  if (!barber || typeof barber !== "object") return [];
+
+  const admins = await User.find({ role: "admin", active: { $ne: false } })
+    .select("_id email")
+    .lean();
+
+  return [
+    { id: barber._id, email: barber.email },
+    ...admins.map((admin) => ({ id: admin._id, email: admin.email })),
+  ].filter((user) => String(user.id) !== String(actorId ?? ""));
+}
+
 // Encola la confirmación por email + in-app (RN0) después de crear el turno.
 // El envío no bloquea la respuesta: si falla, queda registrado en la
 // notificación para poder reintentarlo más adelante.
@@ -393,23 +416,25 @@ async function enqueueAppointmentConfirmation({
   barber,
   services,
 }) {
+  const payload = {
+    clientName: client.name,
+    barberName: barber.name,
+    services: services.map((service) => service.name),
+    startAt: new Date(appointment.start_at).toISOString(),
+    endAt: new Date(appointment.end_at).toISOString(),
+    duration: appointment.duration_snapshot,
+    price: appointment.price_snapshot,
+    extra: appointment.extra ?? 0,
+    voucherDiscount: appointment.voucher_discount ?? 0,
+    offerDiscount: appointment.offer_discount ?? 0,
+  };
+
   try {
     const { email } = await createAppointmentNotifications({
       appointmentId: appointment._id,
       targetUser: { id: client._id, email: client.email },
       type: "confirmacion_turno",
-      payload: {
-        clientName: client.name,
-        barberName: barber.name,
-        services: services.map((service) => service.name),
-        startAt: new Date(appointment.start_at).toISOString(),
-        endAt: new Date(appointment.end_at).toISOString(),
-        duration: appointment.duration_snapshot,
-        price: appointment.price_snapshot,
-        extra: appointment.extra ?? 0,
-        voucherDiscount: appointment.voucher_discount ?? 0,
-        offerDiscount: appointment.offer_discount ?? 0,
-      },
+      payload,
     });
 
     if (email) scheduleNotificationSend(email._id, "appointment");
@@ -421,36 +446,57 @@ async function enqueueAppointmentConfirmation({
       err?.message || err,
     );
   }
+
+  // Aviso interno para el barbero y los admins (solo in-app).
+  try {
+    const targets = await getStaffTargets({ barber });
+    await createStaffInAppNotifications({
+      appointmentId: appointment._id,
+      targets,
+      type: "nuevo_turno_staff",
+      payload,
+    });
+  } catch (err) {
+    console.error(
+      "[appointment] no se pudo avisar al staff del turno nuevo",
+      err?.code || "",
+      err?.message || err,
+    );
+  }
 }
 
 // Encola el email de cancelación o inasistencia. El turno debe venir
-// populado con client_id (name, email), barber_id (name) y service_ids (name).
+// populado con client_id (name, email), barber_id (name, email) y
+// service_ids (name).
 async function enqueueStatusNotification({
   appointment,
   type,
   cancelType = null,
   cancelledByAdmin = false,
+  actorId = null,
 }) {
+  const client = appointment.client_id;
+  const payload = {
+    clientName: client.name,
+    barberName: appointment.barber_id?.name ?? "",
+    services: (appointment.service_ids ?? [])
+      .map((service) => service?.name)
+      .filter(Boolean),
+    startAt: new Date(appointment.start_at).toISOString(),
+    endAt: new Date(appointment.end_at).toISOString(),
+    price: appointment.price_snapshot,
+    extra: appointment.extra ?? 0,
+    voucherDiscount: appointment.voucher_discount ?? 0,
+    cancelType,
+    cancelledByAdmin,
+  };
+
   try {
-    const client = appointment.client_id;
     const { email } = await createAppointmentNotifications({
       appointmentId: appointment._id,
       targetUser: { id: client._id, email: client.email },
       type,
-      payload: {
-        clientName: client.name,
-        barberName: appointment.barber_id?.name ?? "",
-        services: (appointment.service_ids ?? [])
-          .map((service) => service?.name)
-          .filter(Boolean),
-        startAt: new Date(appointment.start_at).toISOString(),
-        endAt: new Date(appointment.end_at).toISOString(),
-        price: appointment.price_snapshot,
-        extra: appointment.extra ?? 0,
-        voucherDiscount: appointment.voucher_discount ?? 0,
-        cancelType,
-        cancelledByAdmin,
-      },
+      payload,
     });
 
     if (email) scheduleNotificationSend(email._id, "appointment");
@@ -461,6 +507,29 @@ async function enqueueStatusNotification({
       err?.code || "",
       err?.message || err,
     );
+  }
+
+  // Aviso interno para el barbero y los admins (solo in-app).
+  const staffType = STAFF_TYPES[type];
+  if (staffType) {
+    try {
+      const targets = await getStaffTargets({
+        barber: appointment.barber_id,
+        actorId,
+      });
+      await createStaffInAppNotifications({
+        appointmentId: appointment._id,
+        targets,
+        type: staffType,
+        payload,
+      });
+    } catch (err) {
+      console.error(
+        "[appointment] no se pudo avisar al staff del cambio de estado",
+        err?.code || "",
+        err?.message || err,
+      );
+    }
   }
 }
 
@@ -813,7 +882,7 @@ export async function listAppointments({
 // El admin pasa un turno pendiente a completado o cancelado.
 // La cancelación admin libera el horario, no cuenta inasistencia y emite el
 // vale del 20% de RN7 dentro de la misma transacción.
-export async function updateAppointmentStatus({ id, status }) {
+export async function updateAppointmentStatus({ id, status, requester }) {
   if (!["completed", "cancelled"].includes(status)) {
     throw createAppError(400, "VALIDATION_ERROR", "Estado inválido");
   }
@@ -907,7 +976,7 @@ export async function updateAppointmentStatus({ id, status }) {
 
   const populated = await Appointment.findById(appointmentOid)
     .select(APPOINTMENT_FIELDS)
-    .populate("barber_id", "name")
+    .populate("barber_id", "name email")
     .populate("client_id", "name email")
     .populate("service_ids", "name price duration")
     .populate("offer_id", "name discount_percent")
@@ -922,6 +991,7 @@ export async function updateAppointmentStatus({ id, status }) {
     type: "cancelacion_turno",
     cancelType: "free",
     cancelledByAdmin: true,
+    actorId: requester?.id ?? null,
   });
   await enqueueVoucherNotification({ appointment: populated, voucher });
 
@@ -935,7 +1005,7 @@ export async function cancelAppointment({ id, requester }) {
   const appointment = await Appointment.findById(appointmentOid)
     .select(APPOINTMENT_FIELDS)
     .populate("client_id", "name email")
-    .populate("barber_id", "name")
+    .populate("barber_id", "name email")
     .populate("service_ids", "name")
     .populate("offer_id", "name discount_percent")
     .lean();
@@ -975,7 +1045,7 @@ export async function cancelAppointment({ id, requester }) {
   )
     .select(APPOINTMENT_FIELDS)
     .populate("client_id", "name email")
-    .populate("barber_id", "name")
+    .populate("barber_id", "name email")
     .populate("service_ids", "name")
     .populate("offer_id", "name discount_percent")
     .lean();
@@ -992,13 +1062,14 @@ export async function cancelAppointment({ id, requester }) {
     appointment: updated,
     type: "cancelacion_turno",
     cancelType: policy.kind,
+    actorId: requester.id,
   });
 
   return toAppointmentDTO(updated, { now });
 }
 
 // RN4: el admin marca inasistencia después de la tolerancia de 15 minutos.
-export async function markNoShow({ id }) {
+export async function markNoShow({ id, requester }) {
   const appointmentOid = toObjectIdOrThrow(id, "ID de turno inválido");
   const appointment = await Appointment.findById(appointmentOid)
     .select(APPOINTMENT_FIELDS)
@@ -1031,7 +1102,7 @@ export async function markNoShow({ id }) {
   )
     .select(APPOINTMENT_FIELDS)
     .populate("client_id", "name email")
-    .populate("barber_id", "name")
+    .populate("barber_id", "name email")
     .populate("service_ids", "name")
     .populate("offer_id", "name discount_percent")
     .lean();
@@ -1047,6 +1118,7 @@ export async function markNoShow({ id }) {
   await enqueueStatusNotification({
     appointment: updated,
     type: "inasistencia_turno",
+    actorId: requester?.id ?? null,
   });
 
   return toAppointmentDTO(updated, { now });

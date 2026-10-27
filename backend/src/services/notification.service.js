@@ -31,8 +31,8 @@ const CANCEL_MESSAGES = {
 // Crea el registro de la notificación. Los emails quedan "pending" para
 // enviarse de forma asíncrona; los avisos in-app se consideran "sent" desde
 // que se crean y quedan pendientes de lectura.
-// Es idempotente: el mismo turno + tipo + canal devuelve el registro
-// existente en lugar de duplicarlo.
+// Es idempotente: el mismo turno + tipo + canal + destinatario devuelve el
+// registro existente en lugar de duplicarlo.
 export async function createNotification({
   appointmentId,
   targetUser,
@@ -74,6 +74,7 @@ export async function createNotification({
         appointment_id: appointmentOid,
         type,
         channel,
+        target_user_id: targetUserOid,
       },
       {
         $setOnInsert: {
@@ -102,6 +103,7 @@ export async function createNotification({
         appointment_id: appointmentOid,
         type,
         channel,
+        target_user_id: targetUserOid,
       }).lean();
       if (existing) return existing;
     }
@@ -153,6 +155,41 @@ export async function createAppointmentNotifications({
     email: emailResult.status === "fulfilled" ? emailResult.value : null,
     inApp: inAppResult.status === "fulfilled" ? inAppResult.value : null,
   };
+}
+
+// Avisa al barbero y a los admins de un turno. Solo in-app: el staff ya ve la
+// agenda y no se le manda un email por cada movimiento. Nunca lanza: si falla
+// un destinatario, los demás igual reciben el aviso.
+export async function createStaffInAppNotifications({
+  appointmentId,
+  targets,
+  type,
+  payload,
+}) {
+  if (!Array.isArray(targets) || targets.length === 0) return;
+
+  const results = await Promise.allSettled(
+    targets.map((targetUser) =>
+      createNotification({
+        appointmentId,
+        targetUser,
+        type,
+        channel: "in_app",
+        payload,
+      }),
+    ),
+  );
+
+  const errors = results
+    .filter((result) => result.status === "rejected")
+    .map((result) => result.reason);
+
+  if (errors.length > 0) {
+    console.error(
+      "[notification] no se pudo avisar al staff",
+      errors.map((err) => err?.code || err?.message || String(err)).join(", "),
+    );
+  }
 }
 
 // Mantiene vivo el envío en Vercel sin bloquear la respuesta HTTP. En local
@@ -227,8 +264,15 @@ function buildInAppContent(notification) {
   const barberLabel = payload.barberName
     ? ` con ${payload.barberName}`
     : "";
+  const clientName = payload.clientName || "Un cliente";
+  const barberName = payload.barberName || "el barbero";
+  const servicesLabel =
+    Array.isArray(payload.services) && payload.services.length > 0
+      ? payload.services.join(" + ")
+      : "";
   const link = "/app/client/turnos";
   const voucherLink = "/app/client/vales";
+  const agendaLink = "/app/agenda";
 
   switch (notification.type) {
     case "confirmacion_turno": {
@@ -286,6 +330,28 @@ function buildInAppContent(notification) {
         link: voucherLink,
       };
     }
+    case "nuevo_turno_staff":
+      return {
+        title: "Nuevo turno",
+        message: `${clientName} reservó${servicesLabel ? ` ${servicesLabel}` : ""} con ${barberName}${whenLabel ? ` para el ${whenLabel}` : ""}.`,
+        link: agendaLink,
+      };
+    case "cancelacion_turno_staff": {
+      const detail = whenLabel ? ` del ${whenLabel}` : "";
+      return {
+        title: "Turno cancelado",
+        message: payload.cancelledByAdmin
+          ? `El turno de ${clientName} con ${barberName}${detail} fue cancelado desde el panel.`
+          : `${clientName} canceló su turno con ${barberName}${detail}.`,
+        link: agendaLink,
+      };
+    }
+    case "inasistencia_turno_staff":
+      return {
+        title: "Inasistencia registrada",
+        message: `${clientName} no se presentó al turno con ${barberName}${whenLabel ? ` del ${whenLabel}` : ""}.`,
+        link: agendaLink,
+      };
     default:
       return {
         title: "Aviso",

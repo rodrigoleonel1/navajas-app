@@ -64,6 +64,7 @@ export async function updateAppointmentStatus(req, res, next) {
     const appointment = await updateAppointmentStatusService({
       id: req.params.id,
       status: req.body.status,
+      requester: { id: req.user.id, role: req.user.role },
     });
     res.json(appointment);
   } catch (err) {
@@ -85,7 +86,10 @@ export async function cancelAppointment(req, res, next) {
 
 export async function markNoShow(req, res, next) {
   try {
-    const appointment = await markNoShowService({ id: req.params.id });
+    const appointment = await markNoShowService({
+      id: req.params.id,
+      requester: { id: req.user.id, role: req.user.role },
+    });
     res.json(appointment);
   } catch (err) {
     next(err);

@@ -10,6 +10,10 @@ export const NOTIFICATION_TYPES = [
   "inasistencia_turno",
   "recordatorio_turno",
   "vale_emitido",
+  // Avisos internos para el barbero y los admins (solo canal in_app).
+  "nuevo_turno_staff",
+  "cancelacion_turno_staff",
+  "inasistencia_turno_staff",
 ];
 
 export const NOTIFICATION_STATUSES = ["pending", "sending", "sent", "failed"];
@@ -76,9 +80,9 @@ const notificationSchema = new mongoose.Schema(
   },
 );
 
-// Idempotencia: un solo registro por turno + tipo + canal.
+// Idempotencia: un solo registro por turno + tipo + canal + destinatario.
 notificationSchema.index(
-  { appointment_id: 1, type: 1, channel: 1 },
+  { appointment_id: 1, type: 1, channel: 1, target_user_id: 1 },
   { unique: true },
 );
 // Bandeja in-app: últimos avisos del cliente.

@@ -139,9 +139,9 @@ La pantalla del barbero (`/app/barber/ingresos`) muestra la comisión con un gr�
 
 #### Notificaciones in-app y recordatorios (RN0/RN9)
 
-Cada evento de turno crea dos registros en `notifications`: uno por `email` y otro por `in_app`. Los emails nacen `pending` y se envían de forma asíncrona; si el envío falla quedan en `failed` con el error en `last_error`. Los avisos in-app nacen `sent` y quedan pendientes de lectura hasta que el cliente los abre (`read_at`). La creación es idempotente por `appointment_id + type + channel`.
+Cada evento de turno crea dos registros en `notifications`: uno por `email` y otro por `in_app`. Los emails nacen `pending` y se envían de forma asíncrona; si el envío falla quedan en `failed` con el error en `last_error`. Los avisos in-app nacen `sent` y quedan pendientes de lectura hasta que el destinatario los abre (`read_at`). La creación es idempotente por `appointment_id + type + channel + target_user_id`.
 
-Eventos notificados: confirmación (RN0), cancelación del cliente (RN3), cancelación del admin (RN7), inasistencia (RN4), recordatorio (RN9) y emisión de vale (RN7). La cancelación del admin informa que fue con anticipación y sin penalización, y el aviso de vale enlaza a `/app/client/vales`. El cliente ve una campana en el navbar con el contador de no leídos. El frontend hace polling cada 30 segundos y lo pausa cuando la pestaña está oculta; al abrir el panel también refresca. La bandeja no tiene página dedicada en esta versión.
+Eventos notificados: confirmación (RN0), cancelación del cliente (RN3), cancelación del admin (RN7), inasistencia (RN4), recordatorio (RN9) y emisión de vale (RN7). La cancelación del admin informa que fue con anticipación y sin penalización, y el aviso de vale enlaza a `/app/client/vales`. Cliente, barbero y admin ven una campana en el navbar con el contador de no leídos: el cliente recibe los avisos de sus turnos y el staff (barbero del turno + admins activos) recibe `nuevo_turno_staff`, `cancelacion_turno_staff` e `inasistencia_turno_staff`, solo in-app y enlazados a `/app/agenda`. El staff no recibe email por estos eventos y quien hace la acción no se auto-notifica. El frontend hace polling cada 10 segundos y lo pausa cuando la pestaña está oculta; al abrir el panel también refresca, y reservar o cancelar dispara un refresco inmediato. La bandeja no tiene página dedicada en esta versión.
 
 El recordatorio corre con **Vercel Cron** una vez por día. El plan Hobby solo permite una ejecución diaria, así que el schedule es `0 15 * * *` UTC: **12:00 de Argentina** (Vercel puede ejecutarlo dentro de la hora, entre 12:00 y 12:59). El endpoint busca turnos `pending` del **día comercial siguiente** y crea el email + aviso in-app. No es una ventana exacta de 24 h: según la hora del turno, el aviso llega aproximadamente entre 12 y 36 h antes. La idempotencia evita duplicados si Vercel reintenta la ejecución.
 
@@ -152,7 +152,7 @@ curl -H "Authorization: Bearer $CRON_SECRET" \
   http://localhost:3000/api/cron/reminders
 ```
 
-Endpoints de bandeja (solo `client`):
+Endpoints de bandeja (cualquier rol autenticado; cada uno ve solo sus avisos):
 
 ```text
 GET   /api/notifications?limit=20
@@ -226,9 +226,9 @@ GET    /api/offers?all=1                 # admin: incluye inactivas
 POST   /api/offers                       # admin
 PATCH  /api/offers/:id                   # admin
 POST   /api/ratings
-GET    /api/notifications?limit=20              # cliente: bandeja in-app
-PATCH  /api/notifications/:id/read              # cliente
-PATCH  /api/notifications/read-all              # cliente
+GET    /api/notifications?limit=20              # bandeja in-app (todos los roles)
+PATCH  /api/notifications/:id/read              # bandeja in-app
+PATCH  /api/notifications/read-all              # bandeja in-app
 GET    /api/cron/reminders                      # Vercel Cron (CRON_SECRET)
 ```
 
@@ -450,10 +450,10 @@ La disponibilidad de un barbero se bloquea si el día es feriado global **o** fr
 ```js
 // Idempotencia: un registro por turno + tipo + canal.
 notificationSchema.index(
-  { appointment_id: 1, type: 1, channel: 1 },
+  { appointment_id: 1, type: 1, channel: 1, target_user_id: 1 },
   { unique: true },
 );
-// Bandeja in-app: últimos avisos del cliente.
+// Bandeja in-app: últimos avisos del usuario.
 notificationSchema.index({
   target_user_id: 1,
   channel: 1,
@@ -606,9 +606,9 @@ Los roles deben utilizarse para proteger operaciones sensibles, especialmente la
 | `POST /api/barbers` |  |  | ✓ | CA-3, alta barbero |
 | `GET /api/barbers/me/earnings` |  | ✓ |  | `barber_id = req.user.id`; rango máximo 366 días |
 | `GET /api/barbers/daily-earnings` |  |  | ✓ | Liquidación diaria; activos con cero turnos incluidos |
-| `GET /api/notifications` | ✓ (propios) |  |  | `target_user_id = req.user.id`; solo canal `in_app` |
-| `PATCH /api/notifications/:id/read` | ✓ (propio) |  |  | Verifica ownership del aviso |
-| `PATCH /api/notifications/read-all` | ✓ (propios) |  |  | Marca todos los no leídos |
+| `GET /api/notifications` | ✓ (propios) | ✓ (propios) | ✓ (propios) | `target_user_id = req.user.id`; solo canal `in_app` |
+| `PATCH /api/notifications/:id/read` | ✓ (propio) | ✓ (propio) | ✓ (propio) | Verifica ownership del aviso |
+| `PATCH /api/notifications/read-all` | ✓ (propios) | ✓ (propios) | ✓ (propios) | Marca todos los no leídos |
 | `GET /api/cron/reminders` |  |  |  | Protegido por `CRON_SECRET`, no por JWT |
 | `POST /api/offers` |  |  | ✓ | RN11: crear oferta/descuento |
 | `GET /api/offers` | ✓ | ✓ | ✓ | Solo activas; `?all=1` requiere admin |
