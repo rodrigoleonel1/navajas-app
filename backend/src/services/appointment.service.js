@@ -7,7 +7,6 @@ import { createAppError } from "../utils/appError.js";
 import {
   businessDayStartUtc,
   DAY_MS,
-  parseWorkHour,
   tzParts,
   utcDayStart,
 } from "../utils/businessTime.js";
@@ -19,9 +18,11 @@ import {
 import { toObjectIdOrThrow } from "../utils/objectId.js";
 import {
   assertWithinBarberAvailability,
+  DEFAULT_WORKING_HOURS,
   findNextAvailable,
   generateDaySlots,
   getNonWorkingReason,
+  getWorkingBounds,
 } from "./availability.service.js";
 import { loadHolidayKeys } from "./holiday.service.js";
 import {
@@ -838,8 +839,7 @@ export async function getAvailability({
   }));
 
   const workingHours = barber.barberProfile?.workingHours ?? {};
-  const open = parseWorkHour(workingHours.start, 9 * 60);
-  const close = parseWorkHour(workingHours.end, 18 * 60);
+  const { open, close } = getWorkingBounds(barber.barberProfile);
   const now = new Date();
 
   let slots = [];
@@ -889,8 +889,8 @@ export async function getAvailability({
     date: requestedKey,
     duration,
     workingHours: {
-      start: workingHours.start ?? "09:00",
-      end: workingHours.end ?? "18:00",
+      start: workingHours.start ?? DEFAULT_WORKING_HOURS.start,
+      end: workingHours.end ?? DEFAULT_WORKING_HOURS.end,
     },
     slots,
     nextAvailable,

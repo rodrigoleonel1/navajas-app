@@ -7,6 +7,26 @@ import {
   tzParts,
 } from "../utils/businessTime.js";
 
+// Jornada por defecto cuando el barbero no configuró workingHours.
+export const DEFAULT_WORKING_HOURS = { start: "09:00", end: "18:00" };
+const DEFAULT_OPEN_MINUTES = parseWorkHour(
+  DEFAULT_WORKING_HOURS.start,
+  9 * 60,
+);
+const DEFAULT_CLOSE_MINUTES = parseWorkHour(
+  DEFAULT_WORKING_HOURS.end,
+  18 * 60,
+);
+
+// Jornada del barbero en minutos desde la medianoche.
+export function getWorkingBounds(barberProfile) {
+  const workingHours = barberProfile?.workingHours ?? {};
+  return {
+    open: parseWorkHour(workingHours.start, DEFAULT_OPEN_MINUTES),
+    close: parseWorkHour(workingHours.end, DEFAULT_CLOSE_MINUTES),
+  };
+}
+
 // RN10: el turno debe caer dentro de la jornada del barbero y en un día
 // que no sea franco, franco semanal ni feriado global. Todo en zona comercial.
 // Devuelve el motivo del bloqueo o null si el día es laborable.
@@ -33,9 +53,7 @@ export function assertWithinBarberAvailability(
   barberProfile,
   holidayKeys = new Set(),
 ) {
-  const workingHours = barberProfile?.workingHours ?? {};
-  const open = parseWorkHour(workingHours.start, 9 * 60);
-  const close = parseWorkHour(workingHours.end, 18 * 60);
+  const { open, close } = getWorkingBounds(barberProfile);
 
   const startParts = tzParts(start);
   const endParts = tzParts(end);
@@ -82,21 +100,35 @@ export function overlaps(candidateStart, candidateEnd, bookings) {
   );
 }
 
+// Horarios candidatos de un día comercial: arranca en `startOffset` (minutos
+// desde la medianoche) y avanza de a `step` mientras el turno entre antes del
+// cierre. El llamador filtra lo que no le sirva.
+function* candidateSlots({
+  dayStart,
+  open,
+  close,
+  duration,
+  step,
+  startOffset = open,
+}) {
+  for (let offset = startOffset; offset + duration <= close; offset += step) {
+    const start = new Date(dayStart.getTime() + offset * 60 * 1000);
+    yield {
+      start,
+      end: new Date(start.getTime() + duration * 60 * 1000),
+    };
+  }
+}
+
 // Genera slots libres de un día (UTC) dentro de [open, close] con paso step.
 export function generateDaySlots({ dayStart, open, close, duration, step, bookings, now }) {
   const slots = [];
-  for (
-    let offset = open;
-    offset + duration <= close;
-    offset += step
-  ) {
-    const slotStart = new Date(dayStart.getTime() + offset * 60 * 1000);
-    const slotEnd = new Date(slotStart.getTime() + duration * 60 * 1000);
-    if (slotEnd <= now) continue;
-    if (overlaps(slotStart, slotEnd, bookings)) continue;
+  for (const slot of candidateSlots({ dayStart, open, close, duration, step })) {
+    if (slot.end <= now) continue;
+    if (overlaps(slot.start, slot.end, bookings)) continue;
     slots.push({
-      startAt: slotStart.toISOString(),
-      endAt: slotEnd.toISOString(),
+      startAt: slot.start.toISOString(),
+      endAt: slot.end.toISOString(),
     });
   }
   return slots;
@@ -113,9 +145,7 @@ export function findNextAvailable({
   step,
   horizonDays,
 }) {
-  const workingHours = barberProfile?.workingHours ?? {};
-  const open = parseWorkHour(workingHours.start, 9 * 60);
-  const close = parseWorkHour(workingHours.end, 18 * 60);
+  const { open, close } = getWorkingBounds(barberProfile);
   const now = new Date();
 
   const fromParts = tzParts(from);
@@ -137,26 +167,27 @@ export function findNextAvailable({
       );
     }
 
-    for (
-      let offset = startOffset;
-      offset + duration <= close;
-      offset += step
-    ) {
-      const slotStart = new Date(dayStart.getTime() + offset * 60 * 1000);
-      const slotEnd = new Date(slotStart.getTime() + duration * 60 * 1000);
-      if (slotStart < from || slotEnd <= now) continue;
-      const slotParts = tzParts(slotStart);
-      const slotEndParts = tzParts(slotEnd);
+    for (const slot of candidateSlots({
+      dayStart,
+      open,
+      close,
+      duration,
+      step,
+      startOffset,
+    })) {
+      if (slot.start < from || slot.end <= now) continue;
+      const slotParts = tzParts(slot.start);
+      const slotEndParts = tzParts(slot.end);
       if (
         slotParts.dayKey !== slotEndParts.dayKey ||
         slotParts.dayKey !== dayParts.dayKey
       ) {
         continue;
       }
-      if (overlaps(slotStart, slotEnd, bookings)) continue;
+      if (overlaps(slot.start, slot.end, bookings)) continue;
       return {
-        startAt: slotStart.toISOString(),
-        endAt: slotEnd.toISOString(),
+        startAt: slot.start.toISOString(),
+        endAt: slot.end.toISOString(),
       };
     }
   }
