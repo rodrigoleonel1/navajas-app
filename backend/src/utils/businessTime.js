@@ -64,6 +64,15 @@ export function shiftDayKey(dayKey, delta) {
     .slice(0, 10);
 }
 
+// Filtro de Mongo para los instantes que caen entre el inicio del día
+// comercial `from` y el final del día comercial `to`, ambos inclusive.
+export function businessDayRangeFilter(from, to) {
+  return {
+    $gte: businessDayStartUtc(from),
+    $lt: businessDayStartUtc(shiftDayKey(to, 1)),
+  };
+}
+
 // Día calendario UTC de un Date ("2026-09-29"), para comparar francos y
 // feriados guardados como YYYY-MM-DD. Distinto de tzParts: UTC puro.
 export function dayKeyUTC(date) {

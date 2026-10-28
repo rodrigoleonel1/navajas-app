@@ -1,8 +1,8 @@
 import { Appointment } from "../models/Appointment.js";
 import { User } from "../models/User.js";
 import {
-  businessDayStartUtc,
-  DAY_MS,
+  businessDayRangeFilter,
+  shiftDayKey,
   tzParts,
 } from "../utils/businessTime.js";
 import { toObjectIdOrThrow } from "../utils/objectId.js";
@@ -11,28 +11,14 @@ import {
   emptyIncomeTotals,
 } from "./income.js";
 
-function nextDayKey(dayKey) {
-  const [year, month, day] = dayKey.split("-").map(Number);
-  return new Date(Date.UTC(year, month - 1, day) + DAY_MS)
-    .toISOString()
-    .slice(0, 10);
-}
-
 function dayKeysBetween(from, to) {
   const keys = [];
   let current = from;
   while (current <= to) {
     keys.push(current);
-    current = nextDayKey(current);
+    current = shiftDayKey(current, 1);
   }
   return keys;
-}
-
-function dayRangeFilter(from, to) {
-  return {
-    $gte: businessDayStartUtc(from),
-    $lt: businessDayStartUtc(nextDayKey(to)),
-  };
 }
 
 // Ingresos del barbero autenticado para un rango de días comerciales.
@@ -42,7 +28,7 @@ export async function getBarberEarnings({ barberId, from, to }) {
   const appointments = await Appointment.find({
     barber_id: barberOid,
     status: "completed",
-    start_at: dayRangeFilter(from, to),
+    start_at: businessDayRangeFilter(from, to),
   })
     .select("start_at price_snapshot")
     .lean();
@@ -79,7 +65,7 @@ export async function getAdminEarnings({ from, to }) {
     User.find({ role: "barber" }).select("name active").lean(),
     Appointment.find({
       status: "completed",
-      start_at: dayRangeFilter(from, to),
+      start_at: businessDayRangeFilter(from, to),
     })
       .select("barber_id start_at price_snapshot")
       .lean(),

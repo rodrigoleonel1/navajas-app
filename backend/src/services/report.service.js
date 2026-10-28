@@ -2,8 +2,7 @@ import { Appointment } from "../models/Appointment.js";
 import { Service } from "../models/Service.js";
 import { User } from "../models/User.js";
 import {
-  businessDayStartUtc,
-  shiftDayKey,
+  businessDayRangeFilter,
   tzParts,
 } from "../utils/businessTime.js";
 import {
@@ -53,10 +52,7 @@ function averageRating(sum, count) {
 export async function getBusinessReport({ from, to }) {
   const [appointments, barbers, services] = await Promise.all([
     Appointment.find({
-      start_at: {
-        $gte: businessDayStartUtc(from),
-        $lt: businessDayStartUtc(shiftDayKey(to, 1)),
-      },
+      start_at: businessDayRangeFilter(from, to),
     })
       .select(
         "barber_id service_ids start_at status cancel_type price_snapshot rating",
