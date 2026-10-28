@@ -279,6 +279,10 @@ function buildInAppContent(notification) {
 
   switch (notification.type) {
     case "confirmacion_turno": {
+      const extraNote =
+        Number(payload.extra) > 0
+          ? " Se aplicó un recargo del 20% por inasistencias."
+          : "";
       const voucherNote =
         Number(payload.voucherDiscount) > 0
           ? " Se aplicó un vale de descuento."
@@ -289,7 +293,7 @@ function buildInAppContent(notification) {
           : "";
       return {
         title: "Turno confirmado",
-        message: `Tu turno${barberLabel} quedó confirmado${whenLabel ? ` para el ${whenLabel}` : ""}.${offerNote}${voucherNote}`,
+        message: `Tu turno${barberLabel} quedó confirmado${whenLabel ? ` para el ${whenLabel}` : ""}.${offerNote}${extraNote}${voucherNote}`,
         link,
       };
     }
