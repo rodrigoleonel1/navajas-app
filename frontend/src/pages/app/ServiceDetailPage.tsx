@@ -100,7 +100,7 @@ export function ServiceDetailPage() {
           {loadError || "Servicio no encontrado."}
         </p>
         <Link
-          to="/app/services"
+          to="/app/admin/servicios"
           className="mt-4 inline-flex items-center gap-1 text-primary text-xs font-semibold tracking-wide hover:opacity-80 transition-opacity"
         >
           <ArrowLeft size={14} aria-hidden="true" />
@@ -119,7 +119,7 @@ export function ServiceDetailPage() {
         description={`${service.duration} min — ${formatPrice(service.price)}`}
       />
       <Link
-        to="/app/services"
+        to="/app/admin/servicios"
         className="mt-4 inline-flex items-center gap-1 text-primary text-xs font-semibold tracking-wide hover:opacity-80 transition-opacity"
       >
         <ArrowLeft size={14} aria-hidden="true" />

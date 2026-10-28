@@ -20,7 +20,7 @@ export function Hero() {
           una cuadra de la estación.
         </p>
         <div className="flex items-center gap-4 flex-wrap">
-          <Button href="/login">
+          <Button href="/ingresar">
             Pide tu cita <ArrowUpRight size={14} aria-hidden="true" />
           </Button>
           <Button variant="secondary" href="#servicios">

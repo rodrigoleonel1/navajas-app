@@ -56,8 +56,8 @@ export function buildAppointmentCancellation(payload = {}) {
   const voucherNote = isAdminCancellation
     ? "Además, te emitimos un vale del 20% de descuento para tu próxima visita."
     : "";
-  const appUrl = `${config.APP_URL.replace(/\/+$/, "")}/app/client/turnos`;
-  const voucherUrl = `${config.APP_URL.replace(/\/+$/, "")}/app/client/vales`;
+  const appUrl = `${config.APP_URL.replace(/\/+$/, "")}/app/cliente/turnos`;
+  const voucherUrl = `${config.APP_URL.replace(/\/+$/, "")}/app/cliente/vales`;
 
   const subject = isAdminCancellation
     ? dateLabel

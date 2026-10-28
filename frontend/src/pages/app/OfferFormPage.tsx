@@ -141,7 +141,7 @@ export function OfferFormPage() {
         await createOffer(payload);
         toast.success("Oferta creada");
       }
-      navigate("/app/offers");
+      navigate("/app/admin/ofertas");
     } catch (err) {
       toast.error(getErrorMessage(err, "Error al guardar la oferta"));
     } finally {
@@ -151,7 +151,7 @@ export function OfferFormPage() {
 
   const backLink = (
     <Link
-      to="/app/offers"
+      to="/app/admin/ofertas"
       className="mt-4 inline-flex items-center gap-1 text-primary text-xs font-semibold tracking-wide hover:opacity-80 transition-opacity"
     >
       <ArrowLeft size={14} aria-hidden="true" />
@@ -308,7 +308,7 @@ export function OfferFormPage() {
             type="button"
             variant="outline"
             className="justify-center"
-            onClick={() => navigate("/app/offers")}
+            onClick={() => navigate("/app/admin/ofertas")}
           >
             Cancelar
           </Button>

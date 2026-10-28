@@ -20,7 +20,7 @@ export function ProtectedRoute({
   const token = localStorage.getItem("token");
   if (!token || isTokenExpired(token)) {
     if (token) clearAuth();
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/ingresar" replace />;
   }
   if (roles && !roles.includes(getUser()?.role ?? "")) {
     return <Navigate to="/app" replace />;

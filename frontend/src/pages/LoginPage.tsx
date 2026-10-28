@@ -96,7 +96,7 @@ export function LoginPage() {
             <p className="text-sm text-muted">
               ¿No tenés cuenta?{" "}
               <Link
-                to="/signup"
+                to="/registro"
                 className="font-semibold text-primary hover:text-primary-low underline underline-offset-4 transition-colors"
               >
                 Crear cuenta

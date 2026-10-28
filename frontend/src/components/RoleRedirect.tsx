@@ -3,6 +3,6 @@ import { getRole } from "../lib/auth";
 
 // /app/agenda despacha por rol; sin sesión, al login.
 export function RoleRedirect() {
-  if (!getRole()) return <Navigate to="/login" replace />;
+  if (!getRole()) return <Navigate to="/ingresar" replace />;
   return <Navigate to="/app/agenda" replace />;
 }

@@ -21,33 +21,33 @@ export function AppNavbar() {
     role === "admin"
       ? [
           { to: "/app/agenda", label: "Agenda", index: "01" },
-          { to: "/app/barbers", label: "Barberos", index: "02" },
-          { to: "/app/services", label: "Servicios", index: "03" },
-          { to: "/app/offers", label: "Ofertas", index: "04" },
-          { to: "/app/holidays", label: "Feriados", index: "05" },
+          { to: "/app/admin/barberos", label: "Barberos", index: "02" },
+          { to: "/app/admin/servicios", label: "Servicios", index: "03" },
+          { to: "/app/admin/ofertas", label: "Ofertas", index: "04" },
+          { to: "/app/admin/feriados", label: "Feriados", index: "05" },
           {
-            to: "/app/earnings",
+            to: "/app/admin/ingresos",
             label: "Ingresos",
             index: "06",
           },
-          { to: "/app/reports", label: "Reportes", index: "07" },
-          { to: "/app/voucher-config", label: "Config. vales", index: "08" },
+          { to: "/app/admin/reportes", label: "Reportes", index: "07" },
+          { to: "/app/admin/config-vales", label: "Config. vales", index: "08" },
         ]
       : role === "barber"
         ? [
             { to: "/app/agenda", label: "Agenda", index: "01" },
-            { to: "/app/barber/ingresos", label: "Ingresos", index: "02" },
+            { to: "/app/barbero/ingresos", label: "Ingresos", index: "02" },
           ]
         : [
             { to: "/app/agenda", label: "Reservar", index: "01" },
-            { to: "/app/client/turnos", label: "Mis turnos", index: "02" },
-            { to: "/app/client/vales", label: "Vales", index: "03" },
+            { to: "/app/cliente/turnos", label: "Mis turnos", index: "02" },
+            { to: "/app/cliente/vales", label: "Vales", index: "03" },
           ];
 
   const handleLogout = () => {
     close();
     clearAuth();
-    navigate("/login", { replace: true });
+    navigate("/ingresar", { replace: true });
   };
 
   const desktop = links.map((link) => (

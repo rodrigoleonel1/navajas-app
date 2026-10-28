@@ -82,7 +82,7 @@ export function OffersPage() {
     return [
       {
         label: "Editar oferta",
-        onSelect: () => navigate(`/app/offers/${offer.id}/edit`),
+        onSelect: () => navigate(`/app/admin/ofertas/${offer.id}/editar`),
       },
       offer.active
         ? {
@@ -122,7 +122,7 @@ export function OffersPage() {
               variant="primaryBlock"
               size="sm"
               className="w-full sm:w-auto"
-              onClick={() => navigate("/app/offers/new")}
+              onClick={() => navigate("/app/admin/ofertas/nueva")}
             >
               <Plus size={16} aria-hidden="true" />
               Agregar oferta

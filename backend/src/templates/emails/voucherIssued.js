@@ -37,7 +37,7 @@ export function buildVoucherIssued(payload = {}) {
   const expiresLabel = expiresAt ? formatBusinessDate(expiresAt) : "";
   const issuedLabel = issuedAt ? formatBusinessDate(issuedAt) : "";
   const appointmentLabel = startAt ? formatBusinessDate(startAt) : "";
-  const appUrl = `${config.APP_URL.replace(/\/+$/, "")}/app/client/vales`;
+  const appUrl = `${config.APP_URL.replace(/\/+$/, "")}/app/cliente/vales`;
   const reason =
     source === "fidelity"
       ? "por tu fidelidad cada 10 turnos completados"

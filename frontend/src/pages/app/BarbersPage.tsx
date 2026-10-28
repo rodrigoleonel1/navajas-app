@@ -55,7 +55,7 @@ export function BarbersPage() {
     return [
       {
         label: "Editar barbero",
-        onSelect: () => navigate(`/app/barbers/${barber.id}`),
+        onSelect: () => navigate(`/app/admin/barberos/${barber.id}`),
       },
       barber.active
         ? {
@@ -134,7 +134,7 @@ export function BarbersPage() {
             <BarberTable
               barbers={barbers}
               busyId={togglingId}
-              onEdit={(barber) => navigate(`/app/barbers/${barber.id}`)}
+              onEdit={(barber) => navigate(`/app/admin/barberos/${barber.id}`)}
               onToggle={handleToggle}
             />
             <ul className="grid items-start gap-3 sm:grid-cols-2 lg:hidden">

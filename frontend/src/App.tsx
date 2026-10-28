@@ -1,5 +1,5 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RoleRedirect } from "./components/RoleRedirect";
 import { ConfirmProvider } from "./components/ui/ConfirmModal";
@@ -43,8 +43,8 @@ function App() {
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<LandingPage />} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
+            <Route path="/ingresar" element={<LoginPage />} />
+            <Route path="/registro" element={<SignupPage />} />
 
             <Route
               path="/app"
@@ -58,13 +58,13 @@ function App() {
               <Route path="agenda" element={<AgendaPage />} />
 
               <Route element={<ProtectedRoute roles={["client"]} />}>
-                <Route path="client/turnos" element={<ClientTurnosPage />} />
-                <Route path="client/vales" element={<ClientVouchersPage />} />
+                <Route path="cliente/turnos" element={<ClientTurnosPage />} />
+                <Route path="cliente/vales" element={<ClientVouchersPage />} />
               </Route>
 
               <Route element={<ProtectedRoute roles={["barber"]} />}>
                 <Route
-                  path="barber/ingresos"
+                  path="barbero/ingresos"
                   element={
                     <Suspense
                       fallback={
@@ -79,11 +79,11 @@ function App() {
 
               <Route element={<ProtectedRoute roles={["admin"]} />}>
                 <Route
-                  path="voucher-config"
+                  path="admin/config-vales"
                   element={<VoucherConfigPage />}
                 />
                 <Route
-                  path="earnings"
+                  path="admin/ingresos"
                   element={
                     <Suspense
                       fallback={
@@ -94,23 +94,27 @@ function App() {
                     </Suspense>
                   }
                 />
-                {/* Ruta vieja de los ingresos del admin. */}
+                <Route path="admin/reportes" element={<ReportsPage />} />
+                <Route path="admin/barberos" element={<BarbersPage />} />
                 <Route
-                  path="daily-earnings"
-                  element={<Navigate to="/app/earnings" replace />}
+                  path="admin/barberos/:id"
+                  element={<BarberDetailPage />}
                 />
-                <Route path="reports" element={<ReportsPage />} />
-                <Route path="barbers" element={<BarbersPage />} />
-                <Route path="barbers/:id" element={<BarberDetailPage />} />
-                <Route path="services" element={<ServicesPage />} />
+                <Route path="admin/servicios" element={<ServicesPage />} />
                 <Route
-                  path="services/:id"
+                  path="admin/servicios/:id"
                   element={<ServiceDetailPage />}
                 />
-                <Route path="offers" element={<OffersPage />} />
-                <Route path="offers/new" element={<OfferFormPage />} />
-                <Route path="offers/:id/edit" element={<OfferFormPage />} />
-                <Route path="holidays" element={<HolidaysPage />} />
+                <Route path="admin/ofertas" element={<OffersPage />} />
+                <Route
+                  path="admin/ofertas/nueva"
+                  element={<OfferFormPage />}
+                />
+                <Route
+                  path="admin/ofertas/:id/editar"
+                  element={<OfferFormPage />}
+                />
+                <Route path="admin/feriados" element={<HolidaysPage />} />
               </Route>
             </Route>
           </Routes>

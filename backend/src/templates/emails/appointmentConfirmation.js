@@ -73,7 +73,7 @@ export function buildAppointmentConfirmation(payload = {}) {
   const extraLabel = formatPrice(extraValue);
   const voucherLabel = formatPrice(voucherValue);
   const offerLabel = formatPrice(offerValue);
-  const appUrl = `${config.APP_URL.replace(/\/+$/, "")}/app/client/turnos`;
+  const appUrl = `${config.APP_URL.replace(/\/+$/, "")}/app/cliente/turnos`;
 
   const subject = dateLabel
     ? `Turno confirmado — Navajas Barber, ${dateLabel} a las ${startLabel}`

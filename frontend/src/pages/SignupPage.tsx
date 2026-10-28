@@ -109,7 +109,7 @@ export function SignupPage() {
             <p className="text-sm text-muted">
               ¿Ya tenés cuenta?{" "}
               <Link
-                to="/login"
+                to="/ingresar"
                 className="font-semibold text-primary hover:text-primary-low underline underline-offset-4 transition-colors"
               >
                 Iniciar sesión

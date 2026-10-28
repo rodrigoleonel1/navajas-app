@@ -54,7 +54,7 @@ export function buildAppointmentReminder(payload = {}) {
     : "Servicio";
   const durationLabel = duration ? `${duration} min` : "";
   const priceLabel = formatPrice(price);
-  const appUrl = `${config.APP_URL.replace(/\/+$/, "")}/app/client/turnos`;
+  const appUrl = `${config.APP_URL.replace(/\/+$/, "")}/app/cliente/turnos`;
 
   const subject = dateLabel
     ? `Recordatorio de turno — Navajas Barber, ${dateLabel} a las ${startLabel}`

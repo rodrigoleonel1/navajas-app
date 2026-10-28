@@ -142,7 +142,7 @@ export function BarberDetailPage() {
           {loadError || "Barbero no encontrado."}
         </p>
         <Link
-          to="/app/barbers"
+          to="/app/admin/barberos"
           className="mt-4 inline-flex items-center gap-1 text-primary text-xs font-semibold tracking-wide hover:opacity-80 transition-opacity"
         >
           <ArrowLeft size={14} aria-hidden="true" />
@@ -161,7 +161,7 @@ export function BarberDetailPage() {
         description={barber.email}
       />
       <Link
-        to="/app/barbers"
+        to="/app/admin/barberos"
         className="mt-4 inline-flex items-center gap-1 text-primary text-xs font-semibold tracking-wide hover:opacity-80 transition-opacity"
       >
         <ArrowLeft size={14} aria-hidden="true" />
@@ -262,7 +262,7 @@ export function BarberDetailPage() {
           <p className="mb-3 text-xs text-muted">
             Los feriados del negocio se configuran en{" "}
             <Link
-              to="/app/holidays"
+              to="/app/admin/feriados"
               className="text-primary hover:underline"
             >
               Feriados

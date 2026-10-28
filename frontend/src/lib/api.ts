@@ -28,7 +28,7 @@ api.interceptors.response.use(undefined, (err) => {
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     if (window.location.pathname.startsWith("/app")) {
-      window.location.href = "/login";
+      window.location.href = "/ingresar";
     }
   }
   return Promise.reject(err);

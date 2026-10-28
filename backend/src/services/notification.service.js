@@ -270,8 +270,8 @@ function buildInAppContent(notification) {
     Array.isArray(payload.services) && payload.services.length > 0
       ? payload.services.join(" + ")
       : "";
-  const link = "/app/client/turnos";
-  const voucherLink = "/app/client/vales";
+  const link = "/app/cliente/turnos";
+  const voucherLink = "/app/cliente/vales";
   const agendaLink = "/app/agenda";
 
   switch (notification.type) {

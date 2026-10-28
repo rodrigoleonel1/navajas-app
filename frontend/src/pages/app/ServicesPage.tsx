@@ -74,7 +74,7 @@ export function ServicesPage() {
     return [
       {
         label: "Editar servicio",
-        onSelect: () => navigate(`/app/services/${service.id}`),
+        onSelect: () => navigate(`/app/admin/servicios/${service.id}`),
       },
       service.active
         ? {
@@ -135,7 +135,7 @@ export function ServicesPage() {
             <ServiceTable
               services={services}
               busyId={togglingId}
-              onEdit={(service) => navigate(`/app/services/${service.id}`)}
+              onEdit={(service) => navigate(`/app/admin/servicios/${service.id}`)}
               onToggle={handleToggle}
             />
             <ul className="grid items-start gap-3 sm:grid-cols-2 lg:hidden">

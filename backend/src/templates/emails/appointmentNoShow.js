@@ -40,7 +40,7 @@ export function buildAppointmentNoShow(payload = {}) {
     ? `${startLabel} a ${endLabel} hs`
     : `${startLabel} hs`;
   const servicesLabel = services.length ? services.join(", ") : "Servicio";
-  const appUrl = `${config.APP_URL.replace(/\/+$/, "")}/app/client/turnos`;
+  const appUrl = `${config.APP_URL.replace(/\/+$/, "")}/app/cliente/turnos`;
 
   const subject = "Inasistencia registrada — Navajas Barber";
   const message =

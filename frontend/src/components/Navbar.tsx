@@ -25,7 +25,7 @@ export function Navbar() {
   ));
 
   const actions = (
-    <Button variant="outline" href="/login">
+    <Button variant="outline" href="/ingresar">
       Reservar{" "}
       <ArrowUpRight size={14} className="opacity-60" aria-hidden="true" />
     </Button>
@@ -44,7 +44,7 @@ export function Navbar() {
       ))}
       <Button
         variant="primaryBlock"
-        href="/login"
+        href="/ingresar"
         className="mt-6"
         onClick={close}
       >
