@@ -88,7 +88,7 @@ El alcance incluye desde la reserva del turno por parte del cliente hasta el env
 | Regla 2 | La duración del turno se calcula según el/los servicio(s) elegidos. Un turno puede combinar varios servicios (ej.: Corte \+ Decoloración).  |
 | Regla 3 | Cancelación con 24hs o más de anticipación: sin penalización, libera el horario. Entre 4 y 24hs antes: libera el horario pero se registra como inasistencia. Menos de 4hs antes: no libera el horario y se registra como inasistencia.  |
 | Regla 4 | Si el cliente no se presenta al turno (pasados 15 minutos de tolerancia) y no canceló previamente, el administrador marca manualmente el turno como "Inasistencia"; el horario no se libera.  |
-| Regla 5 | Si un cliente acumula 3 inasistencias en los últimos 2 meses, se aplica un recargo del 20% en su próxima reserva. Al aplicarse, el contador de inasistencias se reinicia.  |
+| Regla 5 | Si un cliente acumula 3 inasistencias en los últimos 2 meses, se aplica un recargo del 20% en su próxima reserva. Al aplicarse, el contador de inasistencias se reinicia. El recargo se informa en la confirmación del turno (email + in-app).  |
 | Regla 6 | Cada barbero cobra el 60% del precio total de cada turno completado (el 40% restante corresponde al local), calculado sobre el precio vigente al momento de la reserva.  |
 | Regla 7 | Si el administrador cancela un turno (ej.: emergencia del barbero), se notifica al cliente que la cancelación fue con anticipación y sin penalización, y se emite automáticamente un vale de 20% de descuento, con fecha de caducidad según la configuración del administrador.  |
 | Regla 8 | Al completar su 10° turno (y cada 10 turnos sucesivos: 20°, 30°, etc.), el cliente recibe automáticamente un vale de fidelidad del 30% de descuento.  |
@@ -106,7 +106,7 @@ El alcance incluye desde la reserva del turno por parte del cliente hasta el env
   * Mensajes a enviar: Msj\_Error (Regla 1\) \+ sugerencia de próximo horario disponible.  
 * Cliente 3:  
   * Condición: Cliente con 3 inasistencias en los últimos 2 meses reserva un nuevo turno.  
-  * Mensajes a enviar: Msj0, Msj\_Recargo (Regla 5, \+20% en esta reserva), Msj9.  
+  * Mensajes a enviar: Msj0 (incluye Msj\_Recargo: \+20% por la Regla 5 en esta reserva), Msj9.  
 * Cliente 4:  
   * Condición: Cancela un turno con 20hs de anticipación (dentro de la ventana 4-24hs).  
   * Mensajes a enviar: Msj\_CancelacionConInasistencia (Regla 3: libera el horario, pero cuenta como inasistencia).  
@@ -173,9 +173,9 @@ El alcance incluye desde la reserva del turno por parte del cliente hasta el env
 
 # 5\. Pantallas de usuario
 
-* Pantalla NAV001: Landing — presentación de la barbería, con acceso a "Reservar turno" (redirige a /login).  
-* Pantalla NAV002: Login (/login) — acceso único para cliente, barbero y administrador.  
-* Pantalla NAV003: Registro de Cliente (/signup).  
+* Pantalla NAV001: Landing — presentación de la barbería, con acceso a "Reservar turno" (redirige a /ingresar).  
+* Pantalla NAV002: Login (/ingresar) — acceso único para cliente, barbero y administrador.  
+* Pantalla NAV003: Registro de Cliente (/registro).  
 * Pantalla NAV004: Reserva de Turno — selección de uno o varios servicios, barbero y horario disponible.  
 * Pantalla NAV005: Próximos Turnos e Historial (Cliente).  
 * Pantalla NAV006: Vales y Penalizaciones (Cliente).  

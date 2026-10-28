@@ -98,7 +98,7 @@ El alcance incluye desde la reserva del turno por parte del cliente hasta el env
 | Regla 2 | La duración del turno se calcula según el/los servicio(s) elegidos. Un turno puede combinar varios servicios (ej.: Corte \+ Decoloración). |
 | Regla 3 | Cancelación ≥24hs de anticipación: sin penalización, libera el horario. Entre 4hs y 24hs: libera el horario y registra inasistencia. \<4hs: no libera el horario y registra inasistencia. |
 | Regla 4 | Si el cliente no se presenta (tolerancia de 15 min) y no canceló previamente, el administrador marca manualmente el turno como "Inasistencia"; el horario no se libera. |
-| Regla 5 | 3 inasistencias en los últimos 2 meses → recargo del 20% en la próxima reserva. Al aplicarse, el contador de inasistencias se reinicia. |
+| Regla 5 | 3 inasistencias en los últimos 2 meses → recargo del 20% en la próxima reserva. Al aplicarse, el contador de inasistencias se reinicia. El recargo se informa en la confirmación del turno (email + in-app). |
 | Regla 6 | Cada barbero cobra el 60% del precio total de cada turno completado (40% para el local), calculado sobre el precio histórico vigente al momento de la reserva. |
 | Regla 7 | Cancelación por parte del administrador → notifica al cliente que la cancelación fue con anticipación y sin penalización, y emite automáticamente un vale de 20% de descuento (fecha de caducidad según configuración). |
 | Regla 8 | Cada 10 turnos completados (10°, 20°, 30°...) → el cliente recibe automáticamente un vale de fidelidad del 30% de descuento. |
@@ -117,7 +117,7 @@ Tabla de decisión: define qué notificación o acción se dispara según la con
 | Cancelación entre 4-24hs antes | RN3 | Msj\_CancelacionConInasistencia |
 | Cancelación \< 4hs antes | RN3 | Msj\_CancelacionSinLiberar |
 | Cliente no se presenta (+15 min) | RN4 | Msj\_Inasistencia \- Registrada por el admin |
-| 3ra inasistencia en 2 meses | RN5 | Msj\_Recargo \- 20% en próxima reserva |
+| 3ra inasistencia en 2 meses | RN5 | Msj\_Recargo (incluido en Msj0) \- 20% en próxima reserva |
 | Admin cancela un turno | RN7 | Msj\_CancelacionAdmin \+ Msj\_Vale (20% dto.) |
 | Cliente completa 10°, 20°, 30°... turno | RN8 | Msj\_ValeFidelidad (30% dto.) |
 | Turno marcado como completado | \- | Msj\_Agradecimiento |
@@ -132,7 +132,7 @@ Tabla de decisión: define qué notificación o acción se dispara según la con
   * Notificaciones: Msj\_Error (RN1) \+ sugerencia de próximo horario disponible.  
 * Cliente 3:  
   * Condición: Cliente con 3 inasistencias en los últimos 2 meses reserva un nuevo turno.  
-  * Notificaciones: Msj0, Msj\_Recargo (RN5, \+20% en esta reserva), Msj9.  
+  * Notificaciones: Msj0 (incluye Msj\_Recargo: \+20% por RN5 en esta reserva), Msj9.  
 * Cliente 4:  
   * Condición: Cancela un turno con 20hs de anticipación (dentro de la ventana 4-24hs).  
   * Notificaciones: Msj\_CancelacionConInasistencia (RN3: libera el horario, pero cuenta como inasistencia).  
@@ -154,7 +154,7 @@ Tabla de decisión: define qué notificación o acción se dispara según la con
 ## 4.1. V1 \- MVP funcional básico
 
 * Objetivo: un cliente puede reservar un turno real, y el admin puede operar el día a día. Sin reglas de penalización todavía.  
-* Auth: signup cliente (/signup), login único (/login) con roles, seed del admin, alta de barberos por el admin.  
+* Auth: signup cliente (/registro), login único (/ingresar) con roles, seed del admin, alta de barberos por el admin.  
 * Servicios: CRUD básico (nombre, duración, precio) — solo admin.  
 * Barberos: alta/baja \+ jornada laboral (horario de entrada/salida) y francos semanales/puntuales — solo admin.
 * Reserva de turno: cliente elige servicio(s) \+ barbero \+ horario disponible. Validar que no haya solapamiento (RN1) y que respete la jornada laboral y los francos (RN10). Los feriados globales se suman en V2.
@@ -201,13 +201,13 @@ EP-1: Autenticación y gestión de usuarios
 | Estado | Aprobado |
 | Creado | 07/09/2026 |
 | Actualizado | 07/09/2026 |
-| Descripción | Permite a clientes registrarse y loguearse, y al administrador dar de alta cuentas de barberos. Un único punto de acceso (/login) sirve a los tres roles, mostrando distinta interfaz según el rol. |
+| Descripción | Permite a clientes registrarse y loguearse, y al administrador dar de alta cuentas de barberos. Un único punto de acceso (/ingresar) sirve a los tres roles, mostrando distinta interfaz según el rol. |
 | Implementación | V1 |
 
 Historias de usuario
 
-* HU-1: Como cliente, quiero registrarme (/signup) con mis datos básicos, para poder reservar turnos.  
-* HU-2: Como usuario (cliente/barbero/admin), quiero loguearme desde un único formulario (/login), para acceder a la vista correspondiente a mi rol.   
+* HU-1: Como cliente, quiero registrarme (/registro) con mis datos básicos, para poder reservar turnos.  
+* HU-2: Como usuario (cliente/barbero/admin), quiero loguearme desde un único formulario (/ingresar), para acceder a la vista correspondiente a mi rol.   
 * HU-3: Como administrador, quiero crear cuentas de barberos, para que puedan acceder a su agenda e ingresos. 
 
 Criterio de Aceptación 
@@ -391,9 +391,9 @@ Dependencias
 
 # 6\. Pantallas de usuario
 
-* Pantalla NAV001 — Landing: presentación de la barbería, con acceso a "Reservar turno" (redirige a /login).  
-* Pantalla NAV002 — Login (/login): acceso único para cliente, barbero y administrador.  
-* Pantalla NAV003 — Registro de Cliente (/signup).  
+* Pantalla NAV001 — Landing: presentación de la barbería, con acceso a "Reservar turno" (redirige a /ingresar).  
+* Pantalla NAV002 — Login (/ingresar): acceso único para cliente, barbero y administrador.  
+* Pantalla NAV003 — Registro de Cliente (/registro).  
 * Pantalla NAV004 — Reserva de Turno: selección de uno o varios servicios, barbero y horario disponible.  
 * Pantalla NAV005 — Próximos Turnos e Historial (Cliente).  
 * Pantalla NAV006 — Vales y Penalizaciones (Cliente).  
