@@ -43,8 +43,8 @@ export function buildAppointmentCancellation(payload = {}) {
   const voucherNote = isAdminCancellation
     ? "Además, te emitimos un vale del 20% de descuento para tu próxima visita."
     : "";
-  const appUrl = appLink("/app/cliente/turnos");
-  const voucherUrl = appLink("/app/cliente/vales");
+  const appUrl = appLink("/app/turnos");
+  const voucherUrl = appLink("/app/vales");
 
   const subject = isAdminCancellation
     ? dateLabel

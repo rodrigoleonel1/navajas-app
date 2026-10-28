@@ -58,8 +58,8 @@ function App() {
               <Route path="agenda" element={<AgendaPage />} />
 
               <Route element={<ProtectedRoute roles={["client"]} />}>
-                <Route path="cliente/turnos" element={<ClientTurnosPage />} />
-                <Route path="cliente/vales" element={<ClientVouchersPage />} />
+                <Route path="turnos" element={<ClientTurnosPage />} />
+                <Route path="vales" element={<ClientVouchersPage />} />
               </Route>
 
               <Route element={<ProtectedRoute roles={["barber"]} />}>

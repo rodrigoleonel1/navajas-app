@@ -21,7 +21,7 @@ export function buildAppointmentNoShow(payload = {}) {
     ? `${startLabel} a ${endLabel} hs`
     : `${startLabel} hs`;
   const servicesLabel = services.length ? services.join(", ") : "Servicio";
-  const appUrl = appLink("/app/cliente/turnos");
+  const appUrl = appLink("/app/turnos");
 
   const subject = "Inasistencia registrada — Navajas Barber";
   const message =

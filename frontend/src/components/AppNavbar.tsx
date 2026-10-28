@@ -40,8 +40,8 @@ export function AppNavbar() {
           ]
         : [
             { to: "/app/agenda", label: "Reservar", index: "01" },
-            { to: "/app/cliente/turnos", label: "Mis turnos", index: "02" },
-            { to: "/app/cliente/vales", label: "Vales", index: "03" },
+            { to: "/app/turnos", label: "Mis turnos", index: "02" },
+            { to: "/app/vales", label: "Vales", index: "03" },
           ];
 
   const handleLogout = () => {

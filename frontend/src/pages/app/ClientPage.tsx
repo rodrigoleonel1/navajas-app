@@ -239,7 +239,7 @@ export function ClientPage() {
           ? `Turno reservado con ${bookingNotes.join(" y ")}.`
           : "Turno reservado",
       );
-      navigate("/app/cliente/turnos");
+      navigate("/app/turnos");
     } catch (err) {
       const nextSuggestion = getConflictSuggestion(err);
       setSuggestion(nextSuggestion);

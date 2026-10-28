@@ -78,7 +78,7 @@ export function buildAppointmentConfirmation(payload = {}) {
       : null,
     hasOffer ? "Se aplicó una oferta de descuento." : null,
     hasVoucher ? "Se aplicó un vale de descuento." : null,
-    `Ver mis turnos: ${appLink("/app/cliente/turnos")}`,
+    `Ver mis turnos: ${appLink("/app/turnos")}`,
     "",
     "Si no podés asistir, avisanos desde Mis turnos.",
     "",
@@ -113,7 +113,7 @@ export function buildAppointmentConfirmation(payload = {}) {
     intro: "Tu turno quedó confirmado.",
     rows,
     notes,
-    cta: { label: "Ver mis turnos", href: appLink("/app/cliente/turnos") },
+    cta: { label: "Ver mis turnos", href: appLink("/app/turnos") },
     footerNote: "Si no podés asistir, avisanos desde Mis turnos.",
   });
 
