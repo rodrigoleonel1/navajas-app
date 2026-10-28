@@ -8,7 +8,7 @@ import {
   type InAppNotification,
 } from "../lib/notifications";
 
-const POLL_MS = 10_000;
+const POLL_MS = 5_000;
 
 export function useNotifications(enabled = true) {
   const [notifications, setNotifications] = useState<InAppNotification[]>([]);
