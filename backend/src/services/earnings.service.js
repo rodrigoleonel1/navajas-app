@@ -6,28 +6,10 @@ import {
   tzParts,
 } from "../utils/businessTime.js";
 import { toObjectIdOrThrow } from "../utils/objectId.js";
-
-// RN6: el barbero cobra el 60% del precio histórico final de cada turno
-// completado. El 40% restante queda para el local.
-const COMMISSION_RATE = 0.6;
-
-function emptyTotals() {
-  return {
-    completed: 0,
-    gross: 0,
-    commission: 0,
-    local: 0,
-  };
-}
-
-function addAppointment(totals, priceSnapshot) {
-  const price = Number(priceSnapshot) || 0;
-  const commission = Math.round(price * COMMISSION_RATE);
-  totals.completed += 1;
-  totals.gross += price;
-  totals.commission += commission;
-  totals.local += price - commission;
-}
+import {
+  addCompletedAppointment,
+  emptyIncomeTotals,
+} from "./income.js";
 
 function nextDayKey(dayKey) {
   const [year, month, day] = dayKey.split("-").map(Number);
@@ -68,17 +50,17 @@ export async function getBarberEarnings({ barberId, from, to }) {
   const days = new Map(
     dayKeysBetween(from, to).map((date) => [
       date,
-      { date, ...emptyTotals() },
+      { date, ...emptyIncomeTotals() },
     ]),
   );
-  const totals = emptyTotals();
+  const totals = emptyIncomeTotals();
 
   for (const appointment of appointments) {
     const date = tzParts(appointment.start_at).dayKey;
     const day = days.get(date);
     if (!day) continue;
-    addAppointment(day, appointment.price_snapshot);
-    addAppointment(totals, appointment.price_snapshot);
+    addCompletedAppointment(day, appointment.price_snapshot);
+    addCompletedAppointment(totals, appointment.price_snapshot);
   }
 
   return {
@@ -113,7 +95,7 @@ export async function getAdminEarnings({ from, to }) {
       rows.set(barber._id.toString(), {
         barberId: barber._id.toString(),
         barberName: barber.name,
-        ...emptyTotals(),
+        ...emptyIncomeTotals(),
       });
     }
   }
@@ -121,10 +103,10 @@ export async function getAdminEarnings({ from, to }) {
   const days = new Map(
     dayKeysBetween(from, to).map((date) => [
       date,
-      { date, ...emptyTotals() },
+      { date, ...emptyIncomeTotals() },
     ]),
   );
-  const totals = emptyTotals();
+  const totals = emptyIncomeTotals();
 
   for (const appointment of appointments) {
     const barberId = appointment.barber_id.toString();
@@ -136,15 +118,15 @@ export async function getAdminEarnings({ from, to }) {
       row = {
         barberId,
         barberName: barber.name,
-        ...emptyTotals(),
+        ...emptyIncomeTotals(),
       };
       rows.set(barberId, row);
     }
-    addAppointment(row, appointment.price_snapshot);
-    addAppointment(totals, appointment.price_snapshot);
+    addCompletedAppointment(row, appointment.price_snapshot);
+    addCompletedAppointment(totals, appointment.price_snapshot);
 
     const day = days.get(tzParts(appointment.start_at).dayKey);
-    if (day) addAppointment(day, appointment.price_snapshot);
+    if (day) addCompletedAppointment(day, appointment.price_snapshot);
   }
 
   const barberRows = [...rows.values()].sort((a, b) =>

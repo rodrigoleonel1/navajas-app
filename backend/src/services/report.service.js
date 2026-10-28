@@ -6,9 +6,11 @@ import {
   shiftDayKey,
   tzParts,
 } from "../utils/businessTime.js";
+import {
+  addCompletedAppointment,
+  emptyIncomeTotals,
+} from "./income.js";
 
-// RN6: mismo reparto que la liquidación (60% barbero / 40% local).
-const COMMISSION_RATE = 0.6;
 const TOP_LIMIT = 5;
 
 // Estados que representan demanda real: se excluyen los turnos cancelados,
@@ -18,24 +20,6 @@ const REQUESTED_STATUSES = ["pending", "completed", "no_show"];
 // RN5: una inasistencia cuenta igual si el cliente no se presentó o si
 // canceló con menos de 24 h (late / blocked).
 const ABSENCE_CANCEL_TYPES = ["late", "blocked"];
-
-function emptyIncomeTotals() {
-  return {
-    completed: 0,
-    gross: 0,
-    commission: 0,
-    local: 0,
-  };
-}
-
-function addCompletedAppointment(totals, priceSnapshot) {
-  const price = Number(priceSnapshot) || 0;
-  const commission = Math.round(price * COMMISSION_RATE);
-  totals.completed += 1;
-  totals.gross += price;
-  totals.commission += commission;
-  totals.local += price - commission;
-}
 
 function isAbsence(appointment) {
   if (appointment.status === "no_show") return "no_show";
