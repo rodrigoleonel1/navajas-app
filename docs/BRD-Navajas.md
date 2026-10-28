@@ -92,7 +92,7 @@ El alcance incluye desde la reserva del turno por parte del cliente hasta el env
 | Regla 6 | Cada barbero cobra el 60% del precio total de cada turno completado (el 40% restante corresponde al local), calculado sobre el precio vigente al momento de la reserva.  |
 | Regla 7 | Si el administrador cancela un turno (ej.: emergencia del barbero), se notifica al cliente que la cancelación fue con anticipación y sin penalización, y se emite automáticamente un vale de 20% de descuento, con fecha de caducidad según la configuración del administrador.  |
 | Regla 8 | Al completar su 10° turno (y cada 10 turnos sucesivos: 20°, 30°, etc.), el cliente recibe automáticamente un vale de fidelidad del 30% de descuento.  |
-| Regla 9 | Enviar un recordatorio automático (email \+ notificación in-app) 24 horas antes del horario del turno.  |
+| Regla 9 | Enviar un recordatorio automático (email \+ notificación in-app) el día anterior al turno, con un cron diario a las 12:00 de Argentina. Según la hora del turno, el aviso llega aproximadamente entre 12 y 36 horas antes (no es una ventana exacta de 24 h).  |
 | Regla 10 | No permitir reservar turnos en días feriados del negocio ni en francos/días libres del barbero, ni fuera de la jornada laboral configurada para cada barbero.  |
 | Regla 11 | El administrador puede activar o desactivar ofertas/combos de servicios con % de descuento, aplicados automáticamente al precio del turno.  |
 
@@ -100,7 +100,7 @@ El alcance incluye desde la reserva del turno por parte del cliente hasta el env
 
 * Cliente 1:  
   * Condición: Reserva un turno de "Corte \+ Barba" con el Barbero A el 10/09 a las 15:00hs. El Barbero A está libre en esa franja.  
-  * Mensajes a enviar: Msj0 (Regla 0), Msj9 (Regla 9, recordatorio 24hs antes).  
+  * Mensajes a enviar: Msj0 (Regla 0), Msj9 (Regla 9, recordatorio el día anterior).  
 * Cliente 2:  
   * Condición: Intenta reservar con el Barbero B a las 10:00hs, pero el Barbero B ya tiene un turno de 9:45 a 10:15hs.  
   * Mensajes a enviar: Msj\_Error (Regla 1\) \+ sugerencia de próximo horario disponible.  

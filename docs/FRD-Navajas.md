@@ -102,7 +102,7 @@ El alcance incluye desde la reserva del turno por parte del cliente hasta el env
 | Regla 6 | Cada barbero cobra el 60% del precio total de cada turno completado (40% para el local), calculado sobre el precio histórico vigente al momento de la reserva. |
 | Regla 7 | Cancelación por parte del administrador → notifica al cliente que la cancelación fue con anticipación y sin penalización, y emite automáticamente un vale de 20% de descuento (fecha de caducidad según configuración). |
 | Regla 8 | Cada 10 turnos completados (10°, 20°, 30°...) → el cliente recibe automáticamente un vale de fidelidad del 30% de descuento. |
-| Regla 9 | Enviar un recordatorio automático (email \+ notificación in-app) 24 horas antes del horario del turno. |
+| Regla 9 | Enviar un recordatorio automático (email \+ notificación in-app) el día anterior al turno, con un cron diario a las 12:00 de Argentina. Según la hora del turno, el aviso llega aproximadamente entre 12 y 36 horas antes (no es una ventana exacta de 24 h). |
 | Regla 10 | No permitir reservar turnos en días feriados del negocio ni en francos/días libres del barbero, ni fuera de la jornada laboral configurada para cada barbero. |
 | Regla 11 | El administrador puede activar/desactivar ofertas/combos de servicios con % de descuento, aplicados automáticamente al precio del turno. |
 
@@ -112,7 +112,7 @@ Tabla de decisión: define qué notificación o acción se dispara según la con
 | :---- | :---- | :---- |
 | Turno reservado exitosamente | RN0 | Msj0 \- Confirmación (email \+ in-app) |
 | Horario solicitado ocupado | RN1 | Msj\_Error \- Horario no disponible \+ próxima opción |
-| 24hs antes del turno | RN9 | Msj9 \- Recordatorio (email \+ in-app) |
+| Día anterior al turno (cron 12:00 ART) | RN9 | Msj9 \- Recordatorio (email \+ in-app) |
 | Cancelación ≥ 24hs antes | RN3 | Msj\_CancelacionOK \- Sin penalización |
 | Cancelación entre 4-24hs antes | RN3 | Msj\_CancelacionConInasistencia |
 | Cancelación \< 4hs antes | RN3 | Msj\_CancelacionSinLiberar |
@@ -173,7 +173,7 @@ Tabla de decisión: define qué notificación o acción se dispara según la con
 * Inasistencia manual por admin con tolerancia de 15 min (RN4).  
 * Recargo del 20% a la 3ra inasistencia en 2 meses, con reseteo del contador (RN5).  
 * Comisión 60/40: vista de ingresos del barbero (gráfico semana/mes) y liquidación diaria para el admin (RN6).  
-* Notificaciones in-app (polling desde React) \+ recordatorio 24hs antes vía Vercel Cron (RN9).  
+* Notificaciones in-app (polling desde React) \+ recordatorio el día anterior vía Vercel Cron diario (RN9).  
 * Vale por cancelación del admin (20% dto., RN7) — configuración simple de duración y sección "Vales" del cliente.
 * Validaciones con Zod en front y back ya integradas de forma consistente en los endpoints principales.  
 * Con esto el sistema ya refleja el modelo de negocio completo de Navajas, no solo el CRUD de turnos.
@@ -265,13 +265,13 @@ EP-3: Notificaciones
 Historias de usuario
 
 * HU-9: Como cliente, quiero recibir un email y una notificación in-app al confirmar mi turno (RN0).  
-* HU-10: Como cliente, quiero recibir un recordatorio 24hs antes de mi turno (RN9).  
+* HU-10: Como cliente, quiero recibir un recordatorio el día anterior a mi turno (RN9).  
 * HU-11: Como cliente, quiero ser notificado si mi turno fue cancelado o marcado como inasistencia.
 
 Criterio de Aceptación 
 
 * CA-9: Toda notificación se registra en la colección notifications de Mongo, con canal y estado.
-* CA-10: El recordatorio de 24hs se dispara mediante un job programado (Vercel Cron) que revisa turnos próximos.  
+* CA-10: El recordatorio se dispara con un cron diario (Vercel Cron, 12:00 ART) que revisa los turnos del día comercial siguiente; según la hora del turno llega entre 12 y 36 h antes.  
 * CA-11: Al cancelar un turno (por el cliente o por el admin) o al marcarlo como inasistencia, el sistema dispara automáticamente una notificación (email \+ in-app) informando al cliente el cambio de estado y, en cancelaciones del admin, que fue con anticipación y sin penalización.
 
 Dependencias
