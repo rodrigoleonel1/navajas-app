@@ -47,6 +47,7 @@ export type BusinessReport = {
   };
   popular: {
     services: ReportPopularRow[];
+    offers: ReportPopularRow[];
     barbers: ReportPopularRow[];
     hours: ReportPopularRow[];
   };

@@ -1,4 +1,5 @@
 import { Appointment } from "../models/Appointment.js";
+import { Offer } from "../models/Offer.js";
 import { Service } from "../models/Service.js";
 import { User } from "../models/User.js";
 import {
@@ -50,16 +51,17 @@ function averageRating(sum, count) {
 // Reporte del negocio para un rango de días comerciales: ingresos, ausencias
 // de clientes por barbero y lo más solicitado (servicio / barbero / horario).
 export async function getBusinessReport({ from, to }) {
-  const [appointments, barbers, services] = await Promise.all([
+  const [appointments, barbers, services, offers] = await Promise.all([
     Appointment.find({
       start_at: businessDayRangeFilter(from, to),
     })
       .select(
-        "barber_id service_ids start_at status cancel_type price_snapshot rating",
+        "barber_id service_ids offer_id start_at status cancel_type price_snapshot rating",
       )
       .lean(),
     User.find({ role: "barber" }).select("name active").lean(),
     Service.find({}).select("name").lean(),
+    Offer.find({}).select("name").lean(),
   ]);
 
   const barberById = new Map(
@@ -67,6 +69,9 @@ export async function getBusinessReport({ from, to }) {
   );
   const serviceNameById = new Map(
     services.map((service) => [service._id.toString(), service.name]),
+  );
+  const offerNameById = new Map(
+    offers.map((offer) => [offer._id.toString(), offer.name]),
   );
 
   const absenceRows = new Map();
@@ -96,6 +101,7 @@ export async function getBusinessReport({ from, to }) {
   const serviceCounts = new Map();
   const barberCounts = new Map();
   const hourCounts = new Map();
+  const offerCounts = new Map();
 
   const incomeTotals = emptyIncomeTotals();
   const absenceTotals = { noShow: 0, lateCancellations: 0, total: 0 };
@@ -154,6 +160,12 @@ export async function getBusinessReport({ from, to }) {
     }
     barberCounts.set(name, (barberCounts.get(name) ?? 0) + 1);
 
+    if (appointment.offer_id) {
+      const key = appointment.offer_id.toString();
+      const label = offerNameById.get(key) ?? "Combo eliminado";
+      offerCounts.set(label, (offerCounts.get(label) ?? 0) + 1);
+    }
+
     const hour = Math.floor(tzParts(appointment.start_at).minutes / 60);
     const hourLabel = `${String(hour).padStart(2, "0")}:00`;
     hourCounts.set(hourLabel, (hourCounts.get(hourLabel) ?? 0) + 1);
@@ -186,6 +198,7 @@ export async function getBusinessReport({ from, to }) {
     },
     popular: {
       services: topRows(serviceCounts),
+      offers: topRows(offerCounts),
       barbers: topRows(barberCounts),
       hours: topRows(hourCounts),
     },

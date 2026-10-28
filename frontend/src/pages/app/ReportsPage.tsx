@@ -375,11 +375,12 @@ export function ReportsPage() {
                 Top 5 por turnos reservados (sin cancelados)
               </p>
             </div>
-            <div className="grid gap-3 md:grid-cols-3">
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <PopularList
                 title="Servicios"
                 rows={data.popular.services}
               />
+              <PopularList title="Combos" rows={data.popular.offers} />
               <PopularList title="Barberos" rows={data.popular.barbers} />
               <PopularList title="Horarios" rows={data.popular.hours} />
             </div>
