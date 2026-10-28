@@ -13,7 +13,6 @@ import {
 import {
   getCancellationPolicy,
   isNoShowEligible,
-  twoMonthsAgo,
 } from "../utils/cancellation.js";
 import { toObjectIdOrThrow } from "../utils/objectId.js";
 import {
@@ -32,6 +31,7 @@ import {
   enqueueVoucherNotification,
 } from "./appointmentNotifications.service.js";
 import { findMatchingOffer } from "./offer.service.js";
+import { applyPenaltyIfNeeded } from "./penalty.service.js";
 import {
   attachVoucherToAppointment,
   claimActiveVoucherForBooking,
@@ -53,37 +53,6 @@ function blockingAppointmentFilter(extra = {}) {
       { status: "cancelled", cancel_type: "blocked" },
     ],
   };
-}
-
-// RN5: al reservar se cuentan las inasistencias no usadas de los últimos
-// 2 meses. Con 3 o más se aplica el recargo y se marcan como usadas.
-async function applyPenaltyIfNeeded({ clientOid, basePrice, session, now }) {
-  const cutoff = twoMonthsAgo(now);
-  const noShows = await Appointment.find({
-    client_id: clientOid,
-    penalty_used: false,
-    start_at: { $gte: cutoff },
-    $or: [
-      { status: "no_show" },
-      { status: "cancelled", cancel_type: { $in: ["late", "blocked"] } },
-    ],
-  })
-    .select("_id")
-    .session(session)
-    .lean();
-
-  if (noShows.length < 3) {
-    return { extra: 0, price: basePrice };
-  }
-
-  await Appointment.updateMany(
-    { _id: { $in: noShows.map((item) => item._id) } },
-    { $set: { penalty_used: true } },
-    { session },
-  );
-
-  const extra = Math.round(basePrice * 0.2);
-  return { extra, price: basePrice + extra };
 }
 
 // Parsea un ISO8601 UTC o tira 400 VALIDATION_ERROR si es inválido.

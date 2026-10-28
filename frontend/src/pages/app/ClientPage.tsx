@@ -5,6 +5,7 @@ import { Button } from "../../components/ui/Button";
 import { Loader } from "../../components/ui/Loader";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
+import { usePenaltyStatus } from "../../hooks/usePenaltyStatus";
 import { useToast } from "../../hooks/useToast";
 import { getErrorMessage } from "../../lib/api";
 import {
@@ -36,6 +37,7 @@ export function ClientPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const userEmail = getUser()?.email;
+  const { status: penaltyStatus } = usePenaltyStatus();
   const [services, setServices] = useState<Service[]>([]);
   const [barbers, setBarbers] = useState<Barber[]>([]);
   const [activeVouchers, setActiveVouchers] = useState<Voucher[]>([]);
@@ -520,6 +522,19 @@ export function ClientPage() {
                     Reservar {formatDayHour(suggestion)}
                   </Button>
                 )}
+              </div>
+            )}
+
+            {penaltyStatus?.willApply && (
+              <div className="bg-card border border-destructive/50 rounded-2xl p-4">
+                <p className="text-sm font-semibold text-destructive">
+                  Recargo del {penaltyStatus.surchargePercent}% en esta reserva
+                </p>
+                <p className="mt-1 text-xs text-muted">
+                  Tenés {penaltyStatus.count} inasistencias en los últimos{" "}
+                  {penaltyStatus.windowMonths} meses. El recargo se aplica una
+                  sola vez y reinicia el contador.
+                </p>
               </div>
             )}
 

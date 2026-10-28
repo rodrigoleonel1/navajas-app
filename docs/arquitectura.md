@@ -175,7 +175,7 @@ El progreso de fidelidad del cliente se consulta con `GET /api/vouchers/fidelity
 
 Al reservar, el service busca el vale vigente del cliente (`used_at: null` y `expires_at > now`), ordena por vencimiento más próximo y reserva **uno solo** de forma atómica. Si la reserva falla, la transacción devuelve el vale a disponible. El turno guarda `voucher_id` y `voucher_discount`; el descuento se calcula después de RN5 y el total final queda en `price_snapshot`.
 
-El cliente ve sus vales en `/app/vales` (`GET /api/vouchers`, solo los propios). El estado se calcula al consultar: `active`, `used` o `expired`. Si un turno con vale aplicado se cancela después, el vale no se restaura automáticamente en esta versión.
+El cliente ve sus vales en `/app/vales` (`GET /api/vouchers`, solo los propios). El estado se calcula al consultar: `active`, `used` o `expired`. Si un turno con vale aplicado se cancela después, el vale no se restaura automáticamente en esta versión. La misma pantalla muestra la tarjeta de penalizaciones con `GET /api/penalties` (inasistencias sin usar de los últimos 2 meses, umbral y recargo), y `/app/agenda` muestra un aviso cuando el recargo de RN5 se va a aplicar en la reserva.
 
 #### Ofertas y combos (RN11)
 
@@ -219,6 +219,7 @@ PATCH  /api/appointments/:id/cancel     # cliente
 PATCH  /api/appointments/:id/no-show    # admin
 GET    /api/vouchers
 GET    /api/vouchers/fidelity                   # cliente: progreso RN8
+GET    /api/penalties                           # cliente: inasistencias RN5
 GET    /api/voucher-config               # admin
 PATCH  /api/voucher-config               # admin
 GET    /api/offers                       # activas (auth opcional)
@@ -241,7 +242,7 @@ PATCH /api/appointments/:id/cancel
 PATCH /api/appointments/:id/no-show
 ```
 
-Los endpoints `/api/holidays` son exclusivos del rol `admin`. La disponibilidad los refleja automáticamente en `nonWorkingDays` y bloquea la reserva con `HOLIDAY`. Los endpoints `/api/voucher-config` también son exclusivos del rol `admin`; `/api/vouchers` es del cliente y solo devuelve sus propios vales. `GET /api/offers` devuelve solo las activas y `?all=1` requiere rol `admin`; `POST` y `PATCH` son exclusivos del `admin`.
+Los endpoints `/api/holidays` son exclusivos del rol `admin`. La disponibilidad los refleja automáticamente en `nonWorkingDays` y bloquea la reserva con `HOLIDAY`. Los endpoints `/api/voucher-config` también son exclusivos del rol `admin`; `/api/vouchers` y `/api/penalties` son del cliente y solo devuelven sus propios datos. `GET /api/offers` devuelve solo las activas y `?all=1` requiere rol `admin`; `POST` y `PATCH` son exclusivos del `admin`.
 
 `GET /api/reports?from=...&to=...` es exclusivo del rol `admin` y devuelve, para el rango de días comerciales: ingresos totales (RN6), ausencias de clientes por barbero (`no_show` + cancelaciones `late`/`blocked`), calificación promedio general y por barbero (EP-7) y el top 5 de servicios, barberos y horarios solicitados. El detalle por barbero del rango vive en `GET /api/barbers/earnings`. El promedio de calificaciones considera solo turnos `completed` con `rating != null`, imputados por el día comercial de `start_at`; se redondea a 1 decimal y es `null` cuando no hay notas en el período.
 

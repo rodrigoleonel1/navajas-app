@@ -1,9 +1,10 @@
-import { Ticket } from "lucide-react";
+import { AlertTriangle, Ticket } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Badge } from "../../components/ui/Badge";
 import { Loader } from "../../components/ui/Loader";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
+import { usePenaltyStatus } from "../../hooks/usePenaltyStatus";
 import { getErrorMessage } from "../../lib/api";
 import { formatDateKey, toBusinessDayKey } from "../../lib/datetime";
 import { cn } from "../../lib/utils";
@@ -68,6 +69,7 @@ export function ClientVouchersPage() {
   const [progress, setProgress] = useState<FidelityProgress | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const { status: penaltyStatus } = usePenaltyStatus();
 
   useEffect(() => {
     let cancelled = false;
@@ -131,6 +133,32 @@ export function ClientVouchersPage() {
                   }}
                 />
               </div>
+            </div>
+          )}
+
+          {penaltyStatus && (
+            <div className="bg-card border border-border rounded-2xl p-6">
+              <div className="flex items-center justify-between gap-3">
+                <h3 className="font-barlow font-bold uppercase text-sm tracking-widest">
+                  Penalizaciones
+                </h3>
+                <span className="font-jetbrains text-xs text-muted">
+                  {penaltyStatus.count}/{penaltyStatus.threshold}
+                </span>
+              </div>
+              <p className="mt-2 text-sm text-muted">
+                {penaltyStatus.willApply
+                  ? `Tenés ${penaltyStatus.count} inasistencias en los últimos ${penaltyStatus.windowMonths} meses. Tu próxima reserva incluye un recargo del ${penaltyStatus.surchargePercent}%.`
+                  : `Tenés ${penaltyStatus.count} inasistencia${penaltyStatus.count === 1 ? "" : "s"} en los últimos ${penaltyStatus.windowMonths} meses. Con ${penaltyStatus.threshold} se aplica un recargo del ${penaltyStatus.surchargePercent}% en la próxima reserva.`}
+              </p>
+              <p className="mt-2 flex items-start gap-2 text-xs text-muted">
+                <AlertTriangle
+                  size={14}
+                  className="mt-0.5 shrink-0 text-primary"
+                  aria-hidden="true"
+                />
+                El recargo se aplica una sola vez y reinicia el contador.
+              </p>
             </div>
           )}
 

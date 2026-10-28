@@ -11,6 +11,7 @@ import cronRoutes from "./routes/cron.js";
 import holidayRoutes from "./routes/holidays.js";
 import notificationRoutes from "./routes/notifications.js";
 import offerRoutes from "./routes/offers.js";
+import penaltyRoutes from "./routes/penalties.js";
 import ratingRoutes from "./routes/ratings.js";
 import reportRoutes from "./routes/reports.js";
 import serviceRoutes from "./routes/services.js";
@@ -47,6 +48,7 @@ app.use("/api/ratings", ratingRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/vouchers", voucherRoutes);
+app.use("/api/penalties", penaltyRoutes);
 app.use("/api/voucher-config", voucherConfigRoutes);
 app.use("/api/cron", cronRoutes);
 
