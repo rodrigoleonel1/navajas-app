@@ -89,16 +89,6 @@ export async function getBusinessReport({ from, to }) {
     services.map((service) => [service._id.toString(), service.name]),
   );
 
-  const incomeRows = new Map();
-  for (const barber of barbers) {
-    if (!barber.active) continue;
-    incomeRows.set(barber._id.toString(), {
-      barberId: barber._id.toString(),
-      barberName: barber.name,
-      ...emptyIncomeTotals(),
-    });
-  }
-
   const absenceRows = new Map();
   for (const barber of barbers) {
     if (!barber.active) continue;
@@ -136,12 +126,6 @@ export async function getBusinessReport({ from, to }) {
     const name = barberName(barberById, barberId);
 
     if (appointment.status === "completed") {
-      let row = incomeRows.get(barberId);
-      if (!row) {
-        row = { barberId, barberName: name, ...emptyIncomeTotals() };
-        incomeRows.set(barberId, row);
-      }
-      addCompletedAppointment(row, appointment.price_snapshot);
       addCompletedAppointment(incomeTotals, appointment.price_snapshot);
 
       if (appointment.rating != null) {
@@ -195,9 +179,6 @@ export async function getBusinessReport({ from, to }) {
     hourCounts.set(hourLabel, (hourCounts.get(hourLabel) ?? 0) + 1);
   }
 
-  const incomeBarbers = [...incomeRows.values()].sort((a, b) =>
-    a.barberName.localeCompare(b.barberName, "es"),
-  );
   const absenceBarbers = [...absenceRows.values()].sort(
     (a, b) => b.total - a.total || a.barberName.localeCompare(b.barberName, "es"),
   );
@@ -213,7 +194,6 @@ export async function getBusinessReport({ from, to }) {
     to,
     income: {
       totals: incomeTotals,
-      barbers: incomeBarbers,
     },
     absences: {
       totals: absenceTotals,

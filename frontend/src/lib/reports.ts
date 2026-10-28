@@ -1,11 +1,6 @@
 import { api } from "./api";
 import type { EarningsTotals } from "./earnings";
 
-export type ReportIncomeBarber = EarningsTotals & {
-  barberId: string;
-  barberName: string;
-};
-
 export type ReportAbsenceBarber = {
   barberId: string;
   barberName: string;
@@ -42,7 +37,6 @@ export type BusinessReport = {
   to: string;
   income: {
     totals: EarningsTotals;
-    barbers: ReportIncomeBarber[];
   };
   absences: {
     totals: ReportAbsenceTotals;
