@@ -39,7 +39,7 @@ function renderNote(note, margin) {
   return `<p style="margin:${margin}px 0 0;font-size:12px;color:#777777;">${body}</p>`;
 }
 
-// Shell común de los 5 emails: header, saludo, intro, tabla de detalle, notas
+// Shell común de los 6 emails: header, saludo, intro, tabla de detalle, notas
 // antes del botón, CTA, nota final y footer. Los templates solo aportan
 // contenido; el escapado de `intro`, `notes`, `clientName` y `cta` se hace acá.
 export function renderEmail({

@@ -153,6 +153,39 @@ export async function enqueueStatusNotification({
   }
 }
 
+// Aviso de agradecimiento al completar el turno. El cliente puede calificar al
+// barbero desde "Mis turnos". Es best-effort: el turno ya quedó completado.
+export async function enqueueCompletedNotification({ appointment }) {
+  try {
+    const client = appointment.client_id;
+    const services = Array.isArray(appointment.service_ids)
+      ? appointment.service_ids.map((service) => service.name)
+      : [];
+
+    const { email } = await createAppointmentNotifications({
+      appointmentId: appointment._id,
+      targetUser: { id: client._id, email: client.email },
+      type: "turno_completado",
+      payload: {
+        clientName: client.name,
+        barberName: appointment.barber_id?.name ?? "",
+        services,
+        startAt: new Date(appointment.start_at).toISOString(),
+        endAt: new Date(appointment.end_at).toISOString(),
+      },
+    });
+
+    if (email) scheduleNotificationSend(email._id, "appointment");
+  } catch (err) {
+    // El turno ya quedó completado; el aviso es best-effort.
+    console.error(
+      "[appointment] no se pudo crear la notificación de turno completado",
+      err?.code || "",
+      err?.message || err,
+    );
+  }
+}
+
 // RN7/RN8: avisa al cliente que se le emitió un vale (cancelación del admin o
 // fidelidad). El turno debe venir populado con client_id (name, email) y
 // barber_id (name).

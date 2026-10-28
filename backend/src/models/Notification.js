@@ -9,6 +9,7 @@ export const NOTIFICATION_TYPES = [
   "cancelacion_turno",
   "inasistencia_turno",
   "recordatorio_turno",
+  "turno_completado",
   "vale_emitido",
   // Avisos internos para el barbero y los admins (solo canal in_app).
   "nuevo_turno_staff",

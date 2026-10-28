@@ -27,6 +27,7 @@ import {
 import { loadHolidayKeys } from "./holiday.service.js";
 import {
   enqueueAppointmentConfirmation,
+  enqueueCompletedNotification,
   enqueueStatusNotification,
   enqueueVoucherNotification,
 } from "./appointmentNotifications.service.js";
@@ -611,6 +612,7 @@ export async function updateAppointmentStatus({ id, status, requester }) {
       throw createAppError(404, "NOT_FOUND", "Turno no encontrado");
     }
 
+    await enqueueCompletedNotification({ appointment: populated });
     await enqueueVoucherNotification({ appointment: populated, voucher });
     return toAppointmentDTO(populated);
   }

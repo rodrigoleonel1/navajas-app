@@ -1,6 +1,7 @@
 import { waitUntil } from "@vercel/functions";
 import { Notification } from "../models/Notification.js";
 import { buildAppointmentCancellation } from "../templates/emails/appointmentCancellation.js";
+import { buildAppointmentCompleted } from "../templates/emails/appointmentCompleted.js";
 import { buildAppointmentConfirmation } from "../templates/emails/appointmentConfirmation.js";
 import { buildAppointmentNoShow } from "../templates/emails/appointmentNoShow.js";
 import { buildAppointmentReminder } from "../templates/emails/appointmentReminder.js";
@@ -244,6 +245,8 @@ function buildNotificationContent(notification) {
       return buildAppointmentNoShow(payload);
     case "recordatorio_turno":
       return buildAppointmentReminder(payload);
+    case "turno_completado":
+      return buildAppointmentCompleted(payload);
     case "vale_emitido":
       return buildVoucherIssued(payload);
     default:
@@ -312,6 +315,12 @@ function buildInAppContent(notification) {
         link,
       };
     }
+    case "turno_completado":
+      return {
+        title: "Gracias por tu visita",
+        message: `Tu turno${barberLabel}${whenLabel ? ` del ${whenLabel}` : ""} quedó completado. ¡Gracias por venir! Podés calificar a tu barbero desde Mis turnos.`,
+        link,
+      };
     case "inasistencia_turno":
       return {
         title: "Inasistencia registrada",
