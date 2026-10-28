@@ -8,6 +8,7 @@ import { SectionHeader } from "../../components/ui/SectionHeader";
 import { getErrorMessage } from "../../lib/api";
 import {
   formatDateKey,
+  getWeekRange,
   shiftDayKey,
   toBusinessDayKey,
 } from "../../lib/datetime";
@@ -30,11 +31,7 @@ function getRange(period: Period, anchor: string) {
   }
 
   if (period === "week") {
-    const weekday = new Date(`${anchor}T12:00:00.000Z`).getUTCDay();
-    const daysSinceMonday = (weekday + 6) % 7;
-    const from = shiftDayKey(anchor, -daysSinceMonday);
-    const end = shiftDayKey(from, 6);
-    return { from, to: end > today && from <= today ? today : end };
+    return getWeekRange(anchor, today);
   }
 
   const from = `${anchor.slice(0, 7)}-01`;

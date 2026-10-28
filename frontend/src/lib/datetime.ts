@@ -107,3 +107,15 @@ export function shiftDayKey(dayKey: string, delta: number): string {
     .toISOString()
     .slice(0, 10);
 }
+
+// Semana comercial: lunes a domingo. Si la semana está en curso, el fin se
+// recorta a hoy para no mostrar días que todavía no pasaron.
+export function getWeekRange(
+  anchor: string,
+  today: string,
+): { from: string; to: string } {
+  const weekday = new Date(`${anchor}T12:00:00.000Z`).getUTCDay();
+  const from = shiftDayKey(anchor, -((weekday + 6) % 7));
+  const end = shiftDayKey(from, 6);
+  return { from, to: end > today && from <= today ? today : end };
+}

@@ -6,7 +6,7 @@ import { SectionHeader } from "../../components/ui/SectionHeader";
 import { getErrorMessage } from "../../lib/api";
 import {
   formatDateKey,
-  shiftDayKey,
+  getWeekRange,
   toBusinessDayKey,
 } from "../../lib/datetime";
 import { getMyEarnings, type BarberEarnings } from "../../lib/earnings";
@@ -23,9 +23,7 @@ function getRange(period: Period) {
     return { from: `${today.slice(0, 7)}-01`, to: today };
   }
 
-  const weekday = new Date(`${today}T12:00:00.000Z`).getUTCDay();
-  const daysSinceMonday = (weekday + 6) % 7;
-  return { from: shiftDayKey(today, -daysSinceMonday), to: today };
+  return getWeekRange(today, today);
 }
 
 function SummaryCard({
