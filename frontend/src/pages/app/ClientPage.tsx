@@ -9,14 +9,11 @@ import { useToast } from "../../hooks/useToast";
 import { getErrorMessage } from "../../lib/api";
 import {
   createAppointment,
-  getAvailability,
   getConflictSuggestion,
-  listBarbers,
-  listServices,
-  type Availability,
-  type Barber,
-  type Service,
 } from "../../lib/appointments";
+import { getAvailability, type Availability } from "../../lib/availability";
+import { listBarbers, type Barber } from "../../lib/barbers";
+import { listServices, type Service } from "../../lib/services";
 import { getUser } from "../../lib/auth";
 import {
   businessDayKeysFromToday,

@@ -17,7 +17,7 @@ import {
   listServices,
   updateService,
   type Service,
-} from "../../lib/appointments";
+} from "../../lib/services";
 import { formatPrice } from "../../lib/format";
 
 export function ServicesPage() {

@@ -1,4 +1,4 @@
-import type { Barber } from "../lib/appointments";
+import type { Barber } from "../lib/barbers";
 import { AppointmentMenu } from "./AppointmentMenu";
 import { RatingSummary } from "./RatingSummary";
 import { Badge } from "./ui/Badge";

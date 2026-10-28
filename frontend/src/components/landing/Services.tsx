@@ -3,7 +3,7 @@ import { services as fallbackServices, type Service } from "../../data/services"
 import {
   listPopularServices,
   type Service as ApiService,
-} from "../../lib/appointments";
+} from "../../lib/services";
 import { formatPrice } from "../../lib/format";
 import { Section } from "../ui/Section";
 import { SectionEyebrow } from "../ui/SectionEyebrow";

@@ -1,4 +1,4 @@
-import type { Service } from "../lib/appointments";
+import type { Service } from "../lib/services";
 import { formatPrice } from "../lib/format";
 import { AppointmentMenu } from "./AppointmentMenu";
 import { Badge } from "./ui/Badge";

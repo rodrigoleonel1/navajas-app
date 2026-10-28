@@ -9,7 +9,7 @@ import { SectionHeader } from "../../components/ui/SectionHeader";
 import { Switch } from "../../components/ui/Switch";
 import { useToast } from "../../hooks/useToast";
 import { getErrorMessage } from "../../lib/api";
-import { listServices, type Service } from "../../lib/appointments";
+import { listServices, type Service } from "../../lib/services";
 import { formatPrice } from "../../lib/format";
 import {
   createOffer,

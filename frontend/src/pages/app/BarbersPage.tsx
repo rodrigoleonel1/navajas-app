@@ -14,8 +14,8 @@ import { SectionHeader } from "../../components/ui/SectionHeader";
 import { Switch } from "../../components/ui/Switch";
 import { useToast } from "../../hooks/useToast";
 import { getErrorMessage } from "../../lib/api";
-import { listBarbers, updateBarberProfile } from "../../lib/appointments";
-import type { Barber } from "../../lib/appointments";
+import { listBarbers, updateBarberProfile } from "../../lib/barbers";
+import type { Barber } from "../../lib/barbers";
 
 export function BarbersPage() {
   const navigate = useNavigate();

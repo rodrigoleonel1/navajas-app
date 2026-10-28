@@ -16,12 +16,11 @@ import { getErrorMessage } from "../../lib/api";
 import {
   listAppointments,
   listAppointmentsPage,
-  listBarbers,
   markNoShow,
   updateAppointmentStatus,
   type Appointment,
-  type Barber,
 } from "../../lib/appointments";
+import { listBarbers, type Barber } from "../../lib/barbers";
 import { toBusinessDayKey } from "../../lib/datetime";
 
 const STATUS_OPTIONS = [

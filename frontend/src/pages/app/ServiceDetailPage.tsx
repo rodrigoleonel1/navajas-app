@@ -14,7 +14,7 @@ import {
   getServiceById,
   updateService,
   type Service,
-} from "../../lib/appointments";
+} from "../../lib/services";
 import { formatPrice } from "../../lib/format";
 import { serviceSchema, type ServiceInput } from "../../lib/schemas";
 

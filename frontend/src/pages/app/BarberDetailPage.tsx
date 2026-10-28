@@ -13,7 +13,7 @@ import {
   getBarberById,
   updateBarberProfile,
   type Barber,
-} from "../../lib/appointments";
+} from "../../lib/barbers";
 import { formatDateKey } from "../../lib/datetime";
 
 const WEEKDAYS = [
