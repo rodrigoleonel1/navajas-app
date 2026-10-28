@@ -89,19 +89,17 @@ export async function getBarberEarnings({ barberId, from, to }) {
   };
 }
 
-// Liquidación diaria: todos los barberos activos (aunque tengan cero turnos)
-// y los inactivos que sí tuvieron turnos completados ese día.
-export async function getDailyEarnings({ date }) {
-  const dayStart = businessDayStartUtc(date);
-  const dayEnd = businessDayStartUtc(nextDayKey(date));
-
+// Ingresos del admin para un rango de días comerciales: totales, serie diaria
+// y detalle por barbero. Incluye a todos los barberos activos (aunque tengan
+// cero turnos) y a los inactivos que sí tuvieron turnos completados en el rango.
+export async function getAdminEarnings({ from, to }) {
   const [barbers, appointments] = await Promise.all([
     User.find({ role: "barber" }).select("name active").lean(),
     Appointment.find({
       status: "completed",
-      start_at: { $gte: dayStart, $lt: dayEnd },
+      start_at: dayRangeFilter(from, to),
     })
-      .select("barber_id price_snapshot")
+      .select("barber_id start_at price_snapshot")
       .lean(),
   ]);
 
@@ -120,6 +118,14 @@ export async function getDailyEarnings({ date }) {
     }
   }
 
+  const days = new Map(
+    dayKeysBetween(from, to).map((date) => [
+      date,
+      { date, ...emptyTotals() },
+    ]),
+  );
+  const totals = emptyTotals();
+
   for (const appointment of appointments) {
     const barberId = appointment.barber_id.toString();
     const barber = barberById.get(barberId);
@@ -135,22 +141,21 @@ export async function getDailyEarnings({ date }) {
       rows.set(barberId, row);
     }
     addAppointment(row, appointment.price_snapshot);
+    addAppointment(totals, appointment.price_snapshot);
+
+    const day = days.get(tzParts(appointment.start_at).dayKey);
+    if (day) addAppointment(day, appointment.price_snapshot);
   }
 
   const barberRows = [...rows.values()].sort((a, b) =>
     a.barberName.localeCompare(b.barberName, "es"),
   );
-  const totals = emptyTotals();
-  for (const row of barberRows) {
-    totals.completed += row.completed;
-    totals.gross += row.gross;
-    totals.commission += row.commission;
-    totals.local += row.local;
-  }
 
   return {
-    date,
-    barbers: barberRows,
+    from,
+    to,
     totals,
+    days: [...days.values()],
+    barbers: barberRows,
   };
 }

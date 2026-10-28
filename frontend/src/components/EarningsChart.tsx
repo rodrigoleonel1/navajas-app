@@ -42,7 +42,7 @@ function EarningsTooltip({
   );
 }
 
-export function BarberEarningsChart({
+export function EarningsChart({
   days,
   period,
 }: {

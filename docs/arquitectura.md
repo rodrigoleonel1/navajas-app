@@ -133,9 +133,9 @@ La API expone `cancelType`, `extra`, `voucherId` y `voucherDiscount`. En un turn
 
 La comisión del barbero se calcula por cada turno `completed` sobre el `price_snapshot` completo, es decir, después del recargo de RN5 y del vale aplicado: `Math.round(price_snapshot * 0.6)`. La parte del local es `price_snapshot - comisión`. No se agrega un campo de comisión: se usa el precio histórico para que los cambios posteriores de servicios no alteren liquidaciones pasadas.
 
-El día de imputación es el día comercial de `start_at` en `America/Argentina/Buenos_Aires`, no la fecha en que se marcó el turno como completado. El barbero consulta `GET /api/barbers/me/earnings?from=YYYY-MM-DD&to=YYYY-MM-DD` (rango máximo 366 días); la UI usa la semana actual (lunes a hoy) o el mes actual (día 1 a hoy). El admin consulta `GET /api/barbers/daily-earnings?date=YYYY-MM-DD`, que devuelve todos los barberos activos —aunque tengan cero turnos— y los inactivos que tuvieron turnos completados ese día.
+El día de imputación es el día comercial de `start_at` en `America/Argentina/Buenos_Aires`, no la fecha en que se marcó el turno como completado. El barbero consulta `GET /api/barbers/me/earnings?from=YYYY-MM-DD&to=YYYY-MM-DD` (rango máximo 366 días); la UI usa día, semana (lunes a hoy) o mes (día 1 a hoy). El admin consulta `GET /api/barbers/earnings?from=YYYY-MM-DD&to=YYYY-MM-DD`, que devuelve los totales del período, la serie diaria y el detalle por barbero: todos los activos —aunque tengan cero turnos— más los inactivos que tuvieron turnos completados en el rango.
 
-La pantalla del barbero (`/app/barber/ingresos`) muestra la comisión con un gráfico Recharts. La pantalla del admin (`/app/daily-earnings`, label “Ingresos”) muestra comisión, parte local y total por barbero. No se registra el pago ni se marca la liquidación como pagada en esta versión.
+La pantalla del barbero (`/app/barber/ingresos`) muestra la comisión con un gráfico Recharts. La pantalla del admin (`/app/earnings`, label “Ingresos”) usa el mismo selector día/semana/mes (la fecha es la referencia del período), muestra comisión, parte local y total por barbero, y grafica la comisión por día en semana y mes. En `/app/reports` los ingresos quedan solo como totales del rango, sin detalle por barbero. No se registra el pago ni se marca la liquidación como pagada en esta versión.
 
 #### Notificaciones in-app y recordatorios (RN0/RN9)
 
@@ -206,7 +206,7 @@ GET    /api/services
 GET    /api/services/popular?limit=3             # landing: más pedidos
 GET    /api/barbers
 GET    /api/barbers/me/earnings?from=...&to=...   # barbero
-GET    /api/barbers/daily-earnings?date=...      # admin
+GET    /api/barbers/earnings?from=...&to=...      # admin: comisiones del período
 GET    /api/reports?from=...&to=...              # admin: reportes del negocio
 GET    /api/holidays?scope=upcoming|past&page=1&limit=10   # total en X-Total-Count
 POST   /api/holidays
@@ -243,7 +243,7 @@ PATCH /api/appointments/:id/no-show
 
 Los endpoints `/api/holidays` son exclusivos del rol `admin`. La disponibilidad los refleja automáticamente en `nonWorkingDays` y bloquea la reserva con `HOLIDAY`. Los endpoints `/api/voucher-config` también son exclusivos del rol `admin`; `/api/vouchers` es del cliente y solo devuelve sus propios vales. `GET /api/offers` devuelve solo las activas y `?all=1` requiere rol `admin`; `POST` y `PATCH` son exclusivos del `admin`.
 
-`GET /api/reports?from=...&to=...` es exclusivo del rol `admin` y devuelve, para el rango de días comerciales: ingresos totales y por barbero (RN6), ausencias de clientes por barbero (`no_show` + cancelaciones `late`/`blocked`), calificación promedio general y por barbero (EP-7) y el top 5 de servicios, barberos y horarios solicitados. El promedio de calificaciones considera solo turnos `completed` con `rating != null`, imputados por el día comercial de `start_at`; se redondea a 1 decimal y es `null` cuando no hay notas en el período.
+`GET /api/reports?from=...&to=...` es exclusivo del rol `admin` y devuelve, para el rango de días comerciales: ingresos totales (RN6), ausencias de clientes por barbero (`no_show` + cancelaciones `late`/`blocked`), calificación promedio general y por barbero (EP-7) y el top 5 de servicios, barberos y horarios solicitados. El detalle por barbero del rango vive en `GET /api/barbers/earnings`. El promedio de calificaciones considera solo turnos `completed` con `rating != null`, imputados por el día comercial de `start_at`; se redondea a 1 decimal y es `null` cuando no hay notas en el período.
 
 > `PATCH /api/appointments/:id/cancel` es del cliente y no acepta body. El admin usa `PATCH /api/appointments/:id` con `{status:'completed'|'cancelled'}`. La inasistencia tiene endpoint propio para validar la tolerancia de 15 minutos.
 
@@ -605,7 +605,7 @@ Los roles deben utilizarse para proteger operaciones sensibles, especialmente la
 | `POST /api/ratings` | ✓ (propio) |  |  | EP-7: turno completado, una sola nota inmutable |
 | `POST /api/barbers` |  |  | ✓ | CA-3, alta barbero |
 | `GET /api/barbers/me/earnings` |  | ✓ |  | `barber_id = req.user.id`; rango máximo 366 días |
-| `GET /api/barbers/daily-earnings` |  |  | ✓ | Liquidación diaria; activos con cero turnos incluidos |
+| `GET /api/barbers/earnings` |  |  | ✓ | Comisiones del período; activos con cero turnos incluidos |
 | `GET /api/notifications` | ✓ (propios) | ✓ (propios) | ✓ (propios) | `target_user_id = req.user.id`; solo canal `in_app` |
 | `PATCH /api/notifications/:id/read` | ✓ (propio) | ✓ (propio) | ✓ (propio) | Verifica ownership del aviso |
 | `PATCH /api/notifications/read-all` | ✓ (propios) | ✓ (propios) | ✓ (propios) | Marca todos los no leídos |

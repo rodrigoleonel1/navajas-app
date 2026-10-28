@@ -23,7 +23,3 @@ export const earningsQuerySchema = z
     message: "El rango máximo es de 366 días",
     path: ["to"],
   });
-
-export const dailyEarningsQuerySchema = z.object({
-  date: dayKey,
-});

@@ -1,13 +1,46 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { EarningsChart } from "../../components/EarningsChart";
 import { DateField } from "../../components/ui/DateField";
 import { ListCard } from "../../components/ui/ListCard";
 import { Loader } from "../../components/ui/Loader";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
 import { getErrorMessage } from "../../lib/api";
-import { formatDateKey, toBusinessDayKey } from "../../lib/datetime";
-import { getDailyEarnings, type DailyEarnings } from "../../lib/earnings";
+import {
+  formatDateKey,
+  shiftDayKey,
+  toBusinessDayKey,
+} from "../../lib/datetime";
+import { getAdminEarnings, type AdminEarnings } from "../../lib/earnings";
 import { formatPrice } from "../../lib/format";
+
+type Period = "day" | "week" | "month";
+
+function lastDayOfMonth(dayKey: string) {
+  const nextMonthStart = `${shiftDayKey(`${dayKey.slice(0, 7)}-01`, 32).slice(0, 7)}-01`;
+  return shiftDayKey(nextMonthStart, -1);
+}
+
+// La fecha elegida es la referencia: Día = ese día, Semana = lunes a domingo,
+// Mes = mes completo. Si el período es el actual, el fin se recorta a hoy.
+function getRange(period: Period, anchor: string) {
+  const today = toBusinessDayKey(new Date().toISOString());
+  if (period === "day") {
+    return { from: anchor, to: anchor };
+  }
+
+  if (period === "week") {
+    const weekday = new Date(`${anchor}T12:00:00.000Z`).getUTCDay();
+    const daysSinceMonday = (weekday + 6) % 7;
+    const from = shiftDayKey(anchor, -daysSinceMonday);
+    const end = shiftDayKey(from, 6);
+    return { from, to: end > today && from <= today ? today : end };
+  }
+
+  const from = `${anchor.slice(0, 7)}-01`;
+  const end = lastDayOfMonth(anchor);
+  return { from, to: end > today && from <= today ? today : end };
+}
 
 function SummaryCard({
   label,
@@ -31,13 +64,15 @@ function SummaryCard({
   );
 }
 
-export function AdminDailyEarningsPage() {
-  const [date, setDate] = useState(() =>
+export function AdminEarningsPage() {
+  const [period, setPeriod] = useState<Period>("week");
+  const [anchor, setAnchor] = useState(() =>
     toBusinessDayKey(new Date().toISOString()),
   );
-  const [data, setData] = useState<DailyEarnings | null>(null);
+  const [data, setData] = useState<AdminEarnings | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const range = useMemo(() => getRange(period, anchor), [period, anchor]);
 
   useEffect(() => {
     let cancelled = false;
@@ -46,7 +81,7 @@ export function AdminDailyEarningsPage() {
       setLoading(true);
       setError("");
       try {
-        const earnings = await getDailyEarnings(date);
+        const earnings = await getAdminEarnings(range);
         if (!cancelled) setData(earnings);
       } catch (err) {
         if (!cancelled) {
@@ -62,26 +97,51 @@ export function AdminDailyEarningsPage() {
     return () => {
       cancelled = true;
     };
-  }, [date]);
+  }, [range]);
 
   return (
     <Section>
       <SectionHeader
         eyebrow="Panel — Admin"
         title="Ingresos"
-        highlight="del día."
+        highlight="del período."
         description="Comisión de barberos y parte del local por turnos completados."
       />
 
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <DateField
-          id="daily-earnings-date"
-          label="Fecha"
-          value={date}
-          onChange={setDate}
-        />
+        <div className="flex flex-wrap items-end gap-3">
+          <div className="inline-flex rounded-full border border-border bg-card p-1">
+            {(["day", "week", "month"] as const).map((value) => (
+              <button
+                key={value}
+                type="button"
+                aria-pressed={period === value}
+                onClick={() => setPeriod(value)}
+                className={
+                  period === value
+                    ? "cursor-pointer rounded-full bg-primary px-4 py-2 text-xs font-semibold text-background"
+                    : "cursor-pointer rounded-full px-4 py-2 text-xs font-medium text-muted transition-colors hover:text-foreground"
+                }
+              >
+                {value === "day"
+                  ? "Día"
+                  : value === "week"
+                    ? "Semana"
+                    : "Mes"}
+              </button>
+            ))}
+          </div>
+          <DateField
+            id="earnings-date"
+            label={period === "day" ? "Fecha" : "Fecha de referencia"}
+            value={anchor}
+            onChange={setAnchor}
+          />
+        </div>
         <p className="font-jetbrains text-xs uppercase tracking-widest text-muted">
-          {formatDateKey(date)}
+          {period === "day"
+            ? formatDateKey(range.from)
+            : `${formatDateKey(range.from)} — ${formatDateKey(range.to)}`}
         </p>
       </div>
 
@@ -115,6 +175,25 @@ export function AdminDailyEarningsPage() {
               hint="Solo turnos en estado completed"
             />
           </div>
+
+          {period !== "day" && (
+            <div className="rounded-2xl border border-border bg-card p-6">
+              <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
+                <h3 className="font-barlow text-sm font-bold uppercase tracking-widest">
+                  Comisión por día
+                </h3>
+                <p className="text-xs text-muted">
+                  60% de los turnos completados
+                </p>
+              </div>
+              <EarningsChart days={data.days} period={period} />
+              {data.totals.completed === 0 && (
+                <p className="mt-2 text-center text-sm text-muted">
+                  No hay turnos completados en este período.
+                </p>
+              )}
+            </div>
+          )}
 
           <div className="rounded-2xl border border-border bg-card p-6">
             <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
@@ -215,7 +294,7 @@ export function AdminDailyEarningsPage() {
 
                 {data.totals.completed === 0 && (
                   <p className="mt-4 text-sm text-muted">
-                    No hay turnos completados para esta fecha.
+                    No hay turnos completados en este período.
                   </p>
                 )}
               </>

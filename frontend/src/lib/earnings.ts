@@ -18,15 +18,17 @@ export type BarberEarnings = {
   days: EarningsDay[];
 };
 
-export type DailyEarningsBarber = EarningsTotals & {
+export type AdminEarningsBarber = EarningsTotals & {
   barberId: string;
   barberName: string;
 };
 
-export type DailyEarnings = {
-  date: string;
-  barbers: DailyEarningsBarber[];
+export type AdminEarnings = {
+  from: string;
+  to: string;
   totals: EarningsTotals;
+  days: EarningsDay[];
+  barbers: AdminEarningsBarber[];
 };
 
 export async function getMyEarnings(params: {
@@ -39,9 +41,10 @@ export async function getMyEarnings(params: {
   return res.data;
 }
 
-export async function getDailyEarnings(date: string): Promise<DailyEarnings> {
-  const res = await api.get<DailyEarnings>("/barbers/daily-earnings", {
-    params: { date },
-  });
+export async function getAdminEarnings(params: {
+  from: string;
+  to: string;
+}): Promise<AdminEarnings> {
+  const res = await api.get<AdminEarnings>("/barbers/earnings", { params });
   return res.data;
 }

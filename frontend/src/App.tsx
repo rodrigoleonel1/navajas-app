@@ -1,12 +1,11 @@
 import { lazy, Suspense } from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 import { RoleRedirect } from "./components/RoleRedirect";
 import { ConfirmProvider } from "./components/ui/ConfirmModal";
 import { Loader } from "./components/ui/Loader";
 import { ToastProvider } from "./components/ui/Toast";
 import { AppLayout } from "./layouts/AppLayout";
-import { AdminDailyEarningsPage } from "./pages/app/AdminDailyEarningsPage";
 import { AgendaPage } from "./pages/app/AgendaPage";
 import { BarberDetailPage } from "./pages/app/BarberDetailPage";
 import { BarbersPage } from "./pages/app/BarbersPage";
@@ -23,11 +22,17 @@ import { LandingPage } from "./pages/LandingPage";
 import { LoginPage } from "./pages/LoginPage";
 import { SignupPage } from "./pages/SignupPage";
 
-// Única página que importa recharts: se carga aparte para que el gráfico no
-// viaje en el bundle de la landing ni del panel.
+// Las páginas que importan recharts se cargan aparte: el gráfico no viaja en el
+// bundle de la landing ni del panel, y las dos comparten el mismo chunk.
 const BarberIngresosPage = lazy(() =>
   import("./pages/app/BarberIngresosPage").then((module) => ({
     default: module.BarberIngresosPage,
+  })),
+);
+
+const AdminEarningsPage = lazy(() =>
+  import("./pages/app/AdminEarningsPage").then((module) => ({
+    default: module.AdminEarningsPage,
   })),
 );
 
@@ -78,8 +83,21 @@ function App() {
                   element={<VoucherConfigPage />}
                 />
                 <Route
+                  path="earnings"
+                  element={
+                    <Suspense
+                      fallback={
+                        <Loader label="Cargando ingresos..." height="page" />
+                      }
+                    >
+                      <AdminEarningsPage />
+                    </Suspense>
+                  }
+                />
+                {/* Ruta vieja de los ingresos del admin. */}
+                <Route
                   path="daily-earnings"
-                  element={<AdminDailyEarningsPage />}
+                  element={<Navigate to="/app/earnings" replace />}
                 />
                 <Route path="reports" element={<ReportsPage />} />
                 <Route path="barbers" element={<BarbersPage />} />

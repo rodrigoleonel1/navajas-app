@@ -1,6 +1,6 @@
 import {
+  getAdminEarnings as getAdminEarningsService,
   getBarberEarnings as getBarberEarningsService,
-  getDailyEarnings as getDailyEarningsService,
 } from "../services/earnings.service.js";
 
 export async function getMyEarnings(req, res, next) {
@@ -17,10 +17,13 @@ export async function getMyEarnings(req, res, next) {
   }
 }
 
-export async function getDailyEarnings(req, res, next) {
+export async function getAdminEarnings(req, res, next) {
   try {
     const query = req.validatedQuery ?? req.query;
-    const earnings = await getDailyEarningsService({ date: query.date });
+    const earnings = await getAdminEarningsService({
+      from: query.from,
+      to: query.to,
+    });
     res.json(earnings);
   } catch (err) {
     next(err);

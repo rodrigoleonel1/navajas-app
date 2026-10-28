@@ -26,7 +26,7 @@ export function AppNavbar() {
           { to: "/app/offers", label: "Ofertas", index: "04" },
           { to: "/app/holidays", label: "Feriados", index: "05" },
           {
-            to: "/app/daily-earnings",
+            to: "/app/earnings",
             label: "Ingresos",
             index: "06",
           },

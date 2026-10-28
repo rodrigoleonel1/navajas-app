@@ -6,7 +6,7 @@ import {
   updateBarberProfile,
 } from "../controllers/barber.controller.js";
 import {
-  getDailyEarnings,
+  getAdminEarnings,
   getMyEarnings,
 } from "../controllers/earnings.controller.js";
 import {
@@ -18,10 +18,7 @@ import { validateBody } from "../middlewares/validateBody.js";
 import { validateQuery } from "../middlewares/validateQuery.js";
 import { createBarberSchema } from "../schemas/auth.schema.js";
 import { updateBarberProfileSchema } from "../schemas/barber.schema.js";
-import {
-  dailyEarningsQuerySchema,
-  earningsQuerySchema,
-} from "../schemas/earnings.schema.js";
+import { earningsQuerySchema } from "../schemas/earnings.schema.js";
 
 const router = Router();
 
@@ -36,11 +33,11 @@ router.get(
   getMyEarnings,
 );
 router.get(
-  "/daily-earnings",
+  "/earnings",
   authenticate,
   requireRole("admin"),
-  validateQuery(dailyEarningsQuerySchema),
-  getDailyEarnings,
+  validateQuery(earningsQuerySchema),
+  getAdminEarnings,
 );
 
 router.get("/:id", authenticate, requireRole("admin"), getBarberById);

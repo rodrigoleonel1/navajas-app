@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { BarberEarningsChart } from "../../components/BarberEarningsChart";
+import { EarningsChart } from "../../components/EarningsChart";
 import { Loader } from "../../components/ui/Loader";
 import { Section } from "../../components/ui/Section";
 import { SectionHeader } from "../../components/ui/SectionHeader";
@@ -152,7 +152,7 @@ export function BarberIngresosPage() {
                   {period === "week" ? "Semana actual" : "Mes actual"}
                 </p>
               </div>
-              <BarberEarningsChart days={data.days} period={period} />
+              <EarningsChart days={data.days} period={period} />
               {data.totals.completed === 0 && (
                 <p className="mt-2 text-center text-sm text-muted">
                   No hay turnos completados en este período.
