@@ -107,7 +107,17 @@ export function BarberDetailPage() {
         weeklyDaysOff,
       });
       setBarber(updated);
-      toast.success("Barbero actualizado");
+      if ((updated.failedCancellations ?? 0) > 0) {
+        toast.success(
+          `Barbero actualizado. Se cancelaron ${updated.cancelledAppointments ?? 0} turno(s) y ${updated.failedCancellations} no se pudieron cancelar.`,
+        );
+      } else if ((updated.cancelledAppointments ?? 0) > 0) {
+        toast.success(
+          `Se cancelaron ${updated.cancelledAppointments} turno(s) afectados por la nueva disponibilidad.`,
+        );
+      } else {
+        toast.success("Barbero actualizado");
+      }
     } catch (err) {
       toast.error(getErrorMessage(err, "Error al guardar cambios"));
     } finally {

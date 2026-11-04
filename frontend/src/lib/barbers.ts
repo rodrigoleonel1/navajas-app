@@ -14,6 +14,9 @@ export type Barber = {
   // EP-7: promedio interno, solo lo devuelve el backend al admin.
   ratingAverage?: number | null;
   ratingCount?: number;
+  // 2.6: turnos cancelados automáticamente al cambiar la disponibilidad.
+  cancelledAppointments?: number;
+  failedCancellations?: number;
 };
 
 export async function listBarbers(

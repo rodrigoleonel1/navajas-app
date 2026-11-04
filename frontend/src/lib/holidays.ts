@@ -8,7 +8,13 @@ export type Holiday = {
 
 export type CreateHolidayResult = {
   holiday: Holiday;
-  affectedAppointments: number;
+  cancelledAppointments: number;
+  failedCancellations: number;
+};
+
+export type UpdateHolidayResult = Holiday & {
+  cancelledAppointments?: number;
+  failedCancellations?: number;
 };
 
 export type HolidayScope = "upcoming" | "past";
@@ -40,8 +46,8 @@ export async function createHoliday(input: {
 export async function updateHoliday(
   id: string,
   patch: { date?: string; name?: string },
-): Promise<Holiday> {
-  const res = await api.patch<Holiday>(`/holidays/${id}`, patch);
+): Promise<UpdateHolidayResult> {
+  const res = await api.patch<UpdateHolidayResult>(`/holidays/${id}`, patch);
   return res.data;
 }
 

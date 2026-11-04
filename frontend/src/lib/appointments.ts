@@ -11,6 +11,7 @@ export type Appointment = {
   endAt: string;
   status: string;
   cancelType: CancelType | null;
+  cancelReason: string | null;
   extra: number;
   priceSnapshot: number;
   voucherId: string | null;

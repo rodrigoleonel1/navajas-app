@@ -23,6 +23,14 @@ export const CANCEL_TYPE_LABELS: Record<string, string> = {
   blocked: "Inasistencia · Horario no liberado",
 };
 
+// Motivo de una cancelación automática del negocio (feriado, franco, jornada).
+export const CANCEL_REASON_LABELS: Record<string, string> = {
+  holiday: "Cancelado por feriado",
+  day_off: "Cancelado por franco del barbero",
+  weekly_day_off: "Cancelado por día no laborable",
+  working_hours: "Cancelado por cambio de jornada",
+};
+
 // "Corte clásico + Barba" a partir de los servicios del turno.
 export function serviceNames(services: Appointment["services"]): string {
   return services.map((service) => service.name ?? "Servicio").join(" + ");

@@ -1,6 +1,7 @@
 import {
   APPOINTMENT_STATUS_LABELS,
   APPOINTMENT_STATUS_TONES,
+  CANCEL_REASON_LABELS,
   CANCEL_TYPE_LABELS,
   serviceNames,
 } from "../lib/appointmentDisplay";
@@ -64,9 +65,12 @@ export function AppointmentCard({
       : []),
   ];
   const notes = [
-    appointment.status === "cancelled" && appointment.cancelType
-      ? CANCEL_TYPE_LABELS[appointment.cancelType]
-      : null,
+    appointment.status === "cancelled" && appointment.cancelReason
+      ? (CANCEL_REASON_LABELS[appointment.cancelReason] ??
+        "Cancelado por el local")
+      : appointment.status === "cancelled" && appointment.cancelType
+        ? CANCEL_TYPE_LABELS[appointment.cancelType]
+        : null,
     appointment.status === "no_show" ? "Horario no liberado" : null,
     appointment.extra > 0 ? "Incluye recargo del 20%" : null,
     (appointment.voucherDiscount ?? 0) > 0

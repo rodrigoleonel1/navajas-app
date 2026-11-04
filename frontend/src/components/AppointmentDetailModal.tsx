@@ -1,6 +1,7 @@
 import {
   APPOINTMENT_STATUS_LABELS,
   APPOINTMENT_STATUS_TONES,
+  CANCEL_REASON_LABELS,
   CANCEL_TYPE_LABELS,
   serviceNames,
 } from "../lib/appointmentDisplay";
@@ -45,11 +46,14 @@ export function AppointmentDetailModal({
   );
   const hasBreakdown = extra > 0 || voucherDiscount > 0 || offerDiscount > 0;
   const statusNote =
-    appointment.status === "cancelled" && appointment.cancelType
-      ? CANCEL_TYPE_LABELS[appointment.cancelType]
-      : appointment.status === "no_show"
-        ? "Horario no liberado"
-        : null;
+    appointment.status === "cancelled" && appointment.cancelReason
+      ? (CANCEL_REASON_LABELS[appointment.cancelReason] ??
+        "Cancelado por el local")
+      : appointment.status === "cancelled" && appointment.cancelType
+        ? CANCEL_TYPE_LABELS[appointment.cancelType]
+        : appointment.status === "no_show"
+          ? "Horario no liberado"
+          : null;
   return (
     <Modal title="Detalle del turno" onClose={onClose}>
       <div className="text-center">

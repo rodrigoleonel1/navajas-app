@@ -18,6 +18,7 @@ import {
   listHolidaysPage,
   type CreateHolidayResult,
   type Holiday,
+  type UpdateHolidayResult,
 } from "../../lib/holidays";
 
 const PAGE_SIZE = 10;
@@ -106,15 +107,26 @@ export function HolidaysPage() {
 
   function handleCreated(result: CreateHolidayResult) {
     reload();
-    if (result.affectedAppointments > 0) {
+    if (result.failedCancellations > 0) {
       setWarning(
-        `Hay ${result.affectedAppointments} turno(s) pendiente(s) ese día. No se cancelaron automáticamente.`,
+        `Se cancelaron ${result.cancelledAppointments} turno(s) y ${result.failedCancellations} no se pudieron cancelar. Revisalos en la agenda.`,
+      );
+      return;
+    }
+    if (result.cancelledAppointments > 0) {
+      setWarning(
+        `Se cancelaron ${result.cancelledAppointments} turno(s) de ese día y se notificó a los clientes.`,
       );
     }
   }
 
-  function handleUpdated() {
+  function handleUpdated(result: UpdateHolidayResult) {
     reload();
+    if ((result.cancelledAppointments ?? 0) > 0) {
+      setWarning(
+        `Se cancelaron ${result.cancelledAppointments} turno(s) del día nuevo y se notificó a los clientes.`,
+      );
+    }
   }
 
   async function handleDelete(holiday: Holiday) {

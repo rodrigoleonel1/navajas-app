@@ -6,6 +6,7 @@ import {
   updateHoliday,
   type CreateHolidayResult,
   type Holiday,
+  type UpdateHolidayResult,
 } from "../lib/holidays";
 import { Button } from "./ui/Button";
 import { Input } from "./ui/Input";
@@ -20,7 +21,7 @@ export function HolidayFormModal({
   holiday?: Holiday | null;
   onClose: () => void;
   onCreated: (result: CreateHolidayResult) => void;
-  onUpdated: (holiday: Holiday) => void;
+  onUpdated: (holiday: UpdateHolidayResult) => void;
 }) {
   const toast = useToast();
   const [date, setDate] = useState(holiday?.date ?? "");
