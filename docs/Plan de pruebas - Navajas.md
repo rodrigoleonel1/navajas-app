@@ -48,11 +48,11 @@ Los 36 casos se agrupan en 7 módulos:
 
 | Módulo | Casos | Cantidad | Estado |
 | :---- | :---- | :---- | :---- |
-| Acceso por rol | CP-01 a CP-07 | 7 | Pendiente |
-| Servicios (admin) | CP-08 a CP-12 | 5 | Pendiente |
-| Barberos y horarios (admin) | CP-13 a CP-16 | 4 | Pendiente |
-| Reserva (cliente) | CP-17 a CP-20 | 4 | Pendiente |
-| Agenda por rol | CP-21 a CP-23 | 3 | Pendiente |
-| Estados del turno (admin) | CP-24 a CP-27 | 4 | Pendiente |
-| Reglas de negocio V2/V3 | CP-28 a CP-36 | 9 | Pendiente |
-| Total | CP-01 a CP-36 | 36 | Pendiente |
+| Acceso por rol | CP-01 a CP-07 | 7 | OK |
+| Servicios (admin) | CP-08 a CP-12 | 5 | OK |
+| Barberos y horarios (admin) | CP-13 a CP-16 | 4 | OK |
+| Reserva (cliente) | CP-17 a CP-20 | 4 | OK |
+| Agenda por rol | CP-21 a CP-23 | 3 | OK |
+| Estados del turno (admin) | CP-24 a CP-27 | 4 | OK |
+| Reglas de negocio V2/V3 | CP-28 a CP-36 | 9 | OK |
+| Total | CP-01 a CP-36 | 36 | OK |
