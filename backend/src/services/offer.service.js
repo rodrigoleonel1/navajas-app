@@ -1,9 +1,22 @@
 import { Offer } from "../models/Offer.js";
 import { Service } from "../models/Service.js";
 import { createAppError } from "../utils/appError.js";
+import { utcDayStart, tzParts } from "../utils/businessTime.js";
 import { toObjectIdOrThrow } from "../utils/objectId.js";
 
 const SERVICE_POPULATE = "name price duration active";
+
+// RN11: una oferta solo aplica dentro de su ventana de vigencia (en zona
+// comercial). Sin fechas = vigencia indefinida. Las fechas son inclusivas.
+function validityFilter(now = new Date()) {
+  const todayStart = utcDayStart(tzParts(now).dayKey);
+  return {
+    $and: [
+      { $or: [{ valid_from: null }, { valid_from: { $lte: todayStart } }] },
+      { $or: [{ valid_to: null }, { valid_to: { $gte: todayStart } }] },
+    ],
+  };
+}
 
 function toDayKey(date) {
   if (!date) return null;
@@ -124,8 +137,14 @@ async function normalizeServiceIds(serviceIds) {
   return ordered;
 }
 
-export async function listOffers({ includeInactive = false } = {}) {
-  const offers = await Offer.find(includeInactive ? {} : { active: true })
+export async function listOffers({
+  includeInactive = false,
+  now = new Date(),
+} = {}) {
+  const filter = includeInactive
+    ? {}
+    : { active: true, ...validityFilter(now) };
+  const offers = await Offer.find(filter)
     .sort({ active: -1, name: 1 })
     .populate("service_ids", SERVICE_POPULATE)
     .lean();
@@ -208,10 +227,14 @@ export async function updateOffer(id, patch) {
   return toOfferDTO(offer);
 }
 
-// Busca una oferta activa cuyo conjunto de servicios coincida exactamente con
-// el de la reserva. Si hubiera más de una, gana la de mayor descuento. Se usa
-// dentro de la transacción de createAppointment.
-export async function findMatchingOffer({ serviceOids, session } = {}) {
+// Busca una oferta activa y vigente cuyo conjunto de servicios coincida
+// exactamente con el de la reserva. Si hubiera más de una, gana la de mayor
+// descuento. Se usa dentro de la transacción de createAppointment.
+export async function findMatchingOffer({
+  serviceOids,
+  session,
+  now = new Date(),
+} = {}) {
   if (!Array.isArray(serviceOids) || serviceOids.length === 0) return null;
 
   const ordered = [...serviceOids].sort((a, b) => {
@@ -224,6 +247,7 @@ export async function findMatchingOffer({ serviceOids, session } = {}) {
   let query = Offer.findOne({
     active: true,
     service_ids: ordered,
+    ...validityFilter(now),
   }).sort({ discount_percent: -1, updated_at: -1 });
 
   if (session) query = query.session(session);

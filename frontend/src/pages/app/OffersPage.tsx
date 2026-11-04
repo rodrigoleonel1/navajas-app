@@ -33,7 +33,7 @@ export function OffersPage() {
   const toast = useToast();
   const navigate = useNavigate();
   const [offers, setOffers] = useState<Offer[]>([]);
-  const [showInactive, setShowInactive] = useState(false);
+  const [showInactive, setShowInactive] = useState(true);
   const [refreshKey, setRefreshKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [listError, setListError] = useState("");
@@ -113,7 +113,7 @@ export function OffersPage() {
           </h3>
           <Switch
             id="show-inactive-offers"
-            label="Ver inactivas"
+            label="Ver todas"
             checked={showInactive}
             onChange={(e) => setShowInactive(e.target.checked)}
           />
