@@ -27,6 +27,7 @@ export function buildAppointmentCancellation(payload = {}) {
     endAt,
     cancelType = "free",
     cancelledByAdmin = false,
+    reasonText = "",
   } = payload;
 
   const dateLabel = startAt ? formatBusinessDate(startAt) : "";
@@ -38,7 +39,9 @@ export function buildAppointmentCancellation(payload = {}) {
   const servicesLabel = services.length ? services.join(", ") : "Servicio";
   const isAdminCancellation = Boolean(cancelledByAdmin);
   const message = isAdminCancellation
-    ? "El local canceló tu turno con anticipación. No hay penalización y el horario quedó libre."
+    ? reasonText
+      ? `${reasonText}. Tu turno quedó cancelado con anticipación, sin penalización, y el horario quedó libre.`
+      : "El local canceló tu turno con anticipación. No hay penalización y el horario quedó libre."
     : MESSAGES[cancelType] ?? MESSAGES.free;
   const voucherNote = isAdminCancellation
     ? "Además, te emitimos un vale del 20% de descuento para tu próxima visita."

@@ -1,14 +1,12 @@
-import { Appointment } from "../models/Appointment.js";
 import { Holiday } from "../models/Holiday.js";
 import { createAppError } from "../utils/appError.js";
 import {
-  businessDayStartUtc,
-  DAY_MS,
   dayKeyUTC,
   tzParts,
   utcDayStart,
 } from "../utils/businessTime.js";
 import { assertObjectId } from "../utils/objectId.js";
+import { cancelAppointmentsOnHoliday } from "./businessCancellation.service.js";
 
 function toHolidayDTO(holiday) {
   return {
@@ -16,17 +14,6 @@ function toHolidayDTO(holiday) {
     date: dayKeyUTC(new Date(holiday.date)),
     name: holiday.name,
   };
-}
-
-async function countPendingAppointments(dayKey) {
-  const dayStart = businessDayStartUtc(dayKey);
-  return Appointment.countDocuments({
-    status: "pending",
-    start_at: {
-      $gte: dayStart,
-      $lt: new Date(dayStart.getTime() + DAY_MS),
-    },
-  });
 }
 
 export async function listHolidays({ scope, limit, page } = {}) {
@@ -55,12 +42,13 @@ export async function listHolidays({ scope, limit, page } = {}) {
   return { holidays: holidays.map(toHolidayDTO), total };
 }
 
-export async function createHoliday({ date, name }) {
+export async function createHoliday({ date, name, actorId = null }) {
+  const holidayName = name.trim();
   let holiday;
   try {
     holiday = await Holiday.create({
       date: utcDayStart(date),
-      name: name.trim(),
+      name: holidayName,
     });
   } catch (err) {
     if (err?.code === 11000) {
@@ -73,26 +61,23 @@ export async function createHoliday({ date, name }) {
     throw err;
   }
 
-  // No se cancelan turnos automáticamente: el admin recibe la advertencia y
-  // decide si los cancela. Un fallo del conteo no debe romper el alta.
-  let affectedAppointments = 0;
-  try {
-    affectedAppointments = await countPendingAppointments(date);
-  } catch (err) {
-    console.error(
-      "[holiday] no se pudieron contar los turnos afectados",
-      err?.code || "",
-      err?.message || err,
-    );
-  }
+  // RN10: los turnos pendientes de ese día se cancelan sin penalización y se
+  // avisa al cliente por email + in-app. Un fallo del barrido no revierte el
+  // feriado: se informa el conteo de fallos.
+  const { cancelled, failed } = await cancelAppointmentsOnHoliday({
+    dayKey: date,
+    holidayName,
+    actorId,
+  });
 
   return {
     holiday: toHolidayDTO(holiday.toObject()),
-    affectedAppointments,
+    cancelledAppointments: cancelled,
+    failedCancellations: failed,
   };
 }
 
-export async function updateHoliday(id, patch) {
+export async function updateHoliday(id, patch, { actorId = null } = {}) {
   assertObjectId(id, "ID de feriado inválido");
 
   const update = {};
@@ -106,8 +91,9 @@ export async function updateHoliday(id, patch) {
     throw createAppError(400, "VALIDATION_ERROR", "Nada para actualizar");
   }
 
+  let holiday;
   try {
-    const holiday = await Holiday.findByIdAndUpdate(
+    holiday = await Holiday.findByIdAndUpdate(
       id,
       { $set: update },
       { returnDocument: "after", runValidators: true },
@@ -115,7 +101,6 @@ export async function updateHoliday(id, patch) {
     if (!holiday) {
       throw createAppError(404, "NOT_FOUND", "Feriado no encontrado");
     }
-    return toHolidayDTO(holiday);
   } catch (err) {
     if (err?.code === 11000) {
       throw createAppError(
@@ -126,6 +111,23 @@ export async function updateHoliday(id, patch) {
     }
     throw err;
   }
+
+  const dto = toHolidayDTO(holiday);
+
+  // Si el feriado se movió de fecha, se cancelan los turnos del día nuevo.
+  let cancelledAppointments = 0;
+  let failedCancellations = 0;
+  if (patch.date !== undefined) {
+    const result = await cancelAppointmentsOnHoliday({
+      dayKey: dto.date,
+      holidayName: dto.name,
+      actorId,
+    });
+    cancelledAppointments = result.cancelled;
+    failedCancellations = result.failed;
+  }
+
+  return { ...dto, cancelledAppointments, failedCancellations };
 }
 
 export async function deleteHoliday(id) {

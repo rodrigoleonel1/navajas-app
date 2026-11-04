@@ -275,6 +275,27 @@ export async function attachVoucherToAppointment({
   }
 }
 
+// Devuelve el vale que se había consumido en un turno. Se usa cuando el
+// negocio cancela el turno (feriado, franco, cambio de jornada): el cliente no
+// pierde el beneficio por una decisión del local.
+export async function releaseVoucherFromAppointment({
+  voucherId,
+  appointmentId,
+  session,
+}) {
+  const voucherOid = toObjectIdOrThrow(voucherId, "ID de vale inválido");
+  const appointmentOid = toObjectIdOrThrow(
+    appointmentId,
+    "ID de turno inválido",
+  );
+
+  await Voucher.updateOne(
+    { _id: voucherOid, used_appointment_id: appointmentOid },
+    { $set: { used_at: null, used_appointment_id: null } },
+    { session },
+  );
+}
+
 // Listado propio del cliente, con estado calculado al consultar (CA-12).
 export async function listVouchers({ userId, now = new Date() }) {
   const clientOid = toObjectIdOrThrow(userId, "ID de cliente inválido");

@@ -48,7 +48,9 @@ export async function getBarberById(req, res, next) {
 
 export async function updateBarberProfile(req, res, next) {
   try {
-    const barber = await updateBarberProfileService(req.params.id, req.body);
+    const barber = await updateBarberProfileService(req.params.id, req.body, {
+      actorId: req.user.id,
+    });
     res.json(barber);
   } catch (err) {
     next(err);

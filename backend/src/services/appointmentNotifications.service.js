@@ -94,6 +94,7 @@ export async function enqueueStatusNotification({
   cancelType = null,
   cancelledByAdmin = false,
   actorId = null,
+  reasonText = null,
 }) {
   const client = appointment.client_id;
   const payload = {
@@ -109,6 +110,7 @@ export async function enqueueStatusNotification({
     voucherDiscount: appointment.voucher_discount ?? 0,
     cancelType,
     cancelledByAdmin,
+    reasonText,
   };
 
   try {

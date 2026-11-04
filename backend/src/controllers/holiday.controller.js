@@ -23,7 +23,10 @@ export async function listHolidays(req, res, next) {
 
 export async function createHoliday(req, res, next) {
   try {
-    const result = await createHolidayService(req.body);
+    const result = await createHolidayService({
+      ...req.body,
+      actorId: req.user.id,
+    });
     res.status(201).json(result);
   } catch (err) {
     next(err);
@@ -32,7 +35,9 @@ export async function createHoliday(req, res, next) {
 
 export async function updateHoliday(req, res, next) {
   try {
-    const holiday = await updateHolidayService(req.params.id, req.body);
+    const holiday = await updateHolidayService(req.params.id, req.body, {
+      actorId: req.user.id,
+    });
     res.json(holiday);
   } catch (err) {
     next(err);

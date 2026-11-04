@@ -305,9 +305,12 @@ function buildInAppContent(notification) {
       };
     case "cancelacion_turno": {
       if (payload.cancelledByAdmin) {
+        const reasonNote = payload.reasonText
+          ? `${payload.reasonText}. `
+          : "";
         return {
           title: "Turno cancelado por el local",
-          message: `El local canceló tu turno${whenLabel ? ` del ${whenLabel}` : ""} con anticipación. No hay penalización y el horario quedó libre.`,
+          message: `${reasonNote}Tu turno${whenLabel ? ` del ${whenLabel}` : ""} quedó cancelado con anticipación. No hay penalización y el horario quedó libre.`,
           link,
         };
       }

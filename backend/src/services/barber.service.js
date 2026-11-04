@@ -2,8 +2,16 @@ import { Appointment } from "../models/Appointment.js";
 import { BookingLock } from "../models/BookingLock.js";
 import { User } from "../models/User.js";
 import { createAppError } from "../utils/appError.js";
+import {
+  DAY_MS,
+  tzParts,
+  utcDayStart,
+} from "../utils/businessTime.js";
 import { createHash } from "../utils/bcrypt.js";
 import { assertObjectId } from "../utils/objectId.js";
+import { DEFAULT_WORKING_HOURS } from "./availability.service.js";
+import { cancelInvalidAppointmentsForBarber } from "./businessCancellation.service.js";
+import { loadHolidayKeys } from "./holiday.service.js";
 
 function toBarberDTO(barber, ratingStats = null) {
   const dto = {
@@ -133,8 +141,37 @@ export async function getBarberById(id) {
   return toBarberDTO(barber, stats.get(barber._id.toString()));
 }
 
-export async function updateBarberProfile(id, patch) {
+export async function updateBarberProfile(
+  id,
+  patch,
+  { actorId = null } = {},
+) {
   assertObjectId(id, "ID de barbero inválido");
+
+  const current = await User.findOne({ _id: id, role: "barber" })
+    .select("barberProfile")
+    .lean();
+  if (!current) {
+    throw createAppError(404, "NOT_FOUND", "Barbero no encontrado");
+  }
+
+  // 2.4: un PATCH parcial puede traer solo `start` o solo `end`. Se valida
+  // contra los valores guardados para no dejar la jornada invertida.
+  const currentStart =
+    current.barberProfile?.workingHours?.start ??
+    DEFAULT_WORKING_HOURS.start;
+  const currentEnd =
+    current.barberProfile?.workingHours?.end ??
+    DEFAULT_WORKING_HOURS.end;
+  const nextStart = patch.workingHours?.start ?? currentStart;
+  const nextEnd = patch.workingHours?.end ?? currentEnd;
+  if (nextStart >= nextEnd) {
+    throw createAppError(
+      400,
+      "VALIDATION_ERROR",
+      "La salida debe ser posterior a la entrada",
+    );
+  }
 
   const update = {};
   if (patch.name !== undefined) {
@@ -188,6 +225,51 @@ export async function updateBarberProfile(id, patch) {
     throw createAppError(404, "NOT_FOUND", "Barbero no encontrado");
   }
 
+  // 2.6: si cambió la jornada o los francos, los turnos pendientes que quedaron
+  // fuera de la nueva disponibilidad se cancelan sin penalización y se avisa
+  // al cliente. Un fallo del barrido no revierte el cambio de perfil.
+  let cancelledAppointments = 0;
+  let failedCancellations = 0;
+  const affectsAvailability =
+    patch.workingHours !== undefined ||
+    patch.daysOff !== undefined ||
+    patch.weeklyDaysOff !== undefined;
+
+  if (affectsAvailability) {
+    const now = new Date();
+    const todayKey = tzParts(now).dayKey;
+    const lastPending = await Appointment.findOne({
+      barber_id: barber._id,
+      status: "pending",
+      start_at: { $gte: now },
+    })
+      .sort({ start_at: -1 })
+      .select("start_at")
+      .lean();
+
+    const lastKey = lastPending
+      ? tzParts(new Date(lastPending.start_at)).dayKey
+      : todayKey;
+    const holidayKeys = await loadHolidayKeys({
+      from: utcDayStart(todayKey),
+      to: new Date(utcDayStart(lastKey).getTime() + DAY_MS),
+    });
+
+    const result = await cancelInvalidAppointmentsForBarber({
+      barberId: barber._id,
+      barberProfile: barber.barberProfile,
+      holidayKeys,
+      actorId,
+      now,
+    });
+    cancelledAppointments = result.cancelled;
+    failedCancellations = result.failed;
+  }
+
   const stats = await getRatingStatsByBarberIds([barber._id]);
-  return toBarberDTO(barber, stats.get(barber._id.toString()));
+  return {
+    ...toBarberDTO(barber, stats.get(barber._id.toString())),
+    cancelledAppointments,
+    failedCancellations,
+  };
 }
