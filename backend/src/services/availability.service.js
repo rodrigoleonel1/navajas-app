@@ -27,6 +27,29 @@ export function getWorkingBounds(barberProfile) {
   };
 }
 
+// Grilla de reserva: los turnos arrancan en la apertura y avanzan de a 30 min.
+// Debe coincidir con el `step` que usa getAvailability para generar los slots.
+export const BOOKING_STEP_MINUTES = 30;
+
+// RN1/RN10: el horario elegido tiene que pertenecer a la grilla de slots del
+// día (apertura + k * step). Evita turnos desalineados como 09:07.
+export function assertSlotAligned(
+  start,
+  barberProfile,
+  step = BOOKING_STEP_MINUTES,
+) {
+  const { open } = getWorkingBounds(barberProfile);
+  const { minutes } = tzParts(start);
+  const offset = minutes - open;
+  if (offset < 0 || offset % step !== 0) {
+    throw createAppError(
+      400,
+      "INVALID_SLOT",
+      "Horario inválido: elegí uno de los horarios disponibles",
+    );
+  }
+}
+
 // RN10: el turno debe caer dentro de la jornada del barbero y en un día
 // que no sea franco, franco semanal ni feriado global. Todo en zona comercial.
 // Devuelve el motivo del bloqueo o null si el día es laborable.

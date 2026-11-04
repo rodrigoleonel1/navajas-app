@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
+import { addMonths } from "date-fns";
 import { Appointment } from "../models/Appointment.js";
 import { BookingLock } from "../models/BookingLock.js";
+import { ClientBookingLock } from "../models/ClientBookingLock.js";
 import { Service } from "../models/Service.js";
 import { User } from "../models/User.js";
 import { createAppError } from "../utils/appError.js";
@@ -16,7 +18,9 @@ import {
 } from "../utils/cancellation.js";
 import { toObjectIdOrThrow } from "../utils/objectId.js";
 import {
+  assertSlotAligned,
   assertWithinBarberAvailability,
+  BOOKING_STEP_MINUTES,
   DEFAULT_WORKING_HOURS,
   findNextAvailable,
   generateDaySlots,
@@ -37,10 +41,14 @@ import {
   claimActiveVoucherForBooking,
   issueAdminCancellationVoucher,
   issueFidelityVoucherIfNeeded,
+  releaseVoucherFromAppointment,
 } from "./voucher.service.js";
 
+// RN1: no se puede reservar más de 4 meses hacia adelante.
+const BOOKING_HORIZON_MONTHS = 4;
+
 const APPOINTMENT_FIELDS =
-  "barber_id client_id service_ids start_at end_at status cancel_type extra price_snapshot voucher_id voucher_discount offer_id offer_discount duration_snapshot rating rated_at";
+  "barber_id client_id service_ids start_at end_at status cancel_type cancel_reason extra price_snapshot voucher_id voucher_discount offer_id offer_discount duration_snapshot rating rated_at";
 
 // Un turno ocupa la agenda si está pendiente, si el cliente no se presentó
 // o si canceló con menos de 4 h (cancel_type blocked).
@@ -65,8 +73,11 @@ function parseISODate(value) {
 }
 
 // RN2: resuelve duración total y precio base desde los servicios elegidos.
+// Deduplica IDs: [corte, corte] no debe cobrar ni durar el doble, y el match
+// exacto de ofertas (RN11) compara conjuntos, no multiconjuntos.
 async function resolveDurationAndPrice(serviceIds) {
-  const serviceOids = serviceIds.map((id) =>
+  const uniqueIds = [...new Set(serviceIds)];
+  const serviceOids = uniqueIds.map((id) =>
     toObjectIdOrThrow(id, "ID de servicio inválido"),
   );
   const services = await Service.find({
@@ -78,7 +89,7 @@ async function resolveDurationAndPrice(serviceIds) {
   const servicesById = new Map(
     services.map((service) => [service._id.toString(), service]),
   );
-  for (const id of serviceIds) {
+  for (const id of uniqueIds) {
     if (!servicesById.has(id)) {
       throw createAppError(
         404,
@@ -87,15 +98,15 @@ async function resolveDurationAndPrice(serviceIds) {
       );
     }
   }
-  const duration = serviceIds.reduce(
+  const duration = uniqueIds.reduce(
     (total, id) => total + servicesById.get(id).duration,
     0,
   );
-  const price = serviceIds.reduce(
+  const price = uniqueIds.reduce(
     (total, id) => total + servicesById.get(id).price,
     0,
   );
-  const orderedServices = serviceIds.map((id) => servicesById.get(id));
+  const orderedServices = uniqueIds.map((id) => servicesById.get(id));
   return { serviceOids, services: orderedServices, duration, price };
 }
 
@@ -191,6 +202,7 @@ function toAppointmentDTO(doc, { now = new Date() } = {}) {
     endAt: new Date(doc.end_at).toISOString(),
     status: doc.status,
     cancelType,
+    cancelReason: doc.cancel_reason ?? null,
     extra: doc.extra ?? 0,
     priceSnapshot: doc.price_snapshot,
     voucherId,
@@ -278,6 +290,24 @@ export async function createAppointment({
 
   const start = parseISODate(startAt);
 
+  // RN1: no se puede reservar en el pasado ni con demasiada anticipación.
+  const requestNow = new Date();
+  if (start.getTime() <= requestNow.getTime()) {
+    throw createAppError(
+      400,
+      "VALIDATION_ERROR",
+      "No se puede reservar un turno en el pasado",
+    );
+  }
+  const horizon = addMonths(requestNow, BOOKING_HORIZON_MONTHS);
+  if (start.getTime() > horizon.getTime()) {
+    throw createAppError(
+      400,
+      "OUT_OF_HORIZON",
+      `Solo se puede reservar hasta ${BOOKING_HORIZON_MONTHS} meses de anticipación`,
+    );
+  }
+
   // RN2: duración total y precio base = suma de los servicios elegidos.
   const {
     serviceOids,
@@ -301,6 +331,8 @@ export async function createAppointment({
     barber.barberProfile,
     holidayKeys,
   );
+  // RN1: el horario debe pertenecer a la grilla de slots (apertura + k*30).
+  assertSlotAligned(start, barber.barberProfile);
 
   const session = await mongoose.startSession();
   let created;
@@ -332,13 +364,38 @@ export async function createAppointment({
           );
         }
 
+        // RN1: el mismo cliente no puede tener dos turnos superpuestos, aunque
+        // sean con barberos distintos. El lock por cliente serializa las
+        // reservas concurrentes para que la verificación sea confiable.
+        await ClientBookingLock.findOneAndUpdate(
+          { client_id: clientOid },
+          { $inc: { version: 1 } },
+          { upsert: true, session },
+        );
+
+        const clientClash = await Appointment.exists(
+          blockingAppointmentFilter({
+            client_id: clientOid,
+            start_at: { $lt: end },
+            end_at: { $gt: start },
+          }),
+        ).session(session);
+
+        if (clientClash) {
+          throw createAppError(
+            409,
+            "CLIENT_CONFLICT",
+            "Ya tenés un turno reservado en ese horario",
+          );
+        }
+
         // RN5: si el cliente tiene 3 inasistencias recientes sin usar,
         // esta reserva lleva el recargo del 20%.
         const now = new Date();
 
         // RN11: si los servicios elegidos coinciden exactamente con una oferta
         // activa, el descuento se aplica sobre el precio base antes de RN5.
-        const offer = await findMatchingOffer({ serviceOids, session });
+        const offer = await findMatchingOffer({ serviceOids, session, now });
         const offerDiscount = offer
           ? Math.round((basePrice * offer.discount_percent) / 100)
           : 0;
@@ -373,6 +430,7 @@ export async function createAppointment({
               end_at: end,
               status: "pending",
               extra: penalty.extra,
+              penalty_source_ids: penalty.sourceIds,
               price_snapshot: finalPrice,
               voucher_id: voucher?._id ?? null,
               voucher_discount: voucherDiscount,
@@ -397,11 +455,14 @@ export async function createAppointment({
     try {
       await runTransaction();
     } catch (err) {
-      // Dos primeras reservas del mismo barbero pueden chocar al crear el
-      // lock con upsert. Se reintenta una vez; el resto de errores sigue.
+      // Las primeras reservas (del barbero o del cliente) pueden chocar al
+      // crear el lock con upsert. Se reintenta una vez; el resto sigue.
       if (
         err?.code === 11000 &&
-        (err?.keyPattern?.barber_id || err?.keyValue?.barber_id)
+        (err?.keyPattern?.barber_id ||
+          err?.keyPattern?.client_id ||
+          err?.keyValue?.barber_id ||
+          err?.keyValue?.client_id)
       ) {
         await runTransaction();
       } else {
@@ -500,7 +561,12 @@ export async function listAppointments({
 
   const query = Appointment.find(filter)
     .select(APPOINTMENT_FIELDS)
-    .sort({ start_at: order === "desc" ? -1 : 1 })
+    // El _id desempata turnos con el mismo start_at: sin un orden total, el
+    // skip de la paginación puede duplicar o saltear filas.
+    .sort({
+      start_at: order === "desc" ? -1 : 1,
+      _id: order === "desc" ? -1 : 1,
+    })
     .populate("barber_id", "name")
     .populate("client_id", "name")
     .populate("service_ids", "name price duration")
@@ -518,6 +584,8 @@ export async function listAppointments({
 }
 
 // El admin pasa un turno pendiente a completado o cancelado.
+// Completar antes de la hora de inicio es intencional: sirve para pruebas y
+// para destrabar turnos cargados manualmente. No se agrega guarda temporal.
 // La cancelación admin libera el horario, no cuenta inasistencia y emite el
 // vale del 20% de RN7 dentro de la misma transacción.
 export async function updateAppointmentStatus({ id, status, requester }) {
@@ -556,6 +624,19 @@ export async function updateAppointmentStatus({ id, status, requester }) {
             400,
             "VALIDATION_ERROR",
             "Solo se puede cambiar un turno pendiente",
+          );
+        }
+
+        // RN5: recién acá se consume el contador de inasistencias. Si el turno
+        // con recargo se hubiera cancelado, las inasistencias siguen vigentes.
+        if (updated.penalty_source_ids?.length) {
+          await Appointment.updateMany(
+            {
+              _id: { $in: updated.penalty_source_ids },
+              penalty_used: false,
+            },
+            { $set: { penalty_used: true } },
+            { session },
           );
         }
 
@@ -602,6 +683,16 @@ export async function updateAppointmentStatus({ id, status, requester }) {
           "VALIDATION_ERROR",
           "Solo se puede cambiar un turno pendiente",
         );
+      }
+
+      // RN7: el local cancela, así que el vale que el cliente había aplicado
+      // vuelve a estar disponible además del vale nuevo del 20%.
+      if (cancelled.voucher_id) {
+        await releaseVoucherFromAppointment({
+          voucherId: cancelled.voucher_id,
+          appointmentId: cancelled._id,
+          session,
+        });
       }
 
       voucher = await issueAdminCancellationVoucher({
@@ -768,7 +859,7 @@ export async function getAvailability({
   date,
   serviceIds,
   durationMinutes,
-  step = 30,
+  step = BOOKING_STEP_MINUTES,
   horizonDays = 14,
 }) {
   const { barber, barberOid } = await getBarberOrThrow(barberId);
@@ -787,6 +878,16 @@ export async function getAvailability({
   }
 
   const requestedKey = toBusinessDayKey(date);
+  const horizonKey = tzParts(
+    addMonths(new Date(), BOOKING_HORIZON_MONTHS),
+  ).dayKey;
+  if (requestedKey > horizonKey) {
+    throw createAppError(
+      400,
+      "OUT_OF_HORIZON",
+      `Solo se puede reservar hasta ${BOOKING_HORIZON_MONTHS} meses de anticipación`,
+    );
+  }
   const baseDay = businessDayStartUtc(requestedKey);
   const horizonEnd = new Date(baseDay.getTime() + horizonDays * DAY_MS);
   const holidayStart = utcDayStart(requestedKey);

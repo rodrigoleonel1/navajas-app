@@ -47,10 +47,25 @@ const appointmentSchema = new mongoose.Schema(
       type: String,
       enum: ["free", "late", "blocked"],
     },
+    // Motivo de una cancelación automática del negocio (RN7/RN10):
+    // feriado, franco puntual, franco semanal o cambio de jornada.
+    cancel_reason: {
+      type: String,
+      enum: ["holiday", "day_off", "weekly_day_off", "working_hours"],
+      default: null,
+    },
     // RN5: la inasistencia ya se usó para aplicar el recargo del 20%.
     penalty_used: {
       type: Boolean,
       default: false,
+    },
+    // RN5: inasistencias que justificaron el recargo de este turno. Se marcan
+    // como usadas recién cuando el turno se completa (no al reservar), así una
+    // cancelación sin costo no consume el contador.
+    penalty_source_ids: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: "Appointment",
+      default: [],
     },
     // Monto del recargo aplicado a esta reserva (0 si no hubo recargo).
     extra: {

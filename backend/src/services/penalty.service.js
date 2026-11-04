@@ -41,7 +41,10 @@ export async function getClientPenaltyStatus({ userId, now = new Date() }) {
 }
 
 // RN5: al reservar se cuentan las inasistencias no usadas de los últimos
-// 2 meses. Con 3 o más se aplica el recargo y se marcan como usadas.
+// 2 meses. Con 3 o más se aplica el recargo, pero NO se marcan todavía: el
+// contador se reinicia cuando el turno con recargo se completa. Si ese turno
+// se cancela sin costo, las inasistencias siguen vigentes y el cliente no
+// puede "quemarlas" reservando y cancelando.
 export async function applyPenaltyIfNeeded({
   clientOid,
   basePrice,
@@ -54,17 +57,15 @@ export async function applyPenaltyIfNeeded({
     .lean();
 
   if (noShows.length < PENALTY_THRESHOLD) {
-    return { extra: 0, price: basePrice };
+    return { extra: 0, price: basePrice, sourceIds: [] };
   }
-
-  await Appointment.updateMany(
-    { _id: { $in: noShows.map((item) => item._id) } },
-    { $set: { penalty_used: true } },
-    { session },
-  );
 
   const extra = Math.round(
     (basePrice * PENALTY_SURCHARGE_PERCENT) / 100,
   );
-  return { extra, price: basePrice + extra };
+  return {
+    extra,
+    price: basePrice + extra,
+    sourceIds: noShows.map((item) => item._id),
+  };
 }
