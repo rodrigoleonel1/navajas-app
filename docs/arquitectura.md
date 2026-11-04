@@ -98,13 +98,13 @@ Toda regla de negocio debe implementarse exclusivamente en `services/`.
 Reglas **RN0–RN11** definidas en `docs/FRD-Navajas.md:93-107`:
 
 - **RN0:** confirmación (email + in-app) al reservar turno.
-- **RN1 + RN10:** cálculo de disponibilidad (solapamiento + jornada laboral, francos por barbero y feriados globales).
+- **RN1 + RN10:** cálculo de disponibilidad (solapamiento de barbero y de cliente + jornada laboral, francos por barbero y feriados globales), grilla de slots de 30 min, reserva en el futuro dentro de un horizonte de 4 meses y dedupe de servicios.
 - **RN2:** cálculo de duración total del turno según servicios.
 - **RN3:** cálculo de la ventana de cancelación (≥24h / 4–24h / <4h).
 - **RN4:** inasistencia manual por admin con tolerancia 15 min (no libera horario).
-- **RN5:** conteo de inasistencias (3 en 2 meses) y aplicación del recargo del 20% con reinicio de contador.
-- **RN6:** cálculo de comisión 60/40 sobre precio histórico.
-- **RN7:** cancelación por admin → vale 20% con caducidad configurada.
+- **RN5:** conteo de inasistencias (3 en 2 meses) y aplicación del recargo del 20%. El contador se reinicia al completar el turno con recargo, no al reservar.
+- **RN6:** cálculo de comisión 60/40 sobre el `price_snapshot` final.
+- **RN7:** cancelación por admin o por el negocio → devolución del vale usado y vale nuevo del 20% con caducidad configurada.
 - **RN8:** cada 10 turnos completados (10°,20°...) → vale fidelidad 30%.
 - **RN9:** recordatorio del día anterior (Vercel Cron diario; ver Notificaciones y recordatorios).
 - **RN11:** gestión de ofertas/combos con % descuento.
@@ -119,19 +119,21 @@ Ventanas de cancelación del cliente:
 | `4–24 h` | `late` | Sí | Sí |
 | `< 4 h` | `blocked` | No | Sí |
 
-Un turno ya iniciado no se puede cancelar. El admin cancela con `PATCH /api/appointments/:id` y `status: "cancelled"`; se guarda `cancel_type: "free"` (libera el horario y no cuenta inasistencia) y, dentro de la misma transacción, se emite un vale del 20% (RN7). La inasistencia se marca con `PATCH /api/appointments/:id/no-show` recién 15 minutos después del inicio; pasa a `status: "no_show"` y no libera el horario. La UI del admin oculta la acción hasta que se cumple la tolerancia; el backend vuelve a validarla.
+Un turno ya iniciado no se puede cancelar. El admin cancela con `PATCH /api/appointments/:id` y `status: "cancelled"`; se guarda `cancel_type: "free"` (libera el horario y no cuenta inasistencia) y, dentro de la misma transacción, se devuelve el vale aplicado y se emite un vale del 20% (RN7). La inasistencia se marca con `PATCH /api/appointments/:id/no-show` recién 15 minutos después del inicio; pasa a `status: "no_show"` y no libera el horario. La UI del admin oculta la acción hasta que se cumple la tolerancia; el backend vuelve a validarla.
 
 Un turno ocupa la agenda si está `pending`, `no_show` o `cancelled` con `cancel_type: "blocked"`. Los turnos `cancelled` `free`/`late` y los `completed` liberan el horario.
 
-RN5 se evalúa al reservar: se cuentan los turnos del cliente con `no_show` o `cancelled` `late`/`blocked` de los últimos 2 meses que tengan `penalty_used: false`. La ventana se calcula en meses calendario y, si el día no existe en el mes destino, se ajusta al último día de ese mes (por ejemplo, `31/08` → `30/06`). Con 3 o más, la reserva nueva suma un recargo del 20% en `extra` (redondeado con `Math.round`) y esas inasistencias pasan a `penalty_used: true` para reiniciar el contador. La evaluación y el reinicio ocurren dentro de la misma transacción de la reserva: si la reserva falla, las inasistencias no se consumen.
+RN5 se evalúa al reservar: se cuentan los turnos del cliente con `no_show` o `cancelled` `late`/`blocked` de los últimos 2 meses que tengan `penalty_used: false`. La ventana se calcula en meses calendario y, si el día no existe en el mes destino, se ajusta al último día de ese mes (por ejemplo, `31/08` → `30/06`). Con 3 o más, la reserva nueva suma un recargo del 20% en `extra` (redondeado con `Math.round`) y guarda en `penalty_source_ids` los IDs de las inasistencias que lo justificaron, **sin marcarlas todavía**. El contador se reinicia recién cuando ese turno pasa a `completed`: ahí se marca `penalty_used: true` sobre `penalty_source_ids`. Si el turno con recargo se cancela, las inasistencias siguen vigentes y no se pueden "quemar" reservando y cancelando. La evaluación corre dentro de la transacción de la reserva.
 
-Después de RN5, si el cliente tiene un vale vigente se aplica **uno solo** (el de vencimiento más próximo) sobre el precio con recargo. `voucher_discount` guarda el descuento en pesos y `price_snapshot` queda como `max(base + extra - voucher_discount, 0)`. No se guarda `base_price`: el precio base se deriva como `price_snapshot - extra + voucher_discount`.
+La reserva también valida, antes de escribir: que `start_at` sea futuro, que no supere un horizonte de 4 meses, que el horario pertenezca a la grilla de slots del barbero (apertura + k × 30 min) y que el cliente no tenga otro turno superpuesto con cualquier barbero. El solapamiento del cliente se serializa con `ClientBookingLock` (un documento por cliente, incrementado dentro de la transacción) y se verifica con el mismo filtro de turnos que ocupan agenda.
+
+Después de RN5, si el cliente tiene un vale vigente se aplica **uno solo** (el de vencimiento más próximo) sobre el precio con recargo. `voucher_discount` guarda el descuento en pesos y `price_snapshot` queda como `max(base - offer_discount + extra - voucher_discount, 0)`. No se guarda `base_price`: el precio base se deriva como `price_snapshot + offer_discount - extra + voucher_discount`.
 
 La API expone `cancelType`, `extra`, `voucherId` y `voucherDiscount`. En un turno `pending`, `cancelType` es la ventana proyectada; en `cancelled`, el valor real; en otros estados, `null`. `priceSnapshot` es el total final.
 
 #### Ingresos y liquidación (RN6)
 
-La comisión del barbero se calcula por cada turno `completed` sobre el `price_snapshot` completo, es decir, después del recargo de RN5 y del vale aplicado: `Math.round(price_snapshot * 0.6)`. La parte del local es `price_snapshot - comisión`. No se agrega un campo de comisión: se usa el precio histórico para que los cambios posteriores de servicios no alteren liquidaciones pasadas.
+La comisión del barbero se calcula por cada turno `completed` sobre el `price_snapshot` completo: `Math.round(price_snapshot * 0.6)`. Esa base ya tiene descontados la oferta (RN11) y el vale aplicado, y ya incluye el recargo de RN5. Ejemplo: servicios por $10.000, oferta del 20% ($2.000), recargo del 20% sobre $8.000 ($1.600) y vale de $1.000 dan `price_snapshot = 8.600`; la comisión es `Math.round(8.600 * 0.6) = 5.160` y el local se queda con $3.440. La parte del local es `price_snapshot - comisión`. No se agrega un campo de comisión: se usa el precio histórico para que los cambios posteriores de servicios, ofertas o vales no alteren liquidaciones pasadas.
 
 El día de imputación es el día comercial de `start_at` en `America/Argentina/Buenos_Aires`, no la fecha en que se marcó el turno como completado. El barbero consulta `GET /api/barbers/me/earnings?from=YYYY-MM-DD&to=YYYY-MM-DD` (rango máximo 366 días); la UI usa día, semana (lunes a hoy) o mes (día 1 a hoy). El admin consulta `GET /api/barbers/earnings?from=YYYY-MM-DD&to=YYYY-MM-DD`, que devuelve los totales del período, la serie diaria y el detalle por barbero: todos los activos —aunque tengan cero turnos— más los inactivos que tuvieron turnos completados en el rango.
 
@@ -141,7 +143,7 @@ La pantalla del barbero (`/app/barbero/ingresos`) muestra la comisión con un gr
 
 Cada evento de turno crea dos registros en `notifications`: uno por `email` y otro por `in_app`. Los emails nacen `pending` y se envían de forma asíncrona; si el envío falla quedan en `failed` con el error en `last_error`. Los avisos in-app nacen `sent` y quedan pendientes de lectura hasta que el destinatario los abre (`read_at`). La creación es idempotente por `appointment_id + type + channel + target_user_id`.
 
-Eventos notificados: confirmación (RN0), cancelación del cliente (RN3), cancelación del admin (RN7), inasistencia (RN4), recordatorio (RN9), turno completado (agradecimiento) y emisión de vale (RN7). La cancelación del admin informa que fue con anticipación y sin penalización, y el aviso de vale enlaza a `/app/vales`. El aviso in-app de confirmación menciona la oferta, el recargo de RN5 y el vale aplicados, si los hubo. Cliente, barbero y admin ven una campana en el navbar con el contador de no leídos: el cliente recibe los avisos de sus turnos y el staff (barbero del turno + admins activos) recibe `nuevo_turno_staff`, `cancelacion_turno_staff` e `inasistencia_turno_staff`, solo in-app y enlazados a `/app/agenda`. El staff no recibe email por estos eventos y quien hace la acción no se auto-notifica. El frontend hace polling cada 5 segundos y lo pausa cuando la pestaña está oculta; al abrir el panel también refresca, y reservar o cancelar dispara un refresco inmediato. La bandeja no tiene página dedicada en esta versión.
+Eventos notificados: confirmación (RN0), cancelación del cliente (RN3), cancelación del admin o del negocio (RN7), inasistencia (RN4), recordatorio (RN9), turno completado (agradecimiento) y emisión de vale (RN7). La cancelación del admin informa que fue con anticipación y sin penalización; en las cancelaciones automáticas se agrega el motivo (feriado, franco, día no laborable o cambio de jornada). El aviso de vale enlaza a `/app/vales`. El aviso in-app de confirmación menciona la oferta, el recargo de RN5 y el vale aplicados, si los hubo. Cliente, barbero y admin ven una campana en el navbar con el contador de no leídos: el cliente recibe los avisos de sus turnos y el staff (barbero del turno + admins activos) recibe `nuevo_turno_staff`, `cancelacion_turno_staff` e `inasistencia_turno_staff`, solo in-app y enlazados a `/app/agenda`. El staff no recibe email por estos eventos y quien hace la acción no se auto-notifica. El frontend hace polling cada 5 segundos y lo pausa cuando la pestaña está oculta; al abrir el panel también refresca, y reservar o cancelar dispara un refresco inmediato. La bandeja no tiene página dedicada en esta versión.
 
 El recordatorio corre con **Vercel Cron** una vez por día. El plan Hobby solo permite una ejecución diaria, así que el schedule es `0 15 * * *` UTC: **12:00 de Argentina** (Vercel puede ejecutarlo dentro de la hora, entre 12:00 y 12:59). El endpoint busca turnos `pending` del **día comercial siguiente** y crea el email + aviso in-app. No es una ventana exacta de 24 h: según la hora del turno, el aviso llega aproximadamente entre 12 y 36 h antes. La idempotencia evita duplicados si Vercel reintenta la ejecución.
 
@@ -165,7 +167,9 @@ GET   /api/cron/reminders             # Authorization: Bearer <CRON_SECRET>
 
 #### Vales (RN7/RN8)
 
-La cancelación del admin es una operación atómica: en la misma transacción se marca el turno como `cancelled` con `cancel_type: "free"` y se crea el `Voucher` del 20%. La emisión es idempotente por `source_appointment_id + source` (`admin_cancellation`), así que un reintento no duplica el vale.
+La cancelación del admin es una operación atómica: en la misma transacción se marca el turno como `cancelled` con `cancel_type: "free"`, se devuelve el vale que el cliente tenía aplicado (vuelve a `used_at: null`) y se crea el `Voucher` del 20%. La emisión es idempotente por `source_appointment_id + source` (`admin_cancellation`), así que un reintento no duplica el vale.
+
+La cancelación automática del negocio (feriado nuevo o movido, franco puntual/semanal o cambio de jornada) usa el mismo criterio: `cancel_type: "free"`, `cancel_reason` con el motivo (`holiday`, `day_off`, `weekly_day_off`, `working_hours`), devolución del vale usado y emisión del vale del 20%. El barrido se hace turno por turno: un fallo de una notificación o de un vale no revierte el feriado ni las demás cancelaciones, y el endpoint devuelve `cancelledAppointments` / `failedCancellations` para que el admin vea el resultado.
 
 Al completar un turno, la misma transacción cuenta los turnos `completed` del cliente y, si el total es múltiplo de 10, emite un vale `fidelity` del 30% (RN8). La caducidad se fija al emitir según la configuración vigente en ese momento.
 
@@ -175,7 +179,7 @@ El progreso de fidelidad del cliente se consulta con `GET /api/vouchers/fidelity
 
 Al reservar, el service busca el vale vigente del cliente (`used_at: null` y `expires_at > now`), ordena por vencimiento más próximo y reserva **uno solo** de forma atómica. Si la reserva falla, la transacción devuelve el vale a disponible. El turno guarda `voucher_id` y `voucher_discount`; el descuento se calcula después de RN5 y el total final queda en `price_snapshot`.
 
-El cliente ve sus vales en `/app/vales` (`GET /api/vouchers`, solo los propios). El estado se calcula al consultar: `active`, `used` o `expired`. Si un turno con vale aplicado se cancela después, el vale no se restaura automáticamente en esta versión. La misma pantalla muestra la tarjeta de penalizaciones con `GET /api/penalties` (inasistencias sin usar de los últimos 2 meses, umbral y recargo), y `/app/agenda` muestra un aviso cuando el recargo de RN5 se va a aplicar en la reserva.
+El cliente ve sus vales en `/app/vales` (`GET /api/vouchers`, solo los propios). El estado se calcula al consultar: `active`, `used` o `expired`. Si el turno se cancela por decisión del negocio (admin, feriado, franco o cambio de jornada), el vale aplicado se devuelve y sigue disponible. La misma pantalla muestra la tarjeta de penalizaciones con `GET /api/penalties` (inasistencias sin usar de los últimos 2 meses, umbral y recargo), y `/app/agenda` muestra un aviso cuando el recargo de RN5 se va a aplicar en la reserva.
 
 #### Ofertas y combos (RN11)
 
@@ -183,7 +187,7 @@ El admin gestiona las ofertas desde `/app/admin/ofertas` (`GET/POST/PATCH /api/o
 
 La oferta se aplica al reservar **solo si el conjunto de servicios elegidos coincide exactamente** con el de la oferta (mismo conjunto, sin importar el orden). Por ejemplo, una oferta del 25% en corte no aplica a corte + barba. Si varias ofertas activas coinciden, gana la de mayor descuento y no se acumulan. La búsqueda (`findMatchingOffer`) corre dentro de la transacción de la reserva.
 
-Las fechas `valid_from`/`valid_to` son **informativas**: se muestran al cliente como vigencia de la promo, pero no condicionan la aplicación. La oferta aplica mientras `active` sea `true`; si la promo vence, el admin debe desactivarla. Se almacenan como fecha calendario UTC 00:00 (`YYYY-MM-DD`) y se muestran como `DD/MM/YYYY`.
+Las fechas `valid_from`/`valid_to` condicionan la aplicación: la oferta solo se considera dentro de su vigencia, con ambas fechas inclusivas y evaluadas en la zona comercial. Sin fechas cargadas, la vigencia es indefinida mientras `active` sea `true`. El filtro se aplica tanto al listado del cliente como a `findMatchingOffer` al reservar; el admin puede listar todas con `?all=1`. Se almacenan como fecha calendario UTC 00:00 (`YYYY-MM-DD`) y se muestran como `DD/MM/YYYY`.
 
 Orden de precios al reservar: precio base de los servicios → descuento de la oferta (RN11) → recargo de RN5 sobre el precio con descuento → vale (RN7/RN8). `offer_discount` y `voucher_discount` guardan los montos en pesos y `price_snapshot` el total final. El turno guarda `offer_id` y `offer_discount` (0 si no hubo oferta). El detalle del turno y el email de confirmación muestran el desglose.
 
@@ -297,6 +301,8 @@ Los modelos deben utilizar nombres **PascalCase y singular**:
 
 ```text
 Appointment
+BookingLock
+ClientBookingLock
 Holiday
 Service
 Offer
@@ -372,7 +378,7 @@ Ejemplo conceptual:
 
 ```js
 Appointment.find(query)
-  .select('barber_id client_id start_at end_at status cancel_type extra price_snapshot voucher_id voucher_discount offer_id offer_discount')
+  .select('barber_id client_id start_at end_at status cancel_type cancel_reason extra penalty_source_ids price_snapshot voucher_id voucher_discount offer_id offer_discount')
   .lean();
 ```
 
@@ -398,6 +404,14 @@ appointmentSchema.index({ barber_id: 1, status: 1, rating: 1 });
 ```
 
 > Antes: 4 índices separados `barber_id+start_at`, `client_id`, `status`, `start_at` → optimizado a compuestos para queries de rango `$lt/$gt` en solapamiento.
+
+#### `client_booking_locks`
+
+```js
+// Un documento por cliente: serializa reservas concurrentes del mismo cliente
+// para que no pueda quedar con dos turnos superpuestos (RN1).
+clientBookingLockSchema.index({ client_id: 1 }, { unique: true });
+```
 
 #### `offers`
 
@@ -444,7 +458,7 @@ userSchema.index({ role: 1 });
 holidaySchema.index({ date: 1 }, { unique: true });
 ```
 
-La disponibilidad de un barbero se bloquea si el día es feriado global **o** franco semanal **o** franco puntual. Los feriados se consultan por rango y se pasan como `Set` de `YYYY-MM-DD` a la lógica de slots.
+La disponibilidad de un barbero se bloquea si el día es feriado global **o** franco semanal **o** franco puntual. Los feriados se consultan por rango y se pasan como `Set` de `YYYY-MM-DD` a la lógica de slots. Al crear un feriado, o al moverlo de fecha, se cancelan automáticamente los turnos `pending` de ese día que todavía no empezaron (RN10/RN7); los endpoints devuelven `cancelledAppointments` y `failedCancellations`.
 
 #### `notifications`
 
@@ -488,17 +502,20 @@ Flujo atómico corregido (antes 11 pasos redundantes con solapamiento duplicado 
 
 ```js
 await session.withTransaction(async () => {
-  // 1. Calcular disponibilidad RN1+RN10 y duración RN2 (incluye validación de solapamiento)
-  // 2. Obtener precio base de servicios y aplicar oferta RN11 (coincidencia exacta)
-  // 3. Aplicar RN5 (recargo 20% si corresponde) → RN7 (vale vigente, uno solo) en BE
+  // 1. Validar RN1+RN10: fecha futura, horizonte de 4 meses, grilla de 30 min,
+  //    disponibilidad del barbero y dedupe de serviceIds
+  // 2. Obtener precio base de servicios y aplicar oferta RN11 vigente
+  //    (coincidencia exacta)
+  // 3. Lock de barbero y de cliente + verificación de solapamiento de ambos
+  // 4. Aplicar RN5 (recargo 20% si corresponde) → RN7 (vale vigente, uno solo)
   //    Usar Math.round para evitar errores float en %
-  // 4. Guardar price_snapshot y duration_snapshot FINALES (histórico real cobrado)
-  // 5. Crear Appointment
+  // 5. Guardar price_snapshot y duration_snapshot FINALES (histórico real cobrado)
+  // 6. Crear Appointment
 });
-// 6. Encolar Notification (outbox) fuera de la transacción → email (Nodemailer/Resend) + in-app
+// 7. Encolar Notification (outbox) fuera de la transacción → email (Nodemailer/Resend) + in-app
 ```
 
-- Si cualquier paso 1-5 falla → rollback.
+- Si cualquier paso 1-6 falla → rollback.
 - Email no es transaccional: no crear `Notification` con envío síncrono dentro de `withTransaction`; usar patrón outbox/eventual.
 - Si aplica, creación de `Voucher` (RN7/RN8) también dentro de transacción.
 

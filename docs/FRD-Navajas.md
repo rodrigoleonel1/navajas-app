@@ -3,8 +3,8 @@
 # Documentación de Requerimientos Funcionales
 
 Proyecto: Navajas (BarberApp)  
-Versión: 1.0  
-Fecha: 07/09/2026  
+Versión: 1.1  
+Fecha: 04/11/2026  
 Autor: Rodrigo Alarcón
 
 # 
@@ -60,6 +60,7 @@ Autor: Rodrigo Alarcón
 | Versión | Fecha | Autor | Descripción |
 | :---- | :---- | :---- | :---- |
 | 1.0 | 07/09/2026 | Alarcón Rodrigo | Versión inicial |
+| 1.1 | 04/11/2026 | Alarcón Rodrigo | Alineación con V1–V3: cancelaciones del negocio, devolución de vales, vigencia de ofertas, grilla de 30 min y horizonte de 4 meses |
 
 # 2\. Alcance
 
@@ -77,7 +78,9 @@ En la asignación de turnos se priorizará la disponibilidad real del barbero (j
 
 ## 2.4. Restricciones
 
-Este requerimiento no tiene restricciones identificadas.
+* Solo se puede reservar un turno a partir del momento actual y hasta 4 meses de anticipación.
+* Los horarios de reserva deben pertenecer a la grilla de 30 minutos que arranca en la apertura del barbero (por ejemplo, con apertura 09:00: 09:00, 09:30, 10:00...).
+* Un mismo cliente no puede tener dos turnos superpuestos, aunque sean con barberos distintos.
 
 ## 2.5. Dependencias
 
@@ -94,17 +97,17 @@ El alcance incluye desde la reserva del turno por parte del cliente hasta el env
 | Regla | Descripción |
 | :---- | :---- |
 | Regla 0 | Siempre enviar un mensaje de confirmación (email \+ notificación in-app) al cliente al reservar un turno. |
-| Regla 1 | No permitir reservar un turno si el barbero ya tiene otro turno asignado que se superponga con el horario y la duración del/los servicio(s) solicitado(s). |
+| Regla 1 | No permitir reservar un turno si el barbero ya tiene otro turno asignado que se superponga con el horario y la duración del/los servicio(s) solicitado(s), ni si el mismo cliente ya tiene otro turno superpuesto (aunque sea con otro barbero). |
 | Regla 2 | La duración del turno se calcula según el/los servicio(s) elegidos. Un turno puede combinar varios servicios (ej.: Corte \+ Decoloración). |
 | Regla 3 | Cancelación ≥24hs de anticipación: sin penalización, libera el horario. Entre 4hs y 24hs: libera el horario y registra inasistencia. \<4hs: no libera el horario y registra inasistencia. |
 | Regla 4 | Si el cliente no se presenta (tolerancia de 15 min) y no canceló previamente, el administrador marca manualmente el turno como "Inasistencia"; el horario no se libera. |
-| Regla 5 | 3 inasistencias en los últimos 2 meses → recargo del 20% en la próxima reserva. Al aplicarse, el contador de inasistencias se reinicia. El recargo se informa en la confirmación del turno (email + in-app). |
-| Regla 6 | Cada barbero cobra el 60% del precio total de cada turno completado (40% para el local), calculado sobre el precio histórico vigente al momento de la reserva. |
-| Regla 7 | Cancelación por parte del administrador → notifica al cliente que la cancelación fue con anticipación y sin penalización, y emite automáticamente un vale de 20% de descuento (fecha de caducidad según configuración). |
+| Regla 5 | 3 inasistencias en los últimos 2 meses → recargo del 20% en la próxima reserva. Las inasistencias se cuentan al reservar, pero el contador se reinicia recién cuando ese turno con recargo pasa a completado: si el turno se cancela sin costo, las inasistencias siguen vigentes. El recargo se informa en la confirmación del turno (email + in-app). |
+| Regla 6 | Cada barbero cobra el 60% del precio final del turno completado (40% para el local). La base comisionable es el `price_snapshot` guardado al reservar: incluye el recargo del 20% (RN5) y ya tiene descontados la oferta (RN11) y el vale aplicado. Queda fija aunque después cambien los precios de los servicios. |
+| Regla 7 | Cancelación por parte del administrador o del negocio (feriado, franco del barbero o cambio de jornada) → notifica al cliente que la cancelación fue con anticipación y sin penalización, devuelve el vale que el cliente tenía aplicado en ese turno y emite automáticamente un vale de 20% de descuento (fecha de caducidad según configuración). |
 | Regla 8 | Cada 10 turnos completados (10°, 20°, 30°...) → el cliente recibe automáticamente un vale de fidelidad del 30% de descuento. |
 | Regla 9 | Enviar un recordatorio automático (email \+ notificación in-app) el día anterior al turno, con un cron diario a las 12:00 de Argentina. Según la hora del turno, el aviso llega aproximadamente entre 12 y 36 horas antes (no es una ventana exacta de 24 h). |
-| Regla 10 | No permitir reservar turnos en días feriados del negocio ni en francos/días libres del barbero, ni fuera de la jornada laboral configurada para cada barbero. |
-| Regla 11 | El administrador puede activar/desactivar ofertas/combos de servicios con % de descuento, aplicados automáticamente al precio del turno. |
+| Regla 10 | No permitir reservar turnos en días feriados del negocio ni en francos/días libres del barbero, ni fuera de la jornada laboral configurada para cada barbero. Si el admin carga un feriado o franco, o modifica la jornada, los turnos pendientes que quedan afectados se cancelan automáticamente sin penalización y se avisa al cliente por email + in-app (RN7). |
+| Regla 11 | El administrador puede activar/desactivar ofertas/combos de servicios con % de descuento, aplicados automáticamente al precio del turno. Una oferta solo aplica dentro de su ventana de vigencia (`valid_from`/`valid_to`, inclusive y en hora del negocio); sin fechas cargadas se considera vigente de forma indefinida. |
 
 Tabla de decisión: define qué notificación o acción se dispara según la condición que se cumple, de acuerdo a las reglas de negocio anteriores.
 
@@ -119,6 +122,7 @@ Tabla de decisión: define qué notificación o acción se dispara según la con
 | Cliente no se presenta (+15 min) | RN4 | Msj\_Inasistencia \- Registrada por el admin |
 | 3ra inasistencia en 2 meses | RN5 | Msj\_Recargo (incluido en Msj0) \- 20% en próxima reserva |
 | Admin cancela un turno | RN7 | Msj\_CancelacionAdmin \+ Msj\_Vale (20% dto.) |
+| Admin carga feriado/franco o cambia la jornada con turnos pendientes | RN10 \+ RN7 | Cancelación automática \+ Msj\_CancelacionAdmin \+ Msj\_Vale (20% dto.) |
 | Cliente completa 10°, 20°, 30°... turno | RN8 | Msj\_ValeFidelidad (30% dto.) |
 | Turno marcado como completado | \- | Msj\_Agradecimiento |
 
@@ -128,7 +132,7 @@ Tabla de decisión: define qué notificación o acción se dispara según la con
   * Condición: Reserva un turno de "Corte \+ Barba" con el Barbero A el 10/09 a las 15:00hs. El Barbero A está libre en esa franja.  
   * Notificaciones: Msj0 (RN0), Msj9 (RN9).  
 * Cliente 2:  
-  * Condición: Intenta reservar con el Barbero B a las 10:00hs, pero el Barbero B ya tiene un turno de 9:45 a 10:15hs.  
+  * Condición: Intenta reservar con el Barbero B a las 10:00hs, pero el Barbero B ya tiene un turno de 9:30 a 10:30hs.  
   * Notificaciones: Msj\_Error (RN1) \+ sugerencia de próximo horario disponible.  
 * Cliente 3:  
   * Condición: Cliente con 3 inasistencias en los últimos 2 meses reserva un nuevo turno.  
@@ -168,13 +172,13 @@ Tabla de decisión: define qué notificación o acción se dispara según la con
 ## 4.2. V2 \- Reglas de negocio \+ notificaciones completas
 
 * Objetivo: sumar la lógica que hace que el sistema sea "inteligente" y no un simple calendario.  
-* Feriados globales del negocio y francos por barbero (completa RN10).
+* Feriados globales del negocio y francos por barbero (completa RN10), con cancelación automática y aviso a los clientes afectados.
 * Cancelación con reglas (RN3): ≥ 24hs sin penalización, 4-24hs libera pero cuenta inasistencia, \< 4hs no libera y cuenta inasistencia.  
 * Inasistencia manual por admin con tolerancia de 15 min (RN4).  
-* Recargo del 20% a la 3ra inasistencia en 2 meses, con reseteo del contador (RN5).  
+* Recargo del 20% a la 3ra inasistencia en 2 meses, con reseteo del contador al completar el turno con recargo (RN5).  
 * Comisión 60/40: vista de ingresos del barbero (gráfico semana/mes) y liquidación diaria para el admin (RN6).  
 * Notificaciones in-app (polling desde React) \+ recordatorio el día anterior vía Vercel Cron diario (RN9).  
-* Vale por cancelación del admin (20% dto., RN7) — configuración simple de duración y sección "Vales" del cliente.
+* Vale por cancelación del admin o del negocio (20% dto., RN7) — configuración simple de duración, devolución del vale usado y sección "Vales" del cliente.
 * Validaciones con Zod en front y back ya integradas de forma consistente en los endpoints principales.  
 * Con esto el sistema ya refleja el modelo de negocio completo de Navajas, no solo el CRUD de turnos.
 
@@ -182,8 +186,8 @@ Tabla de decisión: define qué notificación o acción se dispara según la con
 
 * Objetivo: funcionalidades que suman valor de producto y son ideales para lucir en la defensa, pero no bloquean el funcionamiento core.  
 * Vale de fidelidad cada 10 turnos (30% dto., RN8) \+ configuración de duración del vale de fidelidad por el admin.
-* Ofertas/combos activables/desactivables (RN11) con aplicación automática de descuento.  
-* Calificación a barberos (1-5 estrellas) \+ promedio visible.  
+* Ofertas/combos activables/desactivables (RN11) con aplicación automática de descuento y filtro de vigencia.  
+* Calificación a barberos (1-5 estrellas) \+ promedio interno, visible solo para el admin.  
 * Reportes completos (admin): inasistencia por barbero, ingresos totales/por barbero, más solicitados (barbero/horario/servicio/combo), calificación promedio.  
 * Sección "Vales y Penalizaciones" completa del lado del cliente (vigente/usado/vencido calculado al vuelo).  
 * Landing page pulida \+ diseño mobile-first terminado en todas las pantallas.  
@@ -241,11 +245,11 @@ Historias de usuario
 
 Criterio de Aceptación 
 
-* CA-4: El sistema no permite reservar en horarios solapados, fuera de la jornada laboral, ni en feriados globales o francos/días libres del barbero.
+* CA-4: El sistema no permite reservar en el pasado, más allá de 4 meses de anticipación, en horarios fuera de la grilla de 30 minutos, solapados con otro turno del barbero o del mismo cliente, fuera de la jornada laboral, ni en feriados globales o francos/días libres del barbero.
 * CA-5: Al cancelar, el sistema aplica automáticamente la regla correspondiente según el tiempo de anticipación.  
 * CA-6: El cliente ve claramente separados sus turnos futuros de su historial.  
 * CA-7: Al marcar inasistencia, se actualiza el contador de inasistencias de los últimos 2 meses del cliente.  
-* CA-8: Al cancelar el admin un turno, se genera automáticamente un vale de 20% con fecha de caducidad calculada.
+* CA-8: Al cancelar el admin un turno, se devuelve el vale que el cliente tenía aplicado (si tenía uno) y se genera automáticamente un vale de 20% con fecha de caducidad calculada.
 
 Dependencias
 
@@ -272,7 +276,7 @@ Criterio de Aceptación
 
 * CA-9: Toda notificación se registra en la colección notifications de Mongo, con canal y estado.
 * CA-10: El recordatorio se dispara con un cron diario (Vercel Cron, 12:00 ART) que revisa los turnos del día comercial siguiente; según la hora del turno llega entre 12 y 36 h antes.  
-* CA-11: Al cancelar un turno (por el cliente o por el admin) o al marcarlo como inasistencia, el sistema dispara automáticamente una notificación (email \+ in-app) informando al cliente el cambio de estado y, en cancelaciones del admin, que fue con anticipación y sin penalización.
+* CA-11: Al cancelar un turno (por el cliente, por el admin o automáticamente por feriado/franco/cambio de jornada) o al marcarlo como inasistencia, el sistema dispara automáticamente una notificación (email \+ in-app) informando al cliente el cambio de estado y, en cancelaciones del admin o del negocio, que fue con anticipación y sin penalización (con el motivo cuando es automática).
 
 Dependencias
 
@@ -286,7 +290,7 @@ EP-4: Vales y Fidelización
 | Estado | Aprobado |
 | Creado | 07/09/2026 |
 | Actualizado | 07/09/2026 |
-| Descripción | Gestión de vales de descuento (por cancelación del admin o por fidelidad cada 10 turnos), y configuración de su duración por parte del administrador. |
+| Descripción | Gestión de vales de descuento (por cancelación del administrador, por cancelación del negocio o por fidelidad cada 10 turnos), y configuración de su duración por parte del administrador. |
 | Implementación | V2/V3 |
 
 Historias de usuario
@@ -319,12 +323,12 @@ EP-5: Panel de barbero
 Historias de usuario
 
 * HU-15: Como barbero, quiero ver mi agenda de turnos por día y horario.  
-* HU-16: Como barbero, quiero ver cuánto me corresponde cobrar (60% por servicio) con un gráfico de barras, alternando semana/mes (RN6).
+* HU-16: Como barbero, quiero ver cuánto me corresponde cobrar (60% del precio final de cada turno) con un gráfico de barras, alternando semana/mes (RN6).
 
 Criterio de Aceptación 
 
 * CA-15: El barbero sólo visualiza sus propios turnos, en modo de solo lectura (no puede marcar completado/inasistencia).  
-* CA-16: El cálculo de ingresos usa el precio histórico del turno, no el precio actual del servicio.
+* CA-16: El cálculo de ingresos usa el precio histórico del turno (`price_snapshot` final, con oferta, vale y recargo ya aplicados), no el precio actual del servicio.
 
 Dependencias
 
@@ -350,10 +354,10 @@ Historias de usuario
 
 Criterio de Aceptación 
 
-* CA-17: Los cambios de horario/francos/feriados impactan de inmediato en la disponibilidad de turnos futuros.
-* CA-18: Al reservar una combinación de servicios con oferta activa, el precio refleja el descuento correspondiente.  
+* CA-17: Los cambios de horario/francos/feriados impactan de inmediato en la disponibilidad de turnos futuros; los turnos pendientes que quedan fuera de la nueva disponibilidad se cancelan sin penalización y se notifica al cliente.
+* CA-18: Al reservar una combinación de servicios con una oferta activa y vigente, el precio refleja el descuento correspondiente.  
 * CA-19: Los reportes son filtrables por rango de fechas.  
-* CA-20: La liquidación diaria muestra, por barbero, el monto total del 60% de sus turnos completados ese día.
+* CA-20: La liquidación diaria muestra, por barbero, el monto total del 60% del precio final de sus turnos completados ese día.
 
 Dependencias
 
@@ -367,7 +371,7 @@ EP-7: Calificación a barberos
 | Estado | Aprobado |
 | Creado | 07/09/2026 |
 | Actualizado | 07/09/2026 |
-| Descripción | Permite al cliente calificar a un barbero (1 a 5 estrellas) luego de un turno completado, alimentando el reporte de calificación promedio del admin. |
+| Descripción | Permite al cliente calificar a un barbero (1 a 5 estrellas) luego de un turno completado, alimentando el reporte interno de calificación promedio que ve únicamente el admin. |
 | Implementación | V3 |
 
 Historias de usuario
@@ -376,7 +380,7 @@ Historias de usuario
 
 Criterio de Aceptación 
 
-* CA-21: La calificación queda asociada al barbero y al turno, y actualiza el promedio general del barbero.
+* CA-21: La calificación queda asociada al barbero y al turno, y actualiza el promedio general del barbero. Ese promedio es un dato interno: solo lo ve el admin en reportes y en la ficha del barbero; el cliente no lo ve al reservar.
 
 Dependencias
 
@@ -386,7 +390,7 @@ Dependencias
 
 * DISPONIBILIDAD DE BARBERO: franjas horarias libres de un barbero, calculadas en función de su jornada laboral configurada, sus francos y los feriados globales del negocio, además de los turnos ya asignados (RN1, RN10).
 * HISTORIAL DE CLIENTE: turnos previos del cliente (servicios, barberos, estado), usado para calcular inasistencias recientes (RN5) y turnos completados acumulados (RN8).  
-* PRECIO HISTÓRICO DEL TURNO: precio de él/los servicio(s) vigente al momento de la reserva, usado para calcular la comisión del barbero (RN6), sin verse afectado por cambios de precio posteriores.  
+* PRECIO HISTÓRICO DEL TURNO: precio final guardado en el turno al momento de la reserva (`price_snapshot`). Ya incluye el recargo del 20% (RN5) y tiene descontados la oferta (RN11) y el vale aplicado. Es la base de la comisión del barbero (RN6) y no se ve afectado por cambios posteriores de precios, ofertas o vales.  
 * Generar Vale: calcular fecha de emisión y caducidad de un vale en base a la duración configurada por el administrador para su tipo (fidelidad o cancelación).
 
 # 6\. Pantallas de usuario
@@ -408,9 +412,10 @@ Dependencias
 | Término | Descripción |
 | :---- | :---- |
 | Criterio de aceptación | Condiciones que un producto de software debe satisfacer para ser aceptado por un usuario, cliente o stakeholder.  |
-| Inasistencia | Ausencia del cliente a un turno reservado, ya sea por no presentarse o por cancelar fuera del plazo sin penalización.  |
-| Vale | Beneficio de descuento porcentual, con fecha de emisión y caducidad, otorgado por fidelidad o por cancelación del administrador.  |
-| Precio histórico | Precio de un servicio registrado en el momento exacto de la reserva de un turno, independiente de cambios de precio posteriores.  |
+| Inasistencia | Ausencia del cliente a un turno reservado, ya sea por no presentarse o por cancelar dentro de las 24 h previas. Se cuenta al reservar el siguiente turno, pero se marca como consumida recién cuando ese turno pasa a completado.  |
+| Vale | Beneficio de descuento porcentual, con fecha de emisión y caducidad, otorgado por fidelidad, por cancelación del administrador o por cancelación del negocio (feriado, franco o cambio de jornada).  |
+| Precio histórico | Precio final del turno guardado al reservar (`price_snapshot`): incluye el recargo del 20% y descuenta oferta y vale. Es la base de la comisión y no cambia aunque después se modifiquen precios, ofertas o vales.  |
+| Cancelación del negocio | Cancelación sin penalización originada por el local (feriado, franco del barbero o cambio de jornada). Devuelve el vale usado y emite el vale del 20% de RN7. |
 | EP (épica) | Agrupación de historias de usuario relacionadas funcionalmente, utilizada para organizar el desarrollo. |
 | HU (historias de usuario) | Descripciones cortas y concisas contadas desde el punto de vista del usuario cuando prueba un producto digital. |
 
