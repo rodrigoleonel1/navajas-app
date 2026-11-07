@@ -1,8 +1,9 @@
 import { MoreVertical } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 const MENU_WIDTH = 176;
 const MENU_GAP = 4;
+const VIEWPORT_MARGIN = 8;
 
 export type MenuItem = {
   label: string;
@@ -24,13 +25,21 @@ export function AppointmentMenu({
     null,
   );
   const anchorRef = useRef<HTMLSpanElement>(null);
+  const menuRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
     if (!open) return;
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") setOpen(false);
     }
-    function onScrollOrResize() {
+    function onScrollOrResize(event: Event) {
+      // No cerrar si el scroll ocurre dentro del propio menú.
+      if (
+        event.type === "scroll" &&
+        menuRef.current?.contains(event.target as Node)
+      ) {
+        return;
+      }
       setOpen(false);
     }
     window.addEventListener("keydown", onKeyDown);
@@ -41,7 +50,36 @@ export function AppointmentMenu({
       window.removeEventListener("scroll", onScrollOrResize, true);
       window.removeEventListener("resize", onScrollOrResize);
     };
-  }, [open ]);
+  }, [open]);
+
+  // Antes de pintar, medimos el menú y lo abrimos hacia arriba si abajo no
+  // entra. Así un kebab cerca del borde inferior no queda cortado.
+  useLayoutEffect(() => {
+    if (!open || !anchorRef.current || !menuRef.current) return;
+
+    const anchor = anchorRef.current.getBoundingClientRect();
+    const menu = menuRef.current.getBoundingClientRect();
+
+    const spaceBelow = window.innerHeight - anchor.bottom - MENU_GAP;
+    const spaceAbove = anchor.top - MENU_GAP - VIEWPORT_MARGIN;
+    const openUp = menu.height > spaceBelow && spaceAbove > spaceBelow;
+
+    const top = openUp
+      ? Math.max(VIEWPORT_MARGIN, anchor.top - MENU_GAP - menu.height)
+      : Math.min(
+          anchor.bottom + MENU_GAP,
+          Math.max(VIEWPORT_MARGIN, window.innerHeight - MENU_GAP - menu.height),
+        );
+
+    const left = Math.min(
+      Math.max(VIEWPORT_MARGIN, anchor.right - MENU_WIDTH),
+      Math.max(VIEWPORT_MARGIN, window.innerWidth - MENU_WIDTH - VIEWPORT_MARGIN),
+    );
+
+    setCoords((prev) =>
+      prev && prev.top === top && prev.left === left ? prev : { top, left },
+    );
+  }, [open, items.length]);
 
   if (items.length === 0) return null;
 
@@ -79,9 +117,15 @@ export function AppointmentMenu({
             className="fixed inset-0 z-10 cursor-default"
           />
           <span
+            ref={menuRef}
             role="menu"
-            style={{ top: coords.top, left: coords.left }}
-            className="fixed z-20 w-44 rounded-xl border border-border bg-card p-1 shadow-lg"
+            style={{
+              top: coords.top,
+              left: coords.left,
+              maxHeight: `calc(100dvh - ${VIEWPORT_MARGIN * 2}px)`,
+              maxWidth: `calc(100vw - ${VIEWPORT_MARGIN * 2}px)`,
+            }}
+            className="fixed z-20 w-44 overflow-y-auto rounded-xl border border-border bg-card p-1 shadow-lg"
           >
             {items.map((item) => (
               <button

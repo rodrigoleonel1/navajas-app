@@ -169,7 +169,7 @@ export function AdminEarningsPage() {
             <SummaryCard
               label="Turnos completados"
               value={String(data.totals.completed)}
-              hint="Solo turnos en estado completed"
+              hint="Solo turnos atendidos"
             />
           </div>
 
