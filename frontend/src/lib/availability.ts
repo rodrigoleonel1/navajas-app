@@ -5,12 +5,17 @@ export type Slot = {
   endAt: string;
 };
 
+export type BlockedSlot = Slot & {
+  reason: "occupied" | "past";
+};
+
 export type Availability = {
   barberId: string;
   date: string;
   duration: number;
   workingHours: { start: string; end: string };
   slots: Slot[];
+  blockedSlots: BlockedSlot[];
   nextAvailable: Slot | null;
   nonWorkingDays: string[];
 };

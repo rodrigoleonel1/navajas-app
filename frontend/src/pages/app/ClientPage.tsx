@@ -206,6 +206,24 @@ export function ClientPage() {
 
   const shownAvailability = readyToSearch ? availability : null;
 
+  // Grilla completa del día: libres + ocupados, ordenada por hora. Los ocupados
+  // se muestran deshabilitados para que se vea qué horarios ya están tomados.
+  const shownSlots = useMemo(() => {
+    if (!shownAvailability) return [];
+    return [
+      ...shownAvailability.slots.map((slot) => ({
+        ...slot,
+        blocked: false,
+        reason: null as "occupied" | "past" | null,
+      })),
+      ...(shownAvailability.blockedSlots ?? []).map((slot) => ({
+        ...slot,
+        blocked: true,
+        reason: slot.reason,
+      })),
+    ].sort((a, b) => a.startAt.localeCompare(b.startAt));
+  }, [shownAvailability]);
+
   function toggleService(id: string) {
     setServiceIds((prev) =>
       prev.includes(id) ? prev.filter((s) => s !== id) : [...prev, id],
@@ -461,45 +479,78 @@ export function ClientPage() {
                   />
                 ) : slotsError ? (
                   <p className="text-sm text-destructive">{slotsError}</p>
-                ) : shownAvailability && shownAvailability.slots.length === 0 ? (
-                  <div className="flex flex-col gap-3">
-                    <p className="text-sm text-muted">Sin horarios ese día.</p>
-                    {shownAvailability.nextAvailable && (
-                      <Button
-                        variant="outline"
-                        className="self-start"
-                        onClick={() => {
-                          const next = shownAvailability.nextAvailable;
-                          if (!next) return;
-                          setDate(toBusinessDayKey(next.startAt));
-                          setSelectedSlot(next.startAt);
-                        }}
-                      >
-                        <CalendarCheck size={14} aria-hidden="true" />
-                        Ir al próximo disponible:{" "}
-                        {formatDayHour(
-                          shownAvailability.nextAvailable.startAt,
-                        )}
-                      </Button>
-                    )}
-                  </div>
+                ) : shownAvailability && shownSlots.length === 0 ? (
+                  <p className="text-sm text-muted">Sin horarios ese día.</p>
                 ) : (
-                  <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                    {shownAvailability?.slots.map((slot) => (
-                      <button
-                        key={slot.startAt}
-                        type="button"
-                        onClick={() => setSelectedSlot(slot.startAt)}
-                        aria-pressed={selectedSlot === slot.startAt}
-                        className={
-                          selectedSlot === slot.startAt
-                            ? "border border-primary bg-primary/10 rounded-lg px-2 py-2 text-sm font-semibold transition-colors"
-                            : "border border-border rounded-lg px-2 py-2 text-sm hover:border-primary transition-colors"
-                        }
-                      >
-                        {formatHour(slot.startAt)}
-                      </button>
-                    ))}
+                  <div className="flex flex-col gap-3">
+                    {shownAvailability &&
+                      shownAvailability.slots.length === 0 &&
+                      shownAvailability.nextAvailable && (
+                        <div className="flex flex-col gap-2">
+                          <p className="text-sm text-muted">
+                            No quedan horarios libres ese día.
+                          </p>
+                          <Button
+                            variant="outline"
+                            className="self-start"
+                            onClick={() => {
+                              const next = shownAvailability.nextAvailable;
+                              if (!next) return;
+                              setDate(toBusinessDayKey(next.startAt));
+                              setSelectedSlot(next.startAt);
+                            }}
+                          >
+                            <CalendarCheck size={14} aria-hidden="true" />
+                            Ir al próximo disponible:{" "}
+                            {formatDayHour(
+                              shownAvailability.nextAvailable.startAt,
+                            )}
+                          </Button>
+                        </div>
+                      )}
+                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                      {shownSlots.map((slot) => (
+                        <button
+                          key={slot.startAt}
+                          type="button"
+                          disabled={slot.blocked}
+                          title={
+                            slot.blocked
+                              ? slot.reason === "past"
+                                ? "Horario pasado"
+                                : "Horario ocupado"
+                              : undefined
+                          }
+                          aria-label={
+                            slot.blocked
+                              ? `${formatHour(slot.startAt)} (ocupado)`
+                              : formatHour(slot.startAt)
+                          }
+                          aria-pressed={selectedSlot === slot.startAt}
+                          onClick={() => setSelectedSlot(slot.startAt)}
+                          className={
+                            slot.blocked
+                              ? "cursor-not-allowed rounded-lg border border-border/60 bg-background/40 px-2 py-2 text-sm text-muted"
+                              : selectedSlot === slot.startAt
+                                ? "cursor-pointer rounded-lg border border-primary bg-primary/10 px-2 py-2 text-sm font-semibold transition-colors"
+                                : "cursor-pointer rounded-lg border border-border px-2 py-2 text-sm transition-colors hover:border-primary"
+                          }
+                        >
+                          <span
+                            className={
+                              slot.blocked ? "line-through opacity-60" : undefined
+                            }
+                          >
+                            {formatHour(slot.startAt)}
+                          </span>
+                          {slot.blocked && (
+                            <span className="mt-0.5 block text-[9px] uppercase tracking-widest">
+                              Ocupado
+                            </span>
+                          )}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 )}
               </div>

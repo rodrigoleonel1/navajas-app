@@ -23,7 +23,7 @@ import {
   BOOKING_STEP_MINUTES,
   DEFAULT_WORKING_HOURS,
   findNextAvailable,
-  generateDaySlots,
+  generateDaySlotsDetailed,
   getNonWorkingReason,
   getWorkingBounds,
 } from "./availability.service.js";
@@ -915,6 +915,7 @@ export async function getAvailability({
   const now = new Date();
 
   let slots = [];
+  let blockedSlots = [];
   if (
     !getNonWorkingReason(
       tzParts(baseDay),
@@ -922,7 +923,7 @@ export async function getAvailability({
       holidayKeys,
     )
   ) {
-    slots = generateDaySlots({
+    const grid = generateDaySlotsDetailed({
       dayStart: baseDay,
       open,
       close,
@@ -931,6 +932,8 @@ export async function getAvailability({
       bookings,
       now,
     });
+    slots = grid.slots;
+    blockedSlots = grid.blockedSlots;
   }
 
   const nextAvailable = findNextAvailable({
@@ -965,6 +968,7 @@ export async function getAvailability({
       end: workingHours.end ?? DEFAULT_WORKING_HOURS.end,
     },
     slots,
+    blockedSlots,
     nextAvailable,
     nonWorkingDays,
   };

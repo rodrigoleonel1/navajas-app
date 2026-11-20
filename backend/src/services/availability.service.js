@@ -147,7 +147,7 @@ function* candidateSlots({
 export function generateDaySlots({ dayStart, open, close, duration, step, bookings, now }) {
   const slots = [];
   for (const slot of candidateSlots({ dayStart, open, close, duration, step })) {
-    if (slot.end <= now) continue;
+    if (slot.end <= now || slot.start <= now) continue;
     if (overlaps(slot.start, slot.end, bookings)) continue;
     slots.push({
       startAt: slot.start.toISOString(),
@@ -155,6 +155,35 @@ export function generateDaySlots({ dayStart, open, close, duration, step, bookin
     });
   }
   return slots;
+}
+
+// Igual que generateDaySlots pero además devuelve la grilla ocupada, para que
+// el cliente vea qué horarios están tomados en lugar de que simplemente
+// desaparezcan. Los slots ya pasados no se incluyen en ninguna de las dos.
+export function generateDaySlotsDetailed({
+  dayStart,
+  open,
+  close,
+  duration,
+  step,
+  bookings,
+  now,
+}) {
+  const slots = [];
+  const blockedSlots = [];
+  for (const slot of candidateSlots({ dayStart, open, close, duration, step })) {
+    if (slot.end <= now || slot.start <= now) continue;
+    const entry = {
+      startAt: slot.start.toISOString(),
+      endAt: slot.end.toISOString(),
+    };
+    if (overlaps(slot.start, slot.end, bookings)) {
+      blockedSlots.push({ ...entry, reason: "occupied" });
+      continue;
+    }
+    slots.push(entry);
+  }
+  return { slots, blockedSlots };
 }
 
 // Busca el próximo slot libre desde `from` (inclusive, redondeado al step)
