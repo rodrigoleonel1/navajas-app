@@ -479,78 +479,83 @@ export function ClientPage() {
                   />
                 ) : slotsError ? (
                   <p className="text-sm text-destructive">{slotsError}</p>
-                ) : shownAvailability && shownSlots.length === 0 ? (
-                  <p className="text-sm text-muted">Sin horarios ese día.</p>
                 ) : (
                   <div className="flex flex-col gap-3">
                     {shownAvailability &&
-                      shownAvailability.slots.length === 0 &&
-                      shownAvailability.nextAvailable && (
+                      shownAvailability.slots.length === 0 && (
                         <div className="flex flex-col gap-2">
                           <p className="text-sm text-muted">
-                            No quedan horarios libres ese día.
+                            {shownSlots.length === 0
+                              ? "Sin horarios ese día."
+                              : "No quedan horarios libres ese día."}
                           </p>
-                          <Button
-                            variant="outline"
-                            className="self-start"
-                            onClick={() => {
-                              const next = shownAvailability.nextAvailable;
-                              if (!next) return;
-                              setDate(toBusinessDayKey(next.startAt));
-                              setSelectedSlot(next.startAt);
-                            }}
-                          >
-                            <CalendarCheck size={14} aria-hidden="true" />
-                            Ir al próximo disponible:{" "}
-                            {formatDayHour(
-                              shownAvailability.nextAvailable.startAt,
-                            )}
-                          </Button>
+                          {shownAvailability.nextAvailable && (
+                            <Button
+                              variant="outline"
+                              className="self-start"
+                              onClick={() => {
+                                const next = shownAvailability.nextAvailable;
+                                if (!next) return;
+                                setDate(toBusinessDayKey(next.startAt));
+                                setSelectedSlot(next.startAt);
+                              }}
+                            >
+                              <CalendarCheck size={14} aria-hidden="true" />
+                              Ir al próximo disponible:{" "}
+                              {formatDayHour(
+                                shownAvailability.nextAvailable.startAt,
+                              )}
+                            </Button>
+                          )}
                         </div>
                       )}
-                    <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
-                      {shownSlots.map((slot) => (
-                        <button
-                          key={slot.startAt}
-                          type="button"
-                          disabled={slot.blocked}
-                          title={
-                            slot.blocked
-                              ? slot.reason === "past"
-                                ? "Horario pasado"
-                                : "Horario ocupado"
-                              : undefined
-                          }
-                          aria-label={
-                            slot.blocked
-                              ? `${formatHour(slot.startAt)} (ocupado)`
-                              : formatHour(slot.startAt)
-                          }
-                          aria-pressed={selectedSlot === slot.startAt}
-                          onClick={() => setSelectedSlot(slot.startAt)}
-                          className={
-                            slot.blocked
-                              ? "cursor-not-allowed rounded-lg border border-border/60 bg-background/40 px-2 py-2 text-sm text-muted"
-                              : selectedSlot === slot.startAt
-                                ? "cursor-pointer rounded-lg border border-primary bg-primary/10 px-2 py-2 text-sm font-semibold transition-colors"
-                                : "cursor-pointer rounded-lg border border-border px-2 py-2 text-sm transition-colors hover:border-primary"
-                          }
-                        >
-                          <span
+                    {shownSlots.length > 0 && (
+                      <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                        {shownSlots.map((slot) => (
+                          <button
+                            key={slot.startAt}
+                            type="button"
+                            disabled={slot.blocked}
+                            title={
+                              slot.blocked
+                                ? slot.reason === "past"
+                                  ? "Horario pasado"
+                                  : "Horario ocupado"
+                                : undefined
+                            }
+                            aria-label={
+                              slot.blocked
+                                ? `${formatHour(slot.startAt)} (ocupado)`
+                                : formatHour(slot.startAt)
+                            }
+                            aria-pressed={selectedSlot === slot.startAt}
+                            onClick={() => setSelectedSlot(slot.startAt)}
                             className={
-                              slot.blocked ? "line-through opacity-60" : undefined
+                              slot.blocked
+                                ? "cursor-not-allowed rounded-lg border border-border/60 bg-background/40 px-2 py-2 text-sm text-muted"
+                                : selectedSlot === slot.startAt
+                                  ? "cursor-pointer rounded-lg border border-primary bg-primary/10 px-2 py-2 text-sm font-semibold transition-colors"
+                                  : "cursor-pointer rounded-lg border border-border px-2 py-2 text-sm transition-colors hover:border-primary"
                             }
                           >
-                            {formatHour(slot.startAt)}
-                          </span>
-                          {slot.blocked && (
-                            <span className="mt-0.5 block text-[9px] uppercase tracking-widest">
-                              Ocupado
+                            <span
+                              className={
+                                slot.blocked
+                                  ? "line-through opacity-60"
+                                  : undefined
+                              }
+                            >
+                              {formatHour(slot.startAt)}
                             </span>
-                          )}
-                        </button>
-                      ))}
-                    </div>
+                            {slot.blocked && (
+                              <span className="mt-0.5 block text-[9px] uppercase tracking-widest">
+                                Ocupado
+                              </span>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
